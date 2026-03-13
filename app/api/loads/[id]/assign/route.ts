@@ -221,7 +221,15 @@ export async function POST(
         const truckBusy = await tx.load.findFirst({
           where: {
             assignedTruckId: truckId,
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
           },
           select: { id: true, pickupCity: true, deliveryCity: true },
         });

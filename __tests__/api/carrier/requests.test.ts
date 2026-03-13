@@ -319,7 +319,7 @@ describe("Carrier Requests", () => {
       expect(data.error).toContain("already assigned");
     });
 
-    it("rejects duplicate pending request → 400", async () => {
+    it("rejects duplicate pending request → 409", async () => {
       // Create a pending request first
       await db.loadRequest.create({
         data: {
@@ -346,7 +346,7 @@ describe("Carrier Requests", () => {
       );
 
       const res = await createLoadRequest(req);
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
 
       const data = await parseResponse(res);
       expect(data.error).toContain("pending request already exists");

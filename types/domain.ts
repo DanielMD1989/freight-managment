@@ -281,6 +281,9 @@ export interface Load {
   assignedTruck?: Truck | null;
   assignedAt?: Date | null;
 
+  // G-M17-5: Carrier's pending request for this load (populated in GET /api/loads/[id])
+  myPendingRequest?: { id: string; status: string; createdAt: string } | null;
+
   // Timestamps
   expiresAt?: Date | null;
   createdAt: Date;

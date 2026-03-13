@@ -241,6 +241,23 @@ export async function GET(
         }
       : null;
 
+    // G-M17-5: Carrier sees their pending request for this load
+    let myPendingRequest: {
+      id: string;
+      status: string;
+      createdAt: Date;
+    } | null = null;
+    if (user.role === "CARRIER" && user.organizationId) {
+      myPendingRequest = await db.loadRequest.findFirst({
+        where: {
+          loadId: id,
+          truck: { carrierId: user.organizationId },
+          status: "PENDING",
+        },
+        select: { id: true, status: true, createdAt: true },
+      });
+    }
+
     // Build response with conditional contact information
     const responseLoad = {
       ...load,
@@ -251,6 +268,8 @@ export async function GET(
       // Contact info - only include if authorized
       shipperContactName: userCanSeeContact ? load.shipperContactName : null,
       shipperContactPhone: userCanSeeContact ? load.shipperContactPhone : null,
+      // G-M17-5: Carrier's pending request for this load
+      myPendingRequest,
     };
 
     return NextResponse.json({ load: responseLoad });

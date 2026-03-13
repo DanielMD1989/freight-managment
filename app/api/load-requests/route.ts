@@ -185,7 +185,15 @@ export async function POST(request: NextRequest) {
         // Uses trips (hasMany) rather than assignedLoad (one-to-one) for proper filtering.
         trips: {
           where: {
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
           },
           select: { id: true },
           take: 1,
@@ -256,7 +264,7 @@ export async function POST(request: NextRequest) {
           error:
             "A pending request already exists for this load-truck combination",
         },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
@@ -354,7 +362,8 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
-    await Promise.all(
+    // Fire-and-forget: notification failure must not return 500 after committed request
+    Promise.all(
       shipperUsers.map((user) =>
         createNotification({
           userId: user.id,
@@ -369,7 +378,7 @@ export async function POST(request: NextRequest) {
           },
         })
       )
-    );
+    ).catch((err) => console.error("Load request notification failed:", err));
 
     // Invalidate load cache after request creation
     await CacheInvalidation.load(data.loadId);

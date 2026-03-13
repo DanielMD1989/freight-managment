@@ -207,7 +207,7 @@ describe("Load Requests — POST /api/load-requests", () => {
     expect(body.error).toMatch(/carrier/i);
   });
 
-  it("duplicate load request for same load-truck pair → 400", async () => {
+  it("duplicate load request for same load-truck pair → 409", async () => {
     // Create an existing PENDING request first
     await db.loadRequest.create({
       data: {
@@ -232,7 +232,7 @@ describe("Load Requests — POST /api/load-requests", () => {
     const res = await createLoadRequest(req);
     const body = await parseResponse(res);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
     expect(body.error).toMatch(/already exists|pending request/i);
   });
 

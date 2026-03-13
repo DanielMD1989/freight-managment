@@ -126,8 +126,18 @@ export default function LoadDetailsScreen() {
         )}
       </Card>
 
-      {/* Request Button */}
-      {load.status === "POSTED" && (
+      {/* Request Button — 3 states: already requested, can request, hidden */}
+      {load.myPendingRequest ? (
+        <View style={styles.actionSection}>
+          <Button
+            title="Request Sent"
+            onPress={() => {}}
+            disabled
+            fullWidth
+            size="lg"
+          />
+        </View>
+      ) : ["POSTED", "SEARCHING", "OFFERED"].includes(load.status) ? (
         <View style={styles.actionSection}>
           {availableTrucks.length > 0 ? (
             <>
@@ -152,7 +162,7 @@ export default function LoadDetailsScreen() {
             </Text>
           )}
         </View>
-      )}
+      ) : null}
 
       <View style={{ height: spacing["3xl"] }} />
     </ScrollView>

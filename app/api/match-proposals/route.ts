@@ -150,6 +150,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // G-M17-4: Reject proposals for trucks already on an active trip
+    const activeTripCount = await db.trip.count({
+      where: {
+        truckId: data.truckId,
+        status: {
+          in: [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+            "DELIVERED",
+            "EXCEPTION",
+          ],
+        },
+      },
+    });
+    if (activeTripCount > 0) {
+      return NextResponse.json(
+        { error: "Truck is currently on an active trip" },
+        { status: 409 }
+      );
+    }
+
     // Check if there's already a pending proposal for this load-truck pair
     const existingProposal = await db.matchProposal.findFirst({
       where: {
