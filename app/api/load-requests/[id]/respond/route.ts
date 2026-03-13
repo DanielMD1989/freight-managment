@@ -108,6 +108,7 @@ export async function POST(
     }
 
     // Check if user is the shipper who owns the load
+    // G-M18-5: DISPATCHER intentionally excluded — blueprint §5: dispatchers have NO accept/reject authority
     const isShipperOwner =
       session.role === "SHIPPER" &&
       session.organizationId === loadRequest.shipperId;
@@ -177,6 +178,82 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
+      // G-M18-2: Guard — load must still be bookable (prevents approving on dead/assigned loads)
+      const BOOKABLE_LOAD_STATUSES = ["POSTED", "SEARCHING", "OFFERED"];
+      if (!BOOKABLE_LOAD_STATUSES.includes(loadRequest.load.status)) {
+        return NextResponse.json(
+          {
+            error: `Load is no longer available for booking (status: ${loadRequest.load.status})`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // G-M18-3: Guard — truck must not be on an active trip
+      const activeTripCount = await db.trip.count({
+        where: {
+          truckId: loadRequest.truck.id,
+          status: {
+            in: [
+              "ASSIGNED",
+              "PICKUP_PENDING",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
+          },
+        },
+      });
+      if (activeTripCount > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Truck is currently on an active trip and cannot be approved for booking",
+          },
+          { status: 409 }
+        );
+      }
+
+      // G-M18-4: Wallet gate — shipper must meet minimum balance (blueprint §8)
+      if (!isAdmin) {
+        const shipperAccount = await db.financialAccount.findFirst({
+          where: { organizationId: loadRequest.shipperId, isActive: true },
+          select: { balance: true, minimumBalance: true },
+        });
+        if (
+          shipperAccount &&
+          shipperAccount.balance < shipperAccount.minimumBalance
+        ) {
+          // Fire-and-forget low-balance notification (max 1 per day per org)
+          db.user
+            .findMany({
+              where: {
+                organizationId: loadRequest.shipperId,
+                status: "ACTIVE",
+              },
+              select: { id: true },
+            })
+            .then(async (users) => {
+              for (const u of users) {
+                await createNotification({
+                  userId: u.id,
+                  type: NotificationType.LOW_BALANCE_WARNING,
+                  title: "Low Wallet Balance",
+                  message:
+                    "Your wallet balance is below the required minimum for marketplace activity. Please top up to continue.",
+                  metadata: { organizationId: loadRequest.shipperId },
+                });
+              }
+            })
+            .catch(() => {});
+
+          return NextResponse.json(
+            { error: "Insufficient wallet balance for marketplace access" },
+            { status: 402 }
+          );
+        }
+      }
+
       // G-A9-2: Soft-accept only — no Trip created, no load assignment, no truck removal.
       // The Carrier must call POST /api/load-requests/[id]/confirm to finalise the booking.
       try {
@@ -190,7 +267,7 @@ export async function POST(
             throw new Error("REQUEST_ALREADY_PROCESSED");
           }
 
-          return tx.loadRequest.update({
+          const updated = await tx.loadRequest.update({
             where: { id: requestId },
             data: {
               status: "SHIPPER_APPROVED",
@@ -199,19 +276,22 @@ export async function POST(
               respondedById: session.userId,
             },
           });
-        });
 
-        await db.loadEvent.create({
-          data: {
-            loadId: loadRequest.loadId,
-            eventType: "LOAD_REQUEST_ACCEPTED",
-            description: `Shipper accepted load request from ${loadRequest.carrier.name} — awaiting carrier confirmation`,
-            userId: session.userId,
-            metadata: {
-              loadRequestId: requestId,
-              carrierId: loadRequest.carrierId,
+          // G-M18-7: LoadEvent inside transaction (consistent with REJECT path)
+          await tx.loadEvent.create({
+            data: {
+              loadId: loadRequest.loadId,
+              eventType: "LOAD_REQUEST_ACCEPTED",
+              description: `Shipper accepted load request from ${loadRequest.carrier.name} — awaiting carrier confirmation`,
+              userId: session.userId,
+              metadata: {
+                loadRequestId: requestId,
+                carrierId: loadRequest.carrierId,
+              },
             },
-          },
+          });
+
+          return updated;
         });
 
         // Cache invalidate (load is still marketplace-visible but in soft-reservation)
@@ -285,6 +365,25 @@ export async function POST(
           },
         });
 
+        // G-M18-6: Load reversion inside transaction for atomicity
+        // G-A9-3: Revert load SEARCHING → POSTED if no other active requests remain
+        const remaining = await tx.loadRequest.count({
+          where: {
+            loadId: loadRequest.loadId,
+            status: { in: ["PENDING", "SHIPPER_APPROVED"] },
+            id: { not: requestId },
+          },
+        });
+        if (remaining === 0) {
+          await tx.load.update({
+            where: {
+              id: loadRequest.loadId,
+              status: { in: ["SEARCHING", "OFFERED"] },
+            },
+            data: { status: "POSTED" },
+          });
+        }
+
         return updatedRequest;
       });
 
@@ -293,24 +392,6 @@ export async function POST(
         loadRequest.loadId,
         loadRequest.load?.shipperId
       );
-
-      // G-A9-3: Revert load SEARCHING → POSTED if no other active requests remain
-      const remaining = await db.loadRequest.count({
-        where: {
-          loadId: loadRequest.loadId,
-          status: { in: ["PENDING", "SHIPPER_APPROVED"] },
-          id: { not: requestId },
-        },
-      });
-      if (remaining === 0) {
-        await db.load.update({
-          where: {
-            id: loadRequest.loadId,
-            status: { in: ["SEARCHING", "OFFERED"] },
-          },
-          data: { status: "POSTED" },
-        });
-      }
 
       // Non-critical: Notify carrier users (fire-and-forget, outside transaction)
       const carrierUsers = await db.user.findMany({

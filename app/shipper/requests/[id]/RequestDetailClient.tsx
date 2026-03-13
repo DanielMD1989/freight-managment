@@ -122,7 +122,7 @@ export default function RequestDetailClient({ request }: Props) {
       const response = await csrfFetch(
         `/api/load-requests/${request.id}/respond`,
         {
-          method: "PUT",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "APPROVE",
@@ -151,7 +151,7 @@ export default function RequestDetailClient({ request }: Props) {
       const response = await csrfFetch(
         `/api/load-requests/${request.id}/respond`,
         {
-          method: "PUT",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "REJECT",

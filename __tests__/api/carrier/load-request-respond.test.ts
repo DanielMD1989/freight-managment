@@ -598,4 +598,414 @@ describe("Load Request Respond", () => {
       expect(data.error).toContain("already been expired");
     });
   });
+
+  // ─── G-M18-2: Load status guard on APPROVE ──────────────────────────────────
+
+  describe("G-M18-2: Load status guard on APPROVE", () => {
+    it("APPROVE when load is CANCELLED → 400", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "CANCELLED", assignedTruckId: null },
+      });
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(400);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/no longer available/i);
+    });
+
+    it("APPROVE when load is ASSIGNED → 400", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "ASSIGNED", assignedTruckId: "some-other-truck" },
+      });
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(400);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/no longer available/i);
+    });
+
+    it("APPROVE when load is COMPLETED → 400", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "COMPLETED", assignedTruckId: null },
+      });
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(400);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/no longer available/i);
+    });
+
+    it("REJECT still works when load is CANCELLED (no load guard on REJECT)", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "CANCELLED", assignedTruckId: null },
+      });
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "REJECT" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ─── G-M18-3: Active trip guard on APPROVE ──────────────────────────────────
+
+  describe("G-M18-3: Active trip guard on APPROVE", () => {
+    it("APPROVE when truck has active trip (IN_TRANSIT) → 409", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      // Create an active trip for this truck
+      await db.trip.create({
+        data: {
+          id: "active-trip-m18-3",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "IN_TRANSIT",
+          pickupCity: "Addis Ababa",
+          deliveryCity: "Dire Dawa",
+        },
+      });
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(409);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/active trip/i);
+
+      // Cleanup
+      await db.trip.delete({ where: { id: "active-trip-m18-3" } });
+    });
+
+    it("APPROVE when truck has EXCEPTION trip → 409", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      await db.trip.create({
+        data: {
+          id: "exception-trip-m18-3",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+          pickupCity: "Addis Ababa",
+          deliveryCity: "Dire Dawa",
+        },
+      });
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(409);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/active trip/i);
+
+      // Cleanup
+      await db.trip.delete({ where: { id: "exception-trip-m18-3" } });
+    });
+
+    it("APPROVE when truck has COMPLETED trip → 200 (not active)", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      await db.trip.create({
+        data: {
+          id: "completed-trip-m18-3",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "COMPLETED",
+          pickupCity: "Addis Ababa",
+          deliveryCity: "Dire Dawa",
+        },
+      });
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(200);
+
+      // Cleanup
+      await db.trip.delete({ where: { id: "completed-trip-m18-3" } });
+    });
+  });
+
+  // ─── G-M18-4: Wallet gate on shipper APPROVE ───────────────────────────────
+
+  describe("G-M18-4: Wallet gate on shipper APPROVE", () => {
+    it("APPROVE when shipper below minimum balance → 402", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      // Set shipper wallet below minimum
+      await db.financialAccount.update({
+        where: { id: seed.shipperWallet.id },
+        data: { balance: 0, minimumBalance: 500 },
+      });
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(402);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/wallet/i);
+
+      // Restore wallet
+      await db.financialAccount.update({
+        where: { id: seed.shipperWallet.id },
+        data: { balance: 10000, minimumBalance: 0 },
+      });
+    });
+
+    it("REJECT succeeds even when shipper below minimum balance", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      // Set shipper wallet below minimum
+      await db.financialAccount.update({
+        where: { id: seed.shipperWallet.id },
+        data: { balance: 0, minimumBalance: 500 },
+      });
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "REJECT" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(200);
+
+      // Restore wallet
+      await db.financialAccount.update({
+        where: { id: seed.shipperWallet.id },
+        data: { balance: 10000, minimumBalance: 0 },
+      });
+    });
+
+    it("Admin bypasses wallet gate on APPROVE", async () => {
+      setAuthSession(adminSession);
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      // Set shipper wallet below minimum
+      await db.financialAccount.update({
+        where: { id: seed.shipperWallet.id },
+        data: { balance: 0, minimumBalance: 500 },
+      });
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(200);
+
+      // Restore wallet
+      await db.financialAccount.update({
+        where: { id: seed.shipperWallet.id },
+        data: { balance: 10000, minimumBalance: 0 },
+      });
+    });
+  });
+
+  // ─── G-M18-5: DISPATCHER blocked ───────────────────────────────────────────
+
+  describe("G-M18-5: DISPATCHER cannot respond", () => {
+    it("DISPATCHER → 404", async () => {
+      const dispatcherSession = createMockSession({
+        userId: "dispatcher-user-m18",
+        email: "dispatcher@test.com",
+        role: "DISPATCHER",
+        organizationId: "dispatcher-org-1",
+      });
+      setAuthSession(dispatcherSession);
+
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ─── G-M18-6: REJECT atomicity — load reversion ───────────────────────────
+
+  describe("G-M18-6: REJECT load reversion atomicity", () => {
+    it("REJECT with zero remaining requests reverts SEARCHING → POSTED", async () => {
+      // Use a dedicated load to avoid interference from other tests' load requests
+      const isolatedLoad = await db.load.create({
+        data: {
+          id: "m18-6-isolated-load",
+          status: "SEARCHING",
+          pickupCity: "Addis Ababa",
+          deliveryCity: "Dire Dawa",
+          pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 5000,
+          cargoDescription: "Isolated load for M18-6",
+          shipperId: seed.shipperOrg.id,
+          createdById: seed.shipperUser.id,
+          postedAt: new Date(),
+        },
+      });
+
+      // Only one request on this load — rejecting it should revert to POSTED
+      const lr = await createLoadRequest({
+        loadId: isolatedLoad.id,
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "REJECT" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(200);
+
+      const updatedLoad = await db.load.findUnique({
+        where: { id: isolatedLoad.id },
+      });
+      expect(updatedLoad.status).toBe("POSTED");
+    });
+
+    it("REJECT with other PENDING requests does NOT revert load", async () => {
+      // Use a dedicated load to avoid interference
+      const isolatedLoad2 = await db.load.create({
+        data: {
+          id: "m18-6-isolated-load-2",
+          status: "SEARCHING",
+          pickupCity: "Addis Ababa",
+          deliveryCity: "Dire Dawa",
+          pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 5000,
+          cargoDescription: "Isolated load 2 for M18-6",
+          shipperId: seed.shipperOrg.id,
+          createdById: seed.shipperUser.id,
+          postedAt: new Date(),
+        },
+      });
+
+      const lr1 = await createLoadRequest({ loadId: isolatedLoad2.id });
+      // Second competing request on same load
+      await db.loadRequest.create({
+        data: {
+          id: "competing-lr-m18-6",
+          loadId: isolatedLoad2.id,
+          truckId: "some-other-truck-m18",
+          carrierId: "some-other-carrier-m18",
+          shipperId: seed.shipperOrg.id,
+          requestedById: seed.carrierUser.id,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          status: "PENDING",
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr1.id}/respond`,
+        { body: { action: "REJECT" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr1.id });
+      expect(res.status).toBe(200);
+
+      const updatedLoad = await db.load.findUnique({
+        where: { id: isolatedLoad2.id },
+      });
+      // Load stays SEARCHING because competing request is still PENDING
+      expect(updatedLoad.status).toBe("SEARCHING");
+    });
+  });
 });
