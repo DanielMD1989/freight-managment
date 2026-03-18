@@ -5,7 +5,7 @@
  * G-M21-9: Trip.loadId @unique → nullable; cancelled trips release loadId for re-assignment
  * G-M21-2: Hardware/batch GPS positions now set tripId; deductServiceFee OR fallback
  * G-M21-3: GPS positions linked during DELIVERED status (not just IN_TRANSIT)
- * G-M21-7: DELIVERED→EXCEPTION transition (state machine + POD timeout cron)
+ * G-M21-7: Delivery completion paths — shipper confirm without POD + 48h auto-close cron
  * G-M21-8: SERVICE_FEE_FAILED admin notification on fee failure
  */
 
@@ -27,6 +27,10 @@ setupAllMocks();
 // Import handlers AFTER mocks
 const { POST: cancelTrip } = require("@/app/api/trips/[tripId]/cancel/route");
 const { PATCH: updateTrip } = require("@/app/api/trips/[tripId]/route");
+const {
+  POST: confirmDelivery,
+} = require("@/app/api/trips/[tripId]/confirm/route");
+const { POST: tripMonitorCron } = require("@/app/api/cron/trip-monitor/route");
 
 // Import state machine directly (not mocked)
 import { TripStatus } from "@/lib/tripStateMachine";
@@ -329,6 +333,292 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
         "utf8"
       );
       expect(podSource).toContain("SERVICE_FEE_FAILED");
+    });
+  });
+
+  // ── G-M21-7: Delivery Completion Paths (Blueprint v1.5) ──────────────────
+
+  describe("G-M21-7: Delivery completion paths", () => {
+    it("T-M21-7-1: Shipper confirms delivery without carrier POD → COMPLETED", async () => {
+      const tripId = "trip-m21-7-1";
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId: "load-m21-7-1",
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: new Date(),
+          shipperConfirmed: false,
+        },
+      });
+      db.load.create({
+        data: {
+          id: "load-m21-7-1",
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: false,
+        },
+      });
+
+      const shipperSession = createMockSession({
+        userId: "shipper-user-1",
+        email: "shipper@test.com",
+        role: "SHIPPER",
+        organizationId: seed.shipperOrg.id,
+      });
+      setAuthSession(shipperSession);
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/confirm`,
+        { body: { notes: "Goods received in good condition" } }
+      );
+      const res = await callHandler(confirmDelivery, req, { tripId });
+      expect(res.status).toBe(200);
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("COMPLETED");
+      expect(trip.shipperConfirmed).toBe(true);
+      expect(trip.shipperConfirmedAt).toBeTruthy();
+    });
+
+    it("T-M21-7-2: Shipper confirms with POD uploaded → no extra no-POD notification code path", async () => {
+      const tripId = "trip-m21-7-2";
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId: "load-m21-7-2",
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: new Date(),
+          shipperConfirmed: false,
+        },
+      });
+      db.load.create({
+        data: {
+          id: "load-m21-7-2",
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: true,
+        },
+      });
+
+      const shipperSession = createMockSession({
+        userId: "shipper-user-1",
+        email: "shipper@test.com",
+        role: "SHIPPER",
+        organizationId: seed.shipperOrg.id,
+      });
+      setAuthSession(shipperSession);
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/confirm`,
+        { body: {} }
+      );
+      const res = await callHandler(confirmDelivery, req, { tripId });
+      expect(res.status).toBe(200);
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("COMPLETED");
+      expect(trip.shipperConfirmed).toBe(true);
+    });
+
+    it("T-M21-7-3: Auto-close cron closes DELIVERED trip > 48h without POD/confirmation", async () => {
+      const tripId = "trip-m21-7-3";
+      const loadId = "load-m21-7-3";
+      const oldDate = new Date(Date.now() - 49 * 60 * 60 * 1000); // 49h ago
+
+      db.load.create({
+        data: {
+          id: loadId,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: false,
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: oldDate,
+          shipperConfirmed: false,
+        },
+      });
+
+      // Set CRON_SECRET for auth
+      process.env.CRON_SECRET = "test-cron-secret";
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/cron/trip-monitor",
+        {
+          headers: { Authorization: "Bearer test-cron-secret" },
+        }
+      );
+      const res = await callHandler(tripMonitorCron, req, {});
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.autoClosedTrips).toBeGreaterThanOrEqual(1);
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("COMPLETED");
+      expect(trip.autoClosedAt).toBeTruthy();
+      expect(trip.completedAt).toBeTruthy();
+    });
+
+    it("T-M21-7-4: Auto-close with fee failure → trip still closes, settlementStatus stays PENDING", async () => {
+      const tripId = "trip-m21-7-4";
+      const loadId = "load-m21-7-4";
+      const oldDate = new Date(Date.now() - 50 * 60 * 60 * 1000);
+
+      db.load.create({
+        data: {
+          id: loadId,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: false,
+          settlementStatus: "PENDING",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: oldDate,
+          shipperConfirmed: false,
+        },
+      });
+
+      process.env.CRON_SECRET = "test-cron-secret";
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/cron/trip-monitor",
+        {
+          headers: { Authorization: "Bearer test-cron-secret" },
+        }
+      );
+      const res = await callHandler(tripMonitorCron, req, {});
+      expect(res.status).toBe(200);
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("COMPLETED");
+      expect(trip.autoClosedAt).toBeTruthy();
+
+      // Fee failed but trip still closed — settlementStatus untouched
+      const load = await db.load.findUnique({ where: { id: loadId } });
+      expect(load.status).toBe("COMPLETED");
+      expect(load.settlementStatus).toBe("PENDING");
+    });
+
+    it("T-M21-7-5: Trip DELIVERED < 48h → cron does not touch it", async () => {
+      const tripId = "trip-m21-7-5";
+      const loadId = "load-m21-7-5";
+      const recentDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h ago
+
+      db.load.create({
+        data: {
+          id: loadId,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: false,
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: recentDate,
+          shipperConfirmed: false,
+        },
+      });
+
+      process.env.CRON_SECRET = "test-cron-secret";
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/cron/trip-monitor",
+        {
+          headers: { Authorization: "Bearer test-cron-secret" },
+        }
+      );
+      await callHandler(tripMonitorCron, req, {});
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("DELIVERED"); // Unchanged
+      expect(trip.autoClosedAt).toBeUndefined();
+    });
+
+    it("T-M21-7-6: Trip DELIVERED > 48h but shipperConfirmed → cron skips", async () => {
+      const tripId = "trip-m21-7-6";
+      const loadId = "load-m21-7-6";
+      const oldDate = new Date(Date.now() - 50 * 60 * 60 * 1000);
+
+      db.load.create({
+        data: {
+          id: loadId,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: false,
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: oldDate,
+          shipperConfirmed: true, // Already confirmed
+        },
+      });
+
+      process.env.CRON_SECRET = "test-cron-secret";
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/cron/trip-monitor",
+        {
+          headers: { Authorization: "Bearer test-cron-secret" },
+        }
+      );
+      await callHandler(tripMonitorCron, req, {});
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("DELIVERED"); // Unchanged — already confirmed by shipper
+    });
+
+    it("T-M21-7-7: Cron query filters by podSubmitted=false (structural check)", async () => {
+      // The mock DB doesn't support nested relation filters (load: { podSubmitted: false }).
+      // Verify the cron source code contains the correct filter.
+      const fs = require("fs");
+      const source = fs.readFileSync(
+        "app/api/cron/trip-monitor/route.ts",
+        "utf8"
+      );
+      // The cron must filter for trips where load has no POD
+      expect(source).toContain("podSubmitted: false");
+      // And must filter for unconfirmed trips
+      expect(source).toContain("shipperConfirmed: false");
+      // And must use the 48h timeout
+      expect(source).toContain("DELIVERED_TIMEOUT_HOURS");
+      expect(source).toContain("deliveredAt:");
     });
   });
 });

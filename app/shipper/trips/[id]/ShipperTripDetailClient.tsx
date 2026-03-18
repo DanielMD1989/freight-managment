@@ -174,7 +174,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   const isCancelledTrip = trip.status === "CANCELLED";
   const hasPod = podDocuments.length > 0 || trip.podSubmitted;
   const needsConfirmation =
-    trip.status === "DELIVERED" && hasPod && !trip.shipperConfirmed;
+    trip.status === "DELIVERED" && !trip.shipperConfirmed;
 
   // Fetch POD documents on mount
   const fetchPodDocuments = useCallback(async () => {
@@ -998,8 +998,8 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
                 Confirm Delivery
               </h2>
               <p className="text-sm text-slate-500">
-                Confirming will complete the trip and release payment to the
-                carrier.
+                Confirming delivery will complete the trip. Your confirmation
+                serves as proof of acceptance.
               </p>
             </div>
             <div className="p-6">

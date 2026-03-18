@@ -415,10 +415,10 @@ describe("Trip Delivery Confirmation", () => {
     });
   });
 
-  // ─── POD Required ──────────────────────────────────────────────────────────
+  // ─── Blueprint v1.5: POD no longer required for shipper confirmation ──────
 
-  describe("POD Required", () => {
-    it("no POD submitted → 400", async () => {
+  describe("POD Not Required (v1.5)", () => {
+    it("no POD submitted → shipper can still confirm (200)", async () => {
       const req = createRequest(
         "POST",
         "http://localhost:3000/api/trips/no-pod-trip/confirm"
@@ -426,10 +426,8 @@ describe("Trip Delivery Confirmation", () => {
       const res = await callHandler(confirmDelivery, req, {
         tripId: "no-pod-trip",
       });
-      expect(res.status).toBe(400);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("POD");
+      // Blueprint v1.5: Shipper confirmation acts as proof of acceptance
+      expect(res.status).toBe(200);
     });
   });
 

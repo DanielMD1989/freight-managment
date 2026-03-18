@@ -50,9 +50,7 @@ export default function ShipperTripDetailsScreen() {
   if (isLoading || !trip) return <LoadingSpinner fullScreen />;
 
   const needsConfirmation =
-    trip.status === "DELIVERED" &&
-    (trip.load?.podSubmitted || (pods && pods.length > 0)) &&
-    !trip.shipperConfirmed;
+    trip.status === "DELIVERED" && !trip.shipperConfirmed;
 
   const isTerminal = trip.status === "DELIVERED" || trip.status === "COMPLETED";
 
@@ -131,8 +129,8 @@ export default function ShipperTripDetailsScreen() {
             <Text style={styles.confirmTitle}>Confirm Delivery Receipt</Text>
           </View>
           <Text style={styles.confirmMessage}>
-            The carrier has delivered and submitted proof of delivery. Please
-            review and confirm receipt.
+            The carrier has marked the delivery as complete. Please confirm
+            receipt to close the trip.
           </Text>
           <Button
             title="Confirm Delivery"

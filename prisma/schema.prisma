@@ -1062,8 +1062,9 @@ model Trip {
   startedAt   DateTime? // When carrier started trip (status -> PICKUP_PENDING)
   pickedUpAt  DateTime? // When load was picked up (status -> IN_TRANSIT)
   deliveredAt DateTime? // When load was delivered (status -> DELIVERED)
-  completedAt DateTime? // When POD confirmed (status -> COMPLETED)
-  exceptionAt DateTime? // When exception was raised (status -> EXCEPTION)
+  completedAt  DateTime? // When POD confirmed (status -> COMPLETED)
+  autoClosedAt DateTime? // Set by 48h auto-close cron
+  exceptionAt  DateTime? // When exception was raised (status -> EXCEPTION)
 
   // Delivery receiver info (captured when marking as DELIVERED)
   receiverName  String? // Name of person who received the delivery

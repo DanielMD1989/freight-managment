@@ -175,12 +175,24 @@ DRAFT → POSTED → SEARCHING / OFFERED → ASSIGNED → PICKUP_PENDING → IN_
 ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED → COMPLETED
 ```
 
-| Transition       | Actor                | Timestamp Set |
-| ---------------- | -------------------- | ------------- |
-| → PICKUP_PENDING | Carrier              | `startedAt`   |
-| → IN_TRANSIT     | Carrier              | `pickedUpAt`  |
-| → DELIVERED      | Carrier              | `deliveredAt` |
-| → COMPLETED      | Carrier + POD upload | `completedAt` |
+| Transition       | Actor                                                                     | Timestamp Set |
+| ---------------- | ------------------------------------------------------------------------- | ------------- |
+| → PICKUP_PENDING | Carrier                                                                   | `startedAt`   |
+| → IN_TRANSIT     | Carrier                                                                   | `pickedUpAt`  |
+| → DELIVERED      | Carrier                                                                   | `deliveredAt` |
+| → COMPLETED      | Carrier (POD upload), Shipper (delivery confirmation), or AUTO (48h cron) | `completedAt` |
+
+### Delivery Completion Paths
+
+Three paths can close a DELIVERED trip:
+
+1. **Carrier uploads POD** — carrier uploads photo/document proof. Existing flow unchanged.
+
+2. **Shipper confirms delivery** — shipper taps "Confirm Delivery" on mobile or web. No carrier POD required. Shipper's digital confirmation acts as proof of acceptance. Trip → COMPLETED immediately.
+
+3. **Auto-close after 48 hours** — if neither carrier POD nor shipper confirmation within 48 hours of DELIVERED status, cron automatically closes trip as COMPLETED. Notifies Admin, Dispatcher, Carrier, and Shipper. settlementStatus stays PENDING if fee collection fails — Admin resolves separately. Truck is always freed.
+
+> Carrier and shipper settle payments outside the platform. Late POD only affects platform fee calculation timing. Auto-close ensures trucks return to marketplace without Admin intervention.
 
 **Exception path (IN_TRANSIT only):**
 
@@ -302,6 +314,6 @@ Revenue     = Shipper Fee + Carrier Fee
 - At completion with no GPS data → corridor fallback
   - Admin alert
 
-_Blueprint version: 1.4_
+_Blueprint version: 1.5 — Delivery completion paths added: carrier POD, shipper confirmation without POD, 48h auto-close cron._
 
 ---

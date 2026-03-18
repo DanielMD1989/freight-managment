@@ -3,8 +3,9 @@
  *
  * POST /api/trips/[tripId]/confirm - Shipper confirms delivery
  *
- * After carrier uploads POD, shipper must confirm delivery
- * to complete the trip and trigger settlement
+ * Blueprint v1.5: Shipper confirmation acts as proof of delivery acceptance.
+ * POD upload by carrier is preferred but not required.
+ * Shipper's digital confirmation is sufficient to close the trip.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -115,14 +116,10 @@ export async function POST(
       );
     }
 
-    // Check if POD was submitted
+    // Blueprint v1.5: Shipper confirmation acts as proof of delivery acceptance.
+    // POD upload by carrier is preferred but not required.
+    // Shipper's digital confirmation is sufficient to close the trip.
     const hasPod = trip.podDocuments.length > 0 || trip.load?.podSubmitted;
-    if (!hasPod) {
-      return NextResponse.json(
-        { error: "Cannot confirm delivery - no POD has been submitted" },
-        { status: 400 }
-      );
-    }
 
     // CRITICAL FIX: Deduct service fee BEFORE transaction (blocking pattern)
     // Matches loads/[id]/status/route.ts which blocks completion on fee failure
@@ -309,6 +306,28 @@ export async function POST(
         message: `Shipper has confirmed delivery for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Settlement can now proceed.`,
         metadata: { tripId, loadId: tripLoadId },
       });
+    }
+
+    // G-M21-7: If shipper confirmed without carrier POD, notify both parties
+    if (!hasPod) {
+      if (trip.carrier?.id) {
+        notifyOrganization({
+          organizationId: trip.carrier.id,
+          type: NotificationType.DELIVERY_CONFIRMED,
+          title: "Delivery confirmed without POD",
+          message: `Shipper confirmed delivery of ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} without POD upload. Trip is now COMPLETED.`,
+          metadata: { tripId, loadId: tripLoadId },
+        }).catch(() => {});
+      }
+      if (trip.shipperId) {
+        notifyOrganization({
+          organizationId: trip.shipperId,
+          type: NotificationType.DELIVERY_CONFIRMED,
+          title: "Delivery confirmation recorded",
+          message: `Your confirmation for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} has been recorded. No carrier POD was uploaded — your confirmation serves as proof of acceptance.`,
+          metadata: { tripId, loadId: tripLoadId },
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({
