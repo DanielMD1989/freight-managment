@@ -209,6 +209,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // G-M21-9: loadId is nullable after cancellation, but active trips always have it.
+    // Capture as non-null for downstream usage (load sync, fee, notifications).
+    const tripLoadId = trip.loadId!;
+
     // Check carrier ownership first — return 404 for non-owned trips
     if (
       session.role === "CARRIER" &&
@@ -328,6 +332,8 @@ export async function PATCH(
           updateData.cancelledAt = new Date();
           updateData.trackingEnabled = false;
           updateData.cancelledBy = session.userId; // mirrors cancel route for auditability
+          // G-M21-9: release @unique so load can be re-assigned
+          (updateData as Record<string, unknown>).loadId = null;
           break;
       }
     }
@@ -339,11 +345,19 @@ export async function PATCH(
     > | null = null;
     if (validatedData.status === "COMPLETED") {
       try {
-        completionFeeResult = await deductServiceFee(trip.loadId);
+        completionFeeResult = await deductServiceFee(tripLoadId);
         if (
           !completionFeeResult.success &&
           completionFeeResult.error !== "Service fees already deducted"
         ) {
+          // G-M21-8: Notify admin of fee failure so they can intervene
+          createNotificationForRole({
+            role: "ADMIN",
+            type: NotificationType.SERVICE_FEE_FAILED,
+            title: "Service fee deduction failed",
+            message: `Fee deduction failed for trip ${tripId}: ${completionFeeResult.error}`,
+            metadata: { tripId, loadId: tripLoadId },
+          }).catch(() => {});
           return NextResponse.json(
             {
               error: "Cannot complete trip: fee deduction failed",
@@ -354,6 +368,14 @@ export async function PATCH(
         }
       } catch (feeErr: unknown) {
         console.error("Fee deduction failed on COMPLETED:", feeErr);
+        // G-M21-8: Notify admin of fee failure
+        createNotificationForRole({
+          role: "ADMIN",
+          type: NotificationType.SERVICE_FEE_FAILED,
+          title: "Service fee deduction failed",
+          message: `Fee deduction exception for trip ${tripId}: ${feeErr instanceof Error ? feeErr.message : "Unknown error"}`,
+          metadata: { tripId, loadId: tripLoadId },
+        }).catch(() => {});
         return NextResponse.json(
           { error: "Cannot complete trip: fee deduction failed" },
           { status: 400 }
@@ -429,7 +451,7 @@ export async function PATCH(
             // Blueprint §7: cancel reverts load to POSTED so shipper can find new carrier.
             // Also clears assignment fields — mirrors cancel route exactly.
             await tx.load.update({
-              where: { id: trip.loadId },
+              where: { id: tripLoadId },
               data: {
                 status: LoadStatus.POSTED,
                 assignedTruckId: null,
@@ -442,7 +464,7 @@ export async function PATCH(
             const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
             if (loadStatus) {
               await tx.load.update({
-                where: { id: trip.loadId },
+                where: { id: tripLoadId },
                 data: { status: loadStatus },
               });
               loadSynced = true;
@@ -453,7 +475,7 @@ export async function PATCH(
         // Create load event inside transaction
         await tx.loadEvent.create({
           data: {
-            loadId: trip.loadId,
+            loadId: tripLoadId,
             eventType: "TRIP_STATUS_UPDATED",
             description: `Trip status changed to ${validatedData.status}`,
             userId: session.userId,
@@ -503,7 +525,7 @@ export async function PATCH(
             completionFeeResult.totalPlatformFee === 0)
         ) {
           await tx.load.update({
-            where: { id: trip.loadId },
+            where: { id: tripLoadId },
             data: { settlementStatus: "PAID", settledAt: new Date() },
           });
         }
@@ -530,12 +552,12 @@ export async function PATCH(
     // Pattern mirrors BUG-R9-2 fix in loads/[id]/status/route.ts.
     if (validatedData.status === "CANCELLED") {
       const loadFeeStatus = await db.load.findUnique({
-        where: { id: trip.loadId },
+        where: { id: tripLoadId },
         select: { shipperFeeStatus: true },
       });
       if (loadFeeStatus?.shipperFeeStatus === "DEDUCTED") {
         try {
-          await refundServiceFee(trip.loadId);
+          await refundServiceFee(tripLoadId);
         } catch (refundError) {
           // Non-blocking: trip is already cancelled; ops team handles via audit log
           console.error("Refund failed after trip cancellation:", refundError);
@@ -548,7 +570,7 @@ export async function PATCH(
     // This ensures cache consistency: only invalidate when data is durably written
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
     if (loadSynced) {
-      await CacheInvalidation.load(trip.loadId, trip.shipperId);
+      await CacheInvalidation.load(tripLoadId, trip.shipperId);
     }
 
     // G-N3-1: PICKUP_PENDING → notify all active shipper users (carrier en route to pickup)
@@ -558,7 +580,7 @@ export async function PATCH(
         type: NotificationType.TRIP_STARTED,
         title: "Carrier En Route to Pickup",
         message: `Carrier is en route to pick up your load (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}).`,
-        metadata: { tripId, loadId: trip.loadId },
+        metadata: { tripId, loadId: tripLoadId },
       }).catch((err) =>
         console.error("PICKUP_PENDING notification failed:", err)
       );
@@ -571,7 +593,7 @@ export async function PATCH(
         type: NotificationType.TRIP_IN_TRANSIT,
         title: "Cargo In Transit",
         message: `Your cargo has been picked up and is now in transit (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}).`,
-        metadata: { tripId, loadId: trip.loadId },
+        metadata: { tripId, loadId: tripLoadId },
       }).catch((err) => console.error("IN_TRANSIT notification failed:", err));
     }
 
@@ -582,7 +604,7 @@ export async function PATCH(
         type: NotificationType.TRIP_DELIVERED,
         title: "Cargo Delivered",
         message: `Cargo has arrived at destination (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}). Please verify POD to complete the trip.`,
-        metadata: { tripId, loadId: trip.loadId },
+        metadata: { tripId, loadId: tripLoadId },
       }).catch((err) => console.error("DELIVERED notification failed:", err));
     }
 
@@ -594,7 +616,7 @@ export async function PATCH(
           type: NotificationType.TRIP_CANCELLED,
           title: "Trip Cancelled",
           message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been cancelled.`,
-          metadata: { tripId, loadId: trip.loadId },
+          metadata: { tripId, loadId: tripLoadId },
         }),
       ];
       if (isAdmin || isDispatcher) {
@@ -604,7 +626,7 @@ export async function PATCH(
             type: NotificationType.TRIP_CANCELLED,
             title: "Trip Cancelled",
             message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been cancelled.`,
-            metadata: { tripId, loadId: trip.loadId },
+            metadata: { tripId, loadId: tripLoadId },
           })
         );
       }
@@ -626,7 +648,7 @@ export async function PATCH(
           type: NotificationType.DELIVERY_CONFIRMED,
           title: "Trip Completed",
           message: `Trip from ${updatedTrip.load?.pickupCity} to ${updatedTrip.load?.deliveryCity} has been completed by the carrier.`,
-          metadata: { tripId, loadId: trip.loadId },
+          metadata: { tripId, loadId: tripLoadId },
         }).catch((err) =>
           console.error("Failed to notify shipper of completion:", err)
         );
@@ -645,7 +667,7 @@ export async function PATCH(
           message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has entered EXCEPTION state and requires admin resolution.`,
           metadata: {
             tripId,
-            loadId: trip.loadId,
+            loadId: tripLoadId,
             previousStatus: trip.status,
             raisedByRole: session.role,
           },
@@ -658,7 +680,7 @@ export async function PATCH(
           message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has entered EXCEPTION state and requires admin resolution.`,
           metadata: {
             tripId,
-            loadId: trip.loadId,
+            loadId: tripLoadId,
             previousStatus: trip.status,
             raisedByRole: session.role,
           },
@@ -674,7 +696,7 @@ export async function PATCH(
       const resolveMsg = `Exception for trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been resolved. New status: ${validatedData.status}.`;
       const resolveMeta = {
         tripId,
-        loadId: trip.loadId,
+        loadId: tripLoadId,
         newStatus: validatedData.status,
       };
       Promise.all([

@@ -96,11 +96,20 @@ async function postHandler(request: NextRequest) {
       );
     }
 
-    // Find active load (trip) for this truck
+    // Find active load (trip) for this truck (include DELIVERED for final-mile GPS linkage)
     const activeLoad = await db.load.findFirst({
       where: {
         assignedTruckId: data.truckId,
-        status: "IN_TRANSIT",
+        status: { in: ["IN_TRANSIT", "DELIVERED"] },
+      },
+      select: { id: true },
+    });
+
+    // G-M21-2: Find active trip for tripId linkage (batch GPS was missing tripId)
+    const activeTrip = await db.trip.findFirst({
+      where: {
+        truckId: data.truckId,
+        status: { in: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"] },
       },
       select: { id: true },
     });
@@ -123,6 +132,7 @@ async function postHandler(request: NextRequest) {
       accuracy: pos.accuracy,
       timestamp: new Date(pos.timestamp),
       loadId: activeLoad?.id || null,
+      tripId: activeTrip?.id || null,
     }));
 
     // HIGH FIX #1: Wrap GPS batch + truck update in transaction for atomicity

@@ -82,6 +82,9 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // G-M21-9: Active trips always have loadId; capture as non-null
+    const tripLoadId = trip.loadId!;
+
     // Check authorization BEFORE business logic to avoid leaking trip state
     const isCarrier =
       session.role === "CARRIER" && session.organizationId === trip.carrierId;
@@ -189,7 +192,7 @@ export async function POST(
       // Update Load model for backward compatibility
       // Always update to the most recent POD URL
       await tx.load.update({
-        where: { id: trip.loadId },
+        where: { id: tripLoadId },
         data: {
           podUrl, // Always use latest POD
           podSubmitted: true,
@@ -200,7 +203,7 @@ export async function POST(
       // Create load event
       await tx.loadEvent.create({
         data: {
-          loadId: trip.loadId,
+          loadId: tripLoadId,
           eventType: "POD_SUBMITTED",
           description: `Proof of Delivery uploaded: ${file.name}`,
           userId: session.userId,
@@ -217,7 +220,7 @@ export async function POST(
     });
 
     // TD-008 FIX: Invalidate cache after POD upload
-    await CacheInvalidation.load(trip.loadId, trip.load?.shipperId);
+    await CacheInvalidation.load(tripLoadId, trip.load?.shipperId);
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
 
     // G-A14-5: Notify ALL active shipper org users (not just first — take:1 removed).
@@ -228,7 +231,7 @@ export async function POST(
         type: NotificationType.POD_SUBMITTED,
         title: "Proof of Delivery Submitted",
         message: `Carrier has submitted POD for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Please verify and confirm delivery.`,
-        metadata: { tripId, loadId: trip.loadId },
+        metadata: { tripId, loadId: tripLoadId },
       }).catch((err) =>
         console.error("Failed to notify shipper of POD submission:", err)
       );

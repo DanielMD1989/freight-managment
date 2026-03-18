@@ -89,6 +89,9 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // G-M21-9: Capture loadId before transaction nulls it (active trips always have loadId)
+    const tripLoadId = trip.loadId!;
+
     // Cannot cancel COMPLETED, CANCELLED, or IN_TRANSIT trips
     if (trip.status === "COMPLETED") {
       return NextResponse.json(
@@ -153,6 +156,8 @@ export async function POST(
     // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
       // Update trip status to CANCELLED — include status guard to prevent race condition
+      // G-M21-9: Null loadId so the @unique constraint doesn't block re-assignment.
+      // tripLoadId (pre-update value) is captured in closure for load update + refund below.
       const updatedTrip = await tx.trip.update({
         where: {
           id: tripId,
@@ -166,12 +171,13 @@ export async function POST(
           cancelledBy: session.userId,
           cancelReason: validatedData.reason,
           trackingEnabled: false,
+          loadId: null,
         },
       });
 
       // H2 FIX: Update Load status based on who cancelled
       await tx.load.update({
-        where: { id: trip.loadId },
+        where: { id: tripLoadId },
         data: {
           status: loadStatusAfterCancel,
           assignedTruckId: null,
@@ -205,7 +211,7 @@ export async function POST(
       // Create load event inside transaction
       await tx.loadEvent.create({
         data: {
-          loadId: trip.loadId,
+          loadId: tripLoadId,
           eventType: "TRIP_CANCELLED",
           description: `Trip cancelled by ${cancelledByRole}. Load set to ${loadStatusAfterCancel}. Reason: ${validatedData.reason}`,
           userId: session.userId,
@@ -224,18 +230,18 @@ export async function POST(
 
     // Cache invalidation after transaction commits
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
-    await CacheInvalidation.load(trip.loadId, trip.shipperId);
+    await CacheInvalidation.load(tripLoadId, trip.shipperId);
 
     // Refund service fee if fees were already deducted before this cancellation.
     // refundServiceFee() owns its own $transaction — must run outside this route's tx.
     // Non-blocking: trip is already cancelled; ops team handles via audit log.
     const loadFeeStatus = await db.load.findUnique({
-      where: { id: trip.loadId },
+      where: { id: tripLoadId },
       select: { shipperFeeStatus: true },
     });
     if (loadFeeStatus?.shipperFeeStatus === "DEDUCTED") {
       try {
-        await refundServiceFee(trip.loadId);
+        await refundServiceFee(tripLoadId);
       } catch (refundError) {
         console.error("Refund failed after trip cancellation:", refundError);
       }
@@ -248,7 +254,7 @@ export async function POST(
     // G-N3-9: Use notifyOrganization() to reach ALL active org users (not just first).
 
     const cancelMsg = `${cancelledByRole} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`;
-    const cancelMeta = { tripId, loadId: trip.loadId };
+    const cancelMeta = { tripId, loadId: tripLoadId };
 
     // Notify shipper: when carrier, dispatcher, or admin cancels
     if (trip.shipperId) {

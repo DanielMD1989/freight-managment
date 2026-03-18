@@ -288,8 +288,8 @@ export default async function TripDetailPage({
     pickupDate:
       load?.pickupDate?.toISOString() || tripData.createdAt.toISOString(),
     deliveryDate: load?.deliveryDate?.toISOString() || null,
-    pickupAddress: tripData.pickupAddress || load?.pickupAddress,
-    deliveryAddress: tripData.deliveryAddress || load?.deliveryAddress,
+    pickupAddress: tripData.pickupAddress || load?.pickupAddress || null,
+    deliveryAddress: tripData.deliveryAddress || load?.deliveryAddress || null,
     pickupDockHours: load?.pickupDockHours || null,
     deliveryDockHours: load?.deliveryDockHours || null,
     cargoDescription: load?.cargoDescription || null,

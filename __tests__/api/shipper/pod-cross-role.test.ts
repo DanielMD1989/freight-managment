@@ -59,6 +59,8 @@ mockStorage();
 // POD-specific notifications mock
 jest.mock("@/lib/notifications", () => ({
   createNotification: jest.fn(async () => ({ id: "notif-1" })),
+  createNotificationForRole: jest.fn(async () => ({ id: "notif-role-1" })),
+  notifyOrganization: jest.fn(async () => {}),
   NotificationType: {
     LOAD_REQUEST: "LOAD_REQUEST",
     TRUCK_REQUEST: "TRUCK_REQUEST",
@@ -67,6 +69,8 @@ jest.mock("@/lib/notifications", () => ({
     POD_SUBMITTED: "POD_SUBMITTED",
     POD_VERIFIED: "POD_VERIFIED",
     SETTLEMENT_COMPLETE: "SETTLEMENT_COMPLETE",
+    DELIVERY_CONFIRMED: "DELIVERY_CONFIRMED",
+    SERVICE_FEE_FAILED: "SERVICE_FEE_FAILED",
   },
 }));
 

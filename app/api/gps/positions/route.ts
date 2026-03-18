@@ -237,11 +237,20 @@ async function postHandler(request: NextRequest) {
     const carrierId = device.truck.carrierId;
     const positionTimestamp = timestamp ? new Date(timestamp) : new Date();
 
-    // Find active load for this truck
+    // Find active load for this truck (include DELIVERED for final-mile GPS linkage)
     const activeLoad = await db.load.findFirst({
       where: {
         assignedTruckId: truckId,
-        status: "IN_TRANSIT",
+        status: { in: ["IN_TRANSIT", "DELIVERED"] },
+      },
+      select: { id: true },
+    });
+
+    // G-M21-2: Find active trip for tripId linkage (hardware GPS was missing tripId)
+    const activeTrip = await db.trip.findFirst({
+      where: {
+        truckId,
+        status: { in: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"] },
       },
       select: { id: true },
     });
@@ -260,6 +269,7 @@ async function postHandler(request: NextRequest) {
           altitude: altitude || null,
           timestamp: positionTimestamp,
           loadId: activeLoad?.id || null,
+          tripId: activeTrip?.id || null,
         },
       });
 

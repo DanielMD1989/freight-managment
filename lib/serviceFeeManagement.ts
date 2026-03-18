@@ -241,8 +241,14 @@ export async function deductServiceFee(
     });
 
     if (trip) {
+      // G-M21-2: OR fallback — hardware/batch GPS positions have loadId but no tripId.
+      // Branch 1: positions with tripId (trip-scoped endpoint).
+      // Branch 2: positions with loadId but tripId=null (hardware/batch endpoints).
+      // Mutually exclusive — no double-counting possible.
       const positions = await db.gpsPosition.findMany({
-        where: { tripId: trip.id },
+        where: {
+          OR: [{ tripId: trip.id }, { loadId: load.id, tripId: null }],
+        },
         select: { latitude: true, longitude: true },
         orderBy: { timestamp: "asc" },
       });

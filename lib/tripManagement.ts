@@ -166,8 +166,10 @@ export async function updateTripStatus(
       data: updateData,
     });
 
-    // Sync status with load
-    await syncLoadStatus(trip.loadId, newStatus);
+    // Sync status with load (loadId is null for cancelled trips — skip sync)
+    if (trip.loadId) {
+      await syncLoadStatus(trip.loadId, newStatus);
+    }
 
     return updatedTrip;
   } catch (error) {

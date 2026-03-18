@@ -15,7 +15,7 @@ import { csrfFetch } from "@/lib/csrfFetch";
 
 interface Trip {
   id: string; // Trip ID
-  loadId: string; // Associated Load ID
+  loadId: string | null; // Associated Load ID (null for cancelled trips)
   referenceNumber: string;
   status: string;
   weight: number;

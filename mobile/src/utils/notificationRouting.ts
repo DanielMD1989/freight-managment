@@ -222,6 +222,10 @@ export function getNotificationRoute(
     case "TRUCK_RESUBMITTED":
       return isAdmin ? "/(admin)/verification" : null;
 
+    // ── Fee failure (M21) ───────────────────────────────────────────────────
+    case "SERVICE_FEE_FAILED":
+      return isAdmin ? "/(admin)/financials" : null;
+
     // ── Admin / bypass ───────────────────────────────────────────────────────
     case "BYPASS_WARNING":
       return isAdmin ? "/(admin)/users" : null;

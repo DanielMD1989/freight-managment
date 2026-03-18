@@ -11,7 +11,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { notifyOrganization, NotificationType } from "@/lib/notifications";
+import {
+  notifyOrganization,
+  createNotificationForRole,
+  NotificationType,
+} from "@/lib/notifications";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
@@ -92,6 +96,9 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // G-M21-9: Active trips always have loadId; capture as non-null
+    const tripLoadId = trip.loadId!;
+
     // Only DELIVERED trips can be confirmed
     if (trip.status !== "DELIVERED") {
       return NextResponse.json(
@@ -122,10 +129,18 @@ export async function POST(
     let serviceFeeResult: Awaited<ReturnType<typeof deductServiceFee>> | null =
       null;
     try {
-      serviceFeeResult = await deductServiceFee(trip.loadId);
+      serviceFeeResult = await deductServiceFee(tripLoadId);
       if (!serviceFeeResult.success) {
         // "Service fees already deducted" is treated as success (idempotency)
         if (serviceFeeResult.error !== "Service fees already deducted") {
+          // G-M21-8: Notify admin of fee failure
+          createNotificationForRole({
+            role: "ADMIN",
+            type: NotificationType.SERVICE_FEE_FAILED,
+            title: "Service fee deduction failed",
+            message: `Fee deduction failed on confirm for trip ${tripId}: ${serviceFeeResult.error}`,
+            metadata: { tripId, loadId: tripLoadId },
+          }).catch(() => {});
           return NextResponse.json(
             {
               error: "Cannot confirm delivery: fee deduction failed",
@@ -137,6 +152,14 @@ export async function POST(
       }
     } catch (feeError: unknown) {
       console.error("Service fee deduction exception on confirm:", feeError);
+      // G-M21-8: Notify admin of fee failure
+      createNotificationForRole({
+        role: "ADMIN",
+        type: NotificationType.SERVICE_FEE_FAILED,
+        title: "Service fee deduction failed",
+        message: `Fee deduction exception on confirm for trip ${tripId}: ${feeError instanceof Error ? feeError.message : "Unknown error"}`,
+        metadata: { tripId, loadId: tripLoadId },
+      }).catch(() => {});
       return NextResponse.json(
         {
           error: "Cannot confirm delivery: fee deduction failed",
@@ -179,7 +202,7 @@ export async function POST(
 
       // Update Load model for backward compatibility
       await tx.load.update({
-        where: { id: trip.loadId },
+        where: { id: tripLoadId },
         data: {
           status: "COMPLETED",
           podVerified: true,
@@ -190,7 +213,7 @@ export async function POST(
       // Create load event inside transaction
       await tx.loadEvent.create({
         data: {
-          loadId: trip.loadId,
+          loadId: tripLoadId,
           eventType: "DELIVERY_CONFIRMED",
           description: confirmationNotes
             ? `Delivery confirmed by shipper. Notes: ${confirmationNotes}`
@@ -235,7 +258,7 @@ export async function POST(
           serviceFeeResult.totalPlatformFee === 0);
       if (feeActuallySettled) {
         await tx.load.update({
-          where: { id: trip.loadId },
+          where: { id: tripLoadId },
           data: { settlementStatus: "PAID", settledAt: new Date() },
         });
       }
@@ -251,7 +274,7 @@ export async function POST(
       db.loadEvent
         .create({
           data: {
-            loadId: trip.loadId,
+            loadId: tripLoadId,
             eventType: "SERVICE_FEE_DEDUCTED",
             description: `Service fee deducted on delivery confirmation: Shipper ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier ${serviceFeeResult.carrierFee.toFixed(2)} ETB`,
             userId: session.userId,
@@ -275,7 +298,7 @@ export async function POST(
       trip.carrier?.id || "",
       trip.shipperId || ""
     );
-    await CacheInvalidation.load(trip.loadId, trip.shipperId || "");
+    await CacheInvalidation.load(tripLoadId, trip.shipperId || "");
 
     // G-N3-8: Notify ALL active carrier org users that delivery has been confirmed (not just first)
     if (trip.carrier?.id) {
@@ -284,7 +307,7 @@ export async function POST(
         type: NotificationType.POD_VERIFIED,
         title: "Delivery Confirmed",
         message: `Shipper has confirmed delivery for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Settlement can now proceed.`,
-        metadata: { tripId, loadId: trip.loadId },
+        metadata: { tripId, loadId: tripLoadId },
       });
     }
 

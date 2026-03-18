@@ -243,9 +243,15 @@ export async function POST(request: NextRequest) {
 
     // H17 FIX: Wrap trip creation in transaction to prevent duplicates
     const trip = await db.$transaction(async (tx) => {
-      // Check for existing trip inside transaction
-      const existingTrip = await tx.trip.findUnique({
-        where: { loadId: validatedData.loadId },
+      // G-M21-9: Clear orphaned cancelled trip loadId so @unique doesn't block re-assignment
+      await tx.trip.updateMany({
+        where: { loadId: validatedData.loadId, status: "CANCELLED" },
+        data: { loadId: null },
+      });
+
+      // Check for existing active trip inside transaction
+      const existingTrip = await tx.trip.findFirst({
+        where: { loadId: validatedData.loadId, status: { not: "CANCELLED" } },
       });
       if (existingTrip) {
         throw new Error("TRIP_ALREADY_EXISTS");

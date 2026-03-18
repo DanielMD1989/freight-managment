@@ -11,6 +11,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
 import {
   createNotification,
+  createNotificationForRole,
   notifyOrganization,
   NotificationType,
 } from "@/lib/notifications";
@@ -322,6 +323,14 @@ export async function PUT(
       !feeResult.success &&
       feeResult.error !== "Service fees already deducted"
     ) {
+      // G-M21-8: Notify admin of fee failure
+      createNotificationForRole({
+        role: "ADMIN",
+        type: NotificationType.SERVICE_FEE_FAILED,
+        title: "Service fee deduction failed",
+        message: `Fee deduction failed on POD verification for load ${loadId}: ${feeResult.error}`,
+        metadata: { loadId },
+      }).catch(() => {});
       return NextResponse.json(
         {
           error: "Cannot verify POD: fee deduction failed",

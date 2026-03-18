@@ -259,6 +259,12 @@ export async function POST(
           },
         });
 
+        // G-M21-9: Clear orphaned cancelled trip loadId so @unique doesn't block re-assignment
+        await tx.trip.updateMany({
+          where: { loadId: loadId, status: "CANCELLED" },
+          data: { loadId: null },
+        });
+
         // Create Trip record inside transaction (atomic with assignment)
         const trackingUrl = `trip-${loadId.slice(-6)}-${crypto.randomBytes(12).toString("hex")}`;
 

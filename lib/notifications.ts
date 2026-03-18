@@ -93,6 +93,9 @@ export const NotificationType = {
 
   // GPS Tracking (§11)
   GPS_NO_DATA: "GPS_NO_DATA",
+
+  // Fee failure (M21)
+  SERVICE_FEE_FAILED: "SERVICE_FEE_FAILED",
 } as const;
 
 /**
