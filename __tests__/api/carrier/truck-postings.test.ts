@@ -41,6 +41,7 @@ import {
   mockRbac,
   mockApiErrors,
   mockLogger,
+  createGpsDeviceForTruck,
   SeedData,
 } from "../../utils/routeTestUtils";
 
@@ -193,6 +194,7 @@ describe("Carrier Truck Postings", () => {
           approvalStatus: "APPROVED",
         },
       });
+      await createGpsDeviceForTruck(freshTruck.id);
 
       const req = createRequest(
         "POST",
@@ -304,6 +306,7 @@ describe("Carrier Truck Postings", () => {
           approvalStatus: "APPROVED",
         },
       });
+      await createGpsDeviceForTruck(otherOrgTruck.id);
 
       const req = createRequest(
         "POST",
@@ -424,6 +427,7 @@ describe("Carrier Truck Postings", () => {
           approvalStatus: "APPROVED",
         },
       });
+      await createGpsDeviceForTruck(freshTruck2.id);
 
       const req = createRequest(
         "POST",

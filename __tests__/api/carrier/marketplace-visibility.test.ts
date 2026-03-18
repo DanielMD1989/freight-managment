@@ -49,6 +49,7 @@ import {
   mockLoadStateMachine,
   mockServiceFee,
   SeedData,
+  createGpsDeviceForTruck,
 } from "../../utils/routeTestUtils";
 
 // matchingEngine is NOT mocked here so findMatchingTrucksForLoad runs real logic
@@ -656,6 +657,11 @@ describe("Marketplace Visibility (U5)", () => {
         carrierId: "carrier-org-u5",
         isAvailable: false,
         approvalStatus: "APPROVED",
+        gpsDeviceId: "gps-mv12",
+      } as any);
+      jest.spyOn(db.gpsDevice, "findUnique").mockResolvedValueOnce({
+        id: "gps-mv12",
+        status: "ACTIVE",
       } as any);
       jest
         .spyOn(db.truckPosting, "findFirst")
@@ -698,6 +704,11 @@ describe("Marketplace Visibility (U5)", () => {
         carrierId: "carrier-org-u5",
         isAvailable: false,
         approvalStatus: "APPROVED",
+        gpsDeviceId: "gps-mv13",
+      } as any);
+      jest.spyOn(db.gpsDevice, "findUnique").mockResolvedValueOnce({
+        id: "gps-mv13",
+        status: "ACTIVE",
       } as any);
       jest
         .spyOn(db.truckPosting, "findFirst")

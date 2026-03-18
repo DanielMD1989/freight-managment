@@ -46,6 +46,7 @@ import {
   notifyOrganization,
   NotificationType,
 } from "./notifications";
+import { calculateTripDistance, type GpsPosition } from "./gpsQuery";
 
 // Result interfaces
 export interface ServiceFeeDeductResult {
@@ -226,19 +227,75 @@ export async function deductServiceFee(
     };
   }
 
+  // §11 GPS Tracking Policy: Calculate actualTripKm from GPS positions if not already set.
+  // This runs INSIDE deductServiceFee() before billing — single source of truth for GPS distance.
+  let gpsCalculatedKm: number | null = null;
+  if (load.actualTripKm == null) {
+    const trip = await db.trip.findFirst({
+      where: {
+        loadId: load.id,
+        status: { in: ["COMPLETED", "CANCELLED"] },
+      },
+      select: { id: true },
+      orderBy: { completedAt: "desc" },
+    });
+
+    if (trip) {
+      const positions = await db.gpsPosition.findMany({
+        where: { tripId: trip.id },
+        select: { latitude: true, longitude: true },
+        orderBy: { timestamp: "asc" },
+      });
+
+      if (positions.length > 0) {
+        // Calculate Haversine sum and persist to Load
+        gpsCalculatedKm = calculateTripDistance(
+          positions.map((p) => ({
+            ...p,
+            latitude: Number(p.latitude),
+            longitude: Number(p.longitude),
+          })) as GpsPosition[]
+        );
+        await db.load.update({
+          where: { id: load.id },
+          data: { actualTripKm: gpsCalculatedKm },
+        });
+      } else {
+        // Zero GPS data — notify admin, corridor fallback will be used
+        createNotificationForRole({
+          role: "ADMIN",
+          type: NotificationType.GPS_NO_DATA,
+          title: "Trip completed with no GPS data",
+          message: `Trip ${trip.id} for load ${load.pickupCity ?? "?"}→${load.deliveryCity ?? "?"} completed without GPS tracking data. Fees calculated using corridor distance ${corridor.distanceKm} km.`,
+          metadata: {
+            tripId: trip.id,
+            loadId: load.id,
+            corridorDistanceKm: Number(corridor.distanceKm),
+          },
+        }).catch(() => {});
+      }
+    }
+  }
+
   // Calculate fees for both parties
   // Blueprint §8: billing distance = actualTripKm (GPS-recorded) if available,
   // else corridor.distanceKm (authoritative route baseline).
   // estimatedTripKm and tripKm are NOT used for billing.
+  const resolvedActualKm =
+    gpsCalculatedKm != null
+      ? gpsCalculatedKm
+      : load.actualTripKm != null
+        ? Number(load.actualTripKm)
+        : null;
   const distanceKm =
-    load.actualTripKm && Number(load.actualTripKm) > 0
-      ? Number(load.actualTripKm)
+    resolvedActualKm != null && resolvedActualKm > 0
+      ? resolvedActualKm
       : Number(corridor.distanceKm) > 0
         ? Number(corridor.distanceKm)
         : 0;
 
   const distanceSource =
-    load.actualTripKm && Number(load.actualTripKm) > 0
+    resolvedActualKm != null && resolvedActualKm > 0
       ? "actualTripKm (GPS)"
       : "corridor.distanceKm";
 

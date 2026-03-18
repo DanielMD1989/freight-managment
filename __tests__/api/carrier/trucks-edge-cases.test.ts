@@ -371,7 +371,7 @@ describe("Carrier Truck Edge Cases", () => {
       setAuthSession(carrierSession);
     });
 
-    it("returns truck with gpsDevice=null", async () => {
+    it("returns truck with gpsDevice defined (seed truck has GPS device)", async () => {
       const req = createRequest(
         "GET",
         `http://localhost:3000/api/trucks/${seed.truck.id}`
@@ -379,7 +379,8 @@ describe("Carrier Truck Edge Cases", () => {
       const res = await callHandler(getTruck, req, { id: seed.truck.id });
       expect(res.status).toBe(200);
       const data = await parseResponse(res);
-      expect(data.gpsDevice).toBeNull();
+      // Seed truck now has a GPS device (§11 GPS Tracking Policy)
+      expect(data.gpsDevice).toBeDefined();
     });
   });
 

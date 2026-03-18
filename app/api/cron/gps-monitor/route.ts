@@ -14,6 +14,11 @@ import { pollAllGpsDevices, checkForOfflineTrucks } from "@/lib/gpsMonitoring";
 import { triggerGpsOfflineAlerts } from "@/lib/gpsAlerts";
 import { checkAllGeofenceEvents } from "@/lib/geofenceNotifications";
 import { logger } from "@/lib/logger";
+import { db } from "@/lib/db";
+import {
+  createNotificationForRole,
+  NotificationType,
+} from "@/lib/notifications";
 
 /**
  * GPS monitoring cron endpoint
@@ -68,12 +73,68 @@ export async function POST(request: NextRequest) {
       geofenceNotifications,
     });
 
+    // §11 GPS Tracking Policy: Alert admin about active postings without GPS device.
+    // Deduplicated: max 1 notification per posting per 24h.
+    let gpsPostingAlerts = 0;
+    try {
+      const postingsWithoutGps = await db.truckPosting.findMany({
+        where: {
+          status: "ACTIVE",
+          truck: {
+            OR: [
+              { gpsDeviceId: null },
+              { gpsDevice: { status: { not: "ACTIVE" } } },
+            ],
+          },
+        },
+        select: {
+          id: true,
+          truck: {
+            select: {
+              id: true,
+              licensePlate: true,
+              carrierId: true,
+            },
+          },
+        },
+      });
+
+      const oneDayAgo = new Date(Date.now() - 86_400_000);
+      for (const posting of postingsWithoutGps) {
+        // Deduplicate: check if alert already sent in last 24h for this posting
+        const existing = await db.notification.findFirst({
+          where: {
+            type: NotificationType.GPS_NO_DATA,
+            metadata: { path: ["truckPostingId"], equals: posting.id },
+            createdAt: { gte: oneDayAgo },
+          },
+        });
+        if (!existing) {
+          await createNotificationForRole({
+            role: "ADMIN",
+            type: NotificationType.GPS_NO_DATA,
+            title: "Active posting without GPS device",
+            message: `Truck ${posting.truck?.licensePlate ?? "unknown"} has an active marketplace posting but no GPS device registered. Tracking will not be available for loads accepted by this truck.`,
+            metadata: {
+              truckPostingId: posting.id,
+              truckId: posting.truck?.id,
+              licensePlate: posting.truck?.licensePlate,
+            },
+          });
+          gpsPostingAlerts++;
+        }
+      }
+    } catch (err) {
+      logger.error("[GPS Monitor] GPS posting alert error:", { error: err });
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       polling: pollingSummary,
       offlineAlerts: offlineTruckIds.length,
       geofenceNotifications,
+      gpsPostingAlerts,
     });
   } catch (error) {
     console.error("[GPS Monitor] Error:", error);

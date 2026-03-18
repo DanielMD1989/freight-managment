@@ -260,3 +260,48 @@ Revenue     = Shipper Fee + Carrier Fee
 | Platform-Wide Analytics | All financial, operational, and user data |
 
 ---
+
+## 11. GPS Tracking Policy
+
+### Two GPS Sources (Priority Order)
+
+1. **Hardware device (ELD/telematics)** — Primary.
+   Plugged into truck OBD port. Sends data via
+   POST /api/gps/positions. Automatic, continuous.
+2. **Mobile app GPS** — Fallback. Phase 2 implementation.
+   Carrier app sends location via
+   POST /api/tracking/ingest/batch.
+
+### GPS Requirement at Truck Posting (not Approval)
+
+- Admin approves truck documents → truck APPROVED
+  (no GPS required at this stage)
+- Carrier posts truck to marketplace →
+  system checks GPS device exists and status is ACTIVE
+- No active GPS device → posting BLOCKED:
+  "Register a GPS device before posting your truck"
+- Existing approvals never invalidated
+
+### actualTripKm Calculation at Completion
+
+- Calculated INSIDE deductServiceFee() before billing:
+  - If ANY GpsPosition records exist for the trip →
+    calculate Haversine sum → write to Load.actualTripKm
+    → use for billing
+  - If ZERO positions → actualTripKm stays null →
+    fall back to corridor.distanceKm →
+    Admin notified (never silent)
+- Fee priority: actualTripKm (GPS) →
+  corridor.distanceKm (planned) → Admin exception
+
+### Signal Loss Mid-Trip
+
+- Trip never blocked — operational continuity first
+- Admin + Dispatcher notified when truck on active
+  trip goes SIGNAL_LOST
+- At completion with no GPS data → corridor fallback
+  - Admin alert
+
+_Blueprint version: 1.4_
+
+---

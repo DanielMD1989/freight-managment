@@ -40,6 +40,12 @@ jest.mock("@/lib/db", () => ({
     organization: {
       findUnique: jest.fn(),
     },
+    trip: {
+      findFirst: jest.fn(),
+    },
+    gpsPosition: {
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   },
 }));
@@ -82,6 +88,9 @@ describe("Service Fee Notifications (G-W-N4-4, G-W-N4-5)", () => {
     jest.clearAllMocks();
     const notifications = require("@/lib/notifications");
     mockNotifyOrganization = notifications.notifyOrganization;
+    // Default return values for GPS distance query (§11)
+    mockDb.trip.findFirst.mockResolvedValue(null);
+    mockDb.gpsPosition.findMany.mockResolvedValue([]);
   });
 
   // ─── refundServiceFee ─────────────────────────────────────────────────────
@@ -335,12 +344,10 @@ describe("Service Fee Notifications (G-W-N4-4, G-W-N4-5)", () => {
         async (fn: (tx: any) => Promise<unknown>) => {
           const mockTx = {
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
             financialAccount: {

@@ -37,6 +37,7 @@ import {
   mockApiErrors,
   mockLogger,
   SeedData,
+  createGpsDeviceForTruck,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -235,6 +236,9 @@ describe("Multi-Truck Management — M12", () => {
       },
     });
 
+    // §11 GPS Tracking Policy: truck needs GPS device before posting
+    await createGpsDeviceForTruck(truckA.id);
+
     setAuthSession(carrierSession);
 
     // Post truck A — should succeed
@@ -303,6 +307,10 @@ describe("Multi-Truck Management — M12", () => {
         approvalStatus: "APPROVED",
       },
     });
+
+    // §11 GPS Tracking Policy: trucks need GPS devices before posting
+    await createGpsDeviceForTruck(truckC.id);
+    await createGpsDeviceForTruck(truckD.id);
 
     setAuthSession(carrierSession);
 

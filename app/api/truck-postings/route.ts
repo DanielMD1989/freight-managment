@@ -218,7 +218,12 @@ export async function POST(request: NextRequest) {
         // Validate truck exists and is approved
         db.truck.findUnique({
           where: { id: data.truckId },
-          select: { carrierId: true, isAvailable: true, approvalStatus: true },
+          select: {
+            carrierId: true,
+            isAvailable: true,
+            approvalStatus: true,
+            gpsDeviceId: true,
+          },
         }),
         // PHASE 2: Check for existing active posting (ONE_ACTIVE_POST_PER_TRUCK rule)
         db.truckPosting.findFirst({
@@ -269,6 +274,32 @@ export async function POST(request: NextRequest) {
           hint: "Please wait for admin approval before posting this truck",
         },
         { status: 403 }
+      );
+    }
+
+    // §11 GPS Tracking Policy: GPS device required at posting time (not at approval).
+    // Truck has a one-to-one gpsDevice relation via gpsDeviceId.
+    if (truck.gpsDeviceId) {
+      const gpsDevice = await db.gpsDevice.findUnique({
+        where: { id: truck.gpsDeviceId },
+        select: { status: true },
+      });
+      if (!gpsDevice || gpsDevice.status !== "ACTIVE") {
+        return NextResponse.json(
+          {
+            error:
+              "An active GPS device is required before posting your truck to the marketplace. Please register a GPS device for this truck.",
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "An active GPS device is required before posting your truck to the marketplace. Please register a GPS device for this truck.",
+        },
+        { status: 400 }
       );
     }
 

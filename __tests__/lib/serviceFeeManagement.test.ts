@@ -38,7 +38,41 @@ jest.mock("@/lib/db", () => ({
     organization: {
       findUnique: jest.fn(),
     },
+    trip: {
+      findFirst: jest.fn(),
+    },
+    gpsPosition: {
+      findMany: jest.fn(),
+    },
+    notification: {
+      findFirst: jest.fn(),
+    },
     $transaction: jest.fn(),
+  },
+}));
+
+// Mock gpsQuery
+jest.mock("@/lib/gpsQuery", () => ({
+  calculateTripDistance: jest.fn(
+    (positions: { latitude: number; longitude: number }[]) => {
+      // Simple mock: 10km per position pair
+      return positions.length > 1 ? (positions.length - 1) * 10 : 0;
+    }
+  ),
+}));
+
+// Mock notifications (fire-and-forget in serviceFeeManagement)
+jest.mock("@/lib/notifications", () => ({
+  createNotificationForRole: jest.fn().mockResolvedValue(undefined),
+  notifyOrganization: jest.fn().mockResolvedValue(undefined),
+  createNotification: jest.fn().mockResolvedValue(null),
+  NotificationType: {
+    GPS_NO_DATA: "GPS_NO_DATA",
+    PARTIAL_FEE_COLLECTION: "PARTIAL_FEE_COLLECTION",
+    SERVICE_FEE_DEDUCTED: "SERVICE_FEE_DEDUCTED",
+    SERVICE_FEE_REFUNDED: "SERVICE_FEE_REFUNDED",
+    LOW_BALANCE_WARNING: "LOW_BALANCE_WARNING",
+    EXCEPTION_CREATED: "EXCEPTION_CREATED",
   },
 }));
 
@@ -93,12 +127,24 @@ const mockDb = db as unknown as {
   journalEntry: {
     create: jest.Mock;
   };
+  trip: {
+    findFirst: jest.Mock;
+  };
+  gpsPosition: {
+    findMany: jest.Mock;
+  };
+  notification: {
+    findFirst: jest.Mock;
+  };
   $transaction: jest.Mock;
 };
 
 describe("lib/serviceFeeManagement", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: no trip found for GPS lookup (existing tests unaffected)
+    mockDb.trip.findFirst.mockResolvedValue(null);
+    mockDb.gpsPosition.findMany.mockResolvedValue([]);
   });
 
   // ============================================================================
@@ -347,6 +393,277 @@ describe("lib/serviceFeeManagement", () => {
       expect(result.success).toBe(true);
       expect(result.details?.shipper.walletDeducted).toBe(false);
       expect(result.details?.carrier.walletDeducted).toBe(true);
+    });
+
+    // T1: GPS positions exist → actualTripKm written, billing uses GPS distance
+    it("T1: should calculate actualTripKm from GPS positions and use for billing", async () => {
+      const mockCorridor = {
+        id: "corridor-1",
+        distanceKm: 100,
+        shipperPricePerKm: 5,
+        carrierPricePerKm: 3,
+        shipperPromoFlag: false,
+        carrierPromoFlag: false,
+        shipperPromoPct: null,
+        carrierPromoPct: null,
+        pricePerKm: 5,
+        promoFlag: false,
+        promoDiscountPct: null,
+      };
+
+      mockDb.load.findUnique.mockResolvedValue({
+        id: "load-1",
+        shipperId: "shipper-1",
+        corridorId: "corridor-1",
+        corridor: mockCorridor,
+        shipperFeeStatus: "PENDING",
+        carrierFeeStatus: "PENDING",
+        actualTripKm: null, // Not yet calculated
+        assignedTruck: {
+          carrierId: "carrier-1",
+          carrier: { id: "carrier-1", name: "Test Carrier" },
+        },
+        shipper: { id: "shipper-1", name: "Test Shipper" },
+        pickupLocation: null,
+        deliveryLocation: null,
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Hawassa",
+      });
+
+      // GPS: trip exists with positions
+      mockDb.trip.findFirst.mockResolvedValue({ id: "trip-1" });
+      mockDb.gpsPosition.findMany.mockResolvedValue([
+        { latitude: 9.02, longitude: 38.75 },
+        { latitude: 9.1, longitude: 38.8 },
+        { latitude: 7.06, longitude: 38.48 },
+      ]);
+      // load.update for actualTripKm write
+      mockDb.load.update.mockResolvedValue({});
+
+      mockDb.financialAccount.findFirst
+        .mockResolvedValueOnce({
+          id: "shipper-wallet",
+          balance: 10000,
+          minimumBalance: 0,
+        })
+        .mockResolvedValueOnce({
+          id: "carrier-wallet",
+          balance: 10000,
+          minimumBalance: 0,
+        })
+        .mockResolvedValueOnce({ id: "platform-account" });
+
+      mockDb.$transaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            financialAccount: {
+              findUnique: jest.fn().mockResolvedValue({ balance: 10000 }),
+              update: jest.fn().mockResolvedValue({ balance: 9000 }),
+            },
+            journalEntry: {
+              create: jest.fn().mockResolvedValue({ id: "journal-gps" }),
+            },
+            load: {
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
+              update: jest.fn().mockResolvedValue({}),
+            },
+          };
+          return fn(tx);
+        }
+      );
+
+      const result = await deductServiceFee("load-1");
+
+      expect(result.success).toBe(true);
+      // Verify actualTripKm was written to DB
+      expect(mockDb.load.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "load-1" },
+          data: expect.objectContaining({ actualTripKm: expect.any(Number) }),
+        })
+      );
+      // Trip was queried
+      expect(mockDb.trip.findFirst).toHaveBeenCalled();
+      expect(mockDb.gpsPosition.findMany).toHaveBeenCalled();
+    });
+
+    // T2: Zero GPS positions → corridor fallback + admin notification
+    it("T2: should fall back to corridor distance and notify admin when no GPS data", async () => {
+      const { createNotificationForRole } = require("@/lib/notifications");
+      const mockNotifyRole = createNotificationForRole as jest.Mock;
+
+      const mockCorridor = {
+        id: "corridor-1",
+        distanceKm: 200,
+        shipperPricePerKm: 5,
+        carrierPricePerKm: 3,
+        shipperPromoFlag: false,
+        carrierPromoFlag: false,
+        shipperPromoPct: null,
+        carrierPromoPct: null,
+        pricePerKm: 5,
+        promoFlag: false,
+        promoDiscountPct: null,
+      };
+
+      mockDb.load.findUnique.mockResolvedValue({
+        id: "load-1",
+        shipperId: "shipper-1",
+        corridorId: "corridor-1",
+        corridor: mockCorridor,
+        shipperFeeStatus: "PENDING",
+        carrierFeeStatus: "PENDING",
+        actualTripKm: null,
+        assignedTruck: {
+          carrierId: "carrier-1",
+          carrier: { id: "carrier-1", name: "Test Carrier" },
+        },
+        shipper: { id: "shipper-1", name: "Test Shipper" },
+        pickupLocation: null,
+        deliveryLocation: null,
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Hawassa",
+      });
+
+      // GPS: trip exists but zero positions
+      mockDb.trip.findFirst.mockResolvedValue({ id: "trip-1" });
+      mockDb.gpsPosition.findMany.mockResolvedValue([]);
+
+      mockDb.financialAccount.findFirst
+        .mockResolvedValueOnce({
+          id: "shipper-wallet",
+          balance: 10000,
+          minimumBalance: 0,
+        })
+        .mockResolvedValueOnce({
+          id: "carrier-wallet",
+          balance: 10000,
+          minimumBalance: 0,
+        })
+        .mockResolvedValueOnce({ id: "platform-account" });
+
+      mockDb.$transaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            financialAccount: {
+              findUnique: jest.fn().mockResolvedValue({ balance: 10000 }),
+              update: jest.fn().mockResolvedValue({ balance: 9000 }),
+            },
+            journalEntry: {
+              create: jest.fn().mockResolvedValue({ id: "journal-fallback" }),
+            },
+            load: {
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
+              update: jest.fn().mockResolvedValue({}),
+            },
+          };
+          return fn(tx);
+        }
+      );
+
+      const result = await deductServiceFee("load-1");
+
+      expect(result.success).toBe(true);
+      // actualTripKm NOT written (stays null)
+      // load.update should not have been called for actualTripKm before the transaction
+      const preTransactionUpdateCalls = mockDb.load.update.mock.calls.filter(
+        (call: unknown[]) =>
+          (call[0] as { data: { actualTripKm?: unknown } }).data
+            ?.actualTripKm !== undefined
+      );
+      expect(preTransactionUpdateCalls).toHaveLength(0);
+      // Admin notified about zero GPS data
+      expect(mockNotifyRole).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "ADMIN",
+          type: "GPS_NO_DATA",
+          title: "Trip completed with no GPS data",
+        })
+      );
+    });
+
+    // T3: actualTripKm already set → skip GPS calculation
+    it("T3: should skip GPS calculation when actualTripKm already set", async () => {
+      const mockCorridor = {
+        id: "corridor-1",
+        distanceKm: 100,
+        shipperPricePerKm: 5,
+        carrierPricePerKm: 3,
+        shipperPromoFlag: false,
+        carrierPromoFlag: false,
+        shipperPromoPct: null,
+        carrierPromoPct: null,
+        pricePerKm: 5,
+        promoFlag: false,
+        promoDiscountPct: null,
+      };
+
+      mockDb.load.findUnique.mockResolvedValue({
+        id: "load-1",
+        shipperId: "shipper-1",
+        corridorId: "corridor-1",
+        corridor: mockCorridor,
+        shipperFeeStatus: "PENDING",
+        carrierFeeStatus: "PENDING",
+        actualTripKm: 150, // Already set
+        assignedTruck: {
+          carrierId: "carrier-1",
+          carrier: { id: "carrier-1", name: "Test Carrier" },
+        },
+        shipper: { id: "shipper-1", name: "Test Shipper" },
+        pickupLocation: null,
+        deliveryLocation: null,
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Hawassa",
+      });
+
+      mockDb.financialAccount.findFirst
+        .mockResolvedValueOnce({
+          id: "shipper-wallet",
+          balance: 10000,
+          minimumBalance: 0,
+        })
+        .mockResolvedValueOnce({
+          id: "carrier-wallet",
+          balance: 10000,
+          minimumBalance: 0,
+        })
+        .mockResolvedValueOnce({ id: "platform-account" });
+
+      mockDb.$transaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            financialAccount: {
+              findUnique: jest.fn().mockResolvedValue({ balance: 10000 }),
+              update: jest.fn().mockResolvedValue({ balance: 9000 }),
+            },
+            journalEntry: {
+              create: jest.fn().mockResolvedValue({ id: "journal-existing" }),
+            },
+            load: {
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
+              update: jest.fn().mockResolvedValue({}),
+            },
+          };
+          return fn(tx);
+        }
+      );
+
+      const result = await deductServiceFee("load-1");
+
+      expect(result.success).toBe(true);
+      // GPS lookup should NOT have been called
+      expect(mockDb.trip.findFirst).not.toHaveBeenCalled();
+      expect(mockDb.gpsPosition.findMany).not.toHaveBeenCalled();
     });
   });
 

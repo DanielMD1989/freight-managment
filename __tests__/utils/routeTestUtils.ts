@@ -1022,6 +1022,15 @@ export async function seedTestData(): Promise<SeedData> {
     },
   });
 
+  // Create a GPS device for the seed truck (§11 GPS Tracking Policy)
+  const gpsDevice = await db.gpsDevice.create({
+    data: {
+      id: "gps-device-001",
+      imei: "123456789012345",
+      status: "ACTIVE",
+    },
+  });
+
   // Create a truck
   const truck = await db.truck.create({
     data: {
@@ -1033,6 +1042,7 @@ export async function seedTestData(): Promise<SeedData> {
       carrierId: carrierOrg.id,
       createdById: carrierUser.id,
       approvalStatus: "APPROVED",
+      gpsDeviceId: gpsDevice.id,
     },
   });
 
@@ -1063,6 +1073,27 @@ export async function seedTestData(): Promise<SeedData> {
     truck,
     truckPosting,
   };
+}
+
+/**
+ * Create an ACTIVE GPS device and link it to a truck.
+ * §11 GPS Tracking Policy: trucks need GPS device before posting.
+ */
+let gpsDeviceCounter = 100;
+export async function createGpsDeviceForTruck(truckId: string) {
+  const deviceId = `gps-device-${gpsDeviceCounter++}`;
+  const device = await db.gpsDevice.create({
+    data: {
+      id: deviceId,
+      imei: `IMEI${deviceId}`,
+      status: "ACTIVE",
+    },
+  });
+  await db.truck.update({
+    where: { id: truckId },
+    data: { gpsDeviceId: device.id },
+  });
+  return device;
 }
 
 /**

@@ -39,6 +39,7 @@ import {
   mockGeo,
   mockLoadUtils,
   SeedData,
+  createGpsDeviceForTruck,
 } from "../utils/routeTestUtils";
 
 // ─── Mock Setup (module-level, hoisted by Jest) ─────────────────────────────
@@ -531,6 +532,9 @@ describe("E2E Business Workflow (User Stories)", () => {
         },
       });
       postingTruckId = postingTruck.id;
+
+      // §11 GPS Tracking Policy: truck needs GPS device before posting
+      await createGpsDeviceForTruck(postingTruckId);
     });
 
     it("US-2.1: carrier creates truck → approvalStatus PENDING", async () => {
@@ -2029,6 +2033,9 @@ describe("E2E Business Workflow (User Stories)", () => {
           approvalStatus: "APPROVED",
         },
       });
+
+      // §11 GPS Tracking Policy: truck needs GPS device before posting
+      await createGpsDeviceForTruck(dupTruck.id);
 
       await db.truckPosting.create({
         data: {
