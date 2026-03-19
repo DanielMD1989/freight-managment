@@ -92,6 +92,20 @@ export async function POST(
     // G-M21-9: Capture loadId before transaction nulls it (active trips always have loadId)
     const tripLoadId = trip.loadId!;
 
+    // G-M23-5: Blueprint §7 — only Admin can resolve
+    // EXCEPTION trips. Cancel route cannot bypass
+    // the PATCH handler admin-only guard.
+    if (trip.status === "EXCEPTION") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot cancel an exception trip directly. " +
+            "An admin must resolve the exception first.",
+        },
+        { status: 400 }
+      );
+    }
+
     // Cannot cancel COMPLETED, CANCELLED, or IN_TRANSIT trips
     if (trip.status === "COMPLETED") {
       return NextResponse.json(
@@ -162,7 +176,13 @@ export async function POST(
         where: {
           id: tripId,
           status: {
-            notIn: ["COMPLETED", "CANCELLED", "IN_TRANSIT", "DELIVERED"],
+            notIn: [
+              "COMPLETED",
+              "CANCELLED",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
           },
         },
         data: {
@@ -192,7 +212,15 @@ export async function POST(
           where: {
             truckId: trip.truckId,
             id: { not: tripId },
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
           },
         });
         if (otherActiveTrips === 0) {

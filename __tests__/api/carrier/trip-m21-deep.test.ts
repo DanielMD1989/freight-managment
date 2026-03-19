@@ -697,4 +697,259 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       expect(source).toContain("deliveredAt:");
     });
   });
+
+  // ── G-M23-5: Cancel route blocks EXCEPTION trips ────────────────────────
+
+  describe("G-M23-5: Cancel route EXCEPTION guard", () => {
+    it("T-M23-5a: Carrier cannot cancel EXCEPTION trip via cancel route", async () => {
+      const tripId = "trip-m23-5a";
+      db.load.create({
+        data: {
+          id: "load-m23-5a",
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId: "load-m23-5a",
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+          exceptionAt: new Date(),
+        },
+      });
+
+      setAuthSession(carrierSession);
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Carrier trying to bypass admin resolution" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(400);
+
+      const body = await parseResponse(res);
+      expect(body.error).toContain("Cannot cancel an exception trip directly");
+
+      // Trip must remain EXCEPTION
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("EXCEPTION");
+    });
+
+    it("T-M23-5b: Dispatcher cannot cancel EXCEPTION trip via cancel route", async () => {
+      const tripId = "trip-m23-5b";
+      db.load.create({
+        data: {
+          id: "load-m23-5b",
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId: "load-m23-5b",
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+          exceptionAt: new Date(),
+        },
+      });
+
+      const dispatcherSession = createMockSession({
+        userId: "dispatcher-user-1",
+        email: "dispatcher@test.com",
+        role: "DISPATCHER",
+        organizationId: seed.carrierOrg.id,
+      });
+      setAuthSession(dispatcherSession);
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Dispatcher trying to bypass admin resolution" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(400);
+
+      const body = await parseResponse(res);
+      expect(body.error).toContain("Cannot cancel an exception trip directly");
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("EXCEPTION");
+    });
+
+    it("T-M23-5c: Admin can still resolve EXCEPTION → CANCELLED via PATCH", async () => {
+      const tripId = "trip-m23-5c";
+      db.load.create({
+        data: {
+          id: "load-m23-5c",
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId: "load-m23-5c",
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+          exceptionAt: new Date(),
+        },
+      });
+
+      setAuthSession(adminSession);
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trips/${tripId}`,
+        { body: { status: "CANCELLED" } }
+      );
+      const res = await callHandler(updateTrip, req, { tripId });
+      expect(res.status).toBe(200);
+
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(trip.status).toBe("CANCELLED");
+    });
+  });
+
+  // ── G-M23-6: otherActiveTrips consistency ───────────────────────────────
+
+  describe("G-M23-6: otherActiveTrips includes DELIVERED + EXCEPTION", () => {
+    it("T-M23-6a: PATCH CANCELLED with another DELIVERED trip → truck stays unavailable", async () => {
+      const truckId = "truck-m23-6a";
+      db.truck.create({
+        data: {
+          id: truckId,
+          carrierId: seed.carrierOrg.id,
+          isAvailable: false,
+          licensePlate: "M23-6A",
+        },
+      });
+
+      // Trip 1: ASSIGNED — will be cancelled
+      db.load.create({
+        data: {
+          id: "load-m23-6a-cancel",
+          shipperId: seed.shipperOrg.id,
+          status: "ASSIGNED",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: "trip-m23-6a-cancel",
+          loadId: "load-m23-6a-cancel",
+          truckId,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "ASSIGNED",
+        },
+      });
+
+      // Trip 2: DELIVERED — still active, should block truck restore
+      db.load.create({
+        data: {
+          id: "load-m23-6a-delivered",
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: "trip-m23-6a-delivered",
+          loadId: "load-m23-6a-delivered",
+          truckId,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: new Date(),
+        },
+      });
+
+      setAuthSession(carrierSession);
+      const req = createRequest(
+        "PATCH",
+        "http://localhost:3000/api/trips/trip-m23-6a-cancel",
+        { body: { status: "CANCELLED" } }
+      );
+      const res = await callHandler(updateTrip, req, {
+        tripId: "trip-m23-6a-cancel",
+      });
+      expect(res.status).toBe(200);
+
+      // Truck should still be unavailable
+      const truck = await db.truck.findUnique({ where: { id: truckId } });
+      expect(truck.isAvailable).toBe(false);
+    });
+
+    it("T-M23-6b: Cancel route with another EXCEPTION trip → truck stays unavailable", async () => {
+      const truckId = "truck-m23-6b";
+      db.truck.create({
+        data: {
+          id: truckId,
+          carrierId: seed.carrierOrg.id,
+          isAvailable: false,
+          licensePlate: "M23-6B",
+        },
+      });
+
+      // Trip 1: ASSIGNED — will be cancelled
+      db.load.create({
+        data: {
+          id: "load-m23-6b-cancel",
+          shipperId: seed.shipperOrg.id,
+          status: "ASSIGNED",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: "trip-m23-6b-cancel",
+          loadId: "load-m23-6b-cancel",
+          truckId,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "ASSIGNED",
+        },
+      });
+
+      // Trip 2: EXCEPTION — should block truck restore
+      db.load.create({
+        data: {
+          id: "load-m23-6b-exception",
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: "trip-m23-6b-exception",
+          loadId: "load-m23-6b-exception",
+          truckId,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "EXCEPTION",
+          exceptionAt: new Date(),
+        },
+      });
+
+      setAuthSession(carrierSession);
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/trips/trip-m23-6b-cancel/cancel",
+        { body: { reason: "Testing otherActiveTrips guard" } }
+      );
+      const res = await callHandler(cancelTrip, req, {
+        tripId: "trip-m23-6b-cancel",
+      });
+      expect(res.status).toBe(200);
+
+      // Truck should still be unavailable
+      const truck = await db.truck.findUnique({ where: { id: truckId } });
+      expect(truck.isAvailable).toBe(false);
+    });
+  });
 });
