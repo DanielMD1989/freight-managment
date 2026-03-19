@@ -13,7 +13,7 @@ import {
   LoadStatus,
   getStatusDescription,
 } from "@/lib/loadStateMachine";
-import { TripStatus } from "@prisma/client"; // P0-001 FIX: Import TripStatus enum
+import { TripStatus, Prisma } from "@prisma/client"; // P0-001 FIX: Import TripStatus enum
 import { deductServiceFee, refundServiceFee } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from "@/lib/cache";
@@ -328,8 +328,13 @@ export async function PATCH(
               }
             : {};
 
+        // 5b FIX: Optimistic lock — prevent race condition where trip
+        // was already COMPLETED or CANCELLED by another path (P2025 → 409).
         await tx.trip.update({
-          where: { id: load.trip.id },
+          where: {
+            id: load.trip.id,
+            status: { notIn: ["COMPLETED", "CANCELLED"] },
+          },
           data: {
             status: tripStatus,
             updatedAt: new Date(),
@@ -372,6 +377,56 @@ export async function PATCH(
         });
       }
 
+      // 5a FIX: Truck restore INSIDE transaction — matches cancel route pattern.
+      // Previously ran outside tx, causing non-atomic truck/posting state.
+      if (
+        (newStatus === "COMPLETED" || newStatus === "CANCELLED") &&
+        load.trip?.truckId
+      ) {
+        const truckId = load.trip.truckId;
+        const otherActiveTrips = await tx.trip.count({
+          where: {
+            truckId,
+            id: { not: load.trip.id },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
+          },
+        });
+        if (otherActiveTrips === 0) {
+          await tx.truck.update({
+            where: { id: truckId },
+            data: { isAvailable: true, updatedAt: new Date() },
+          });
+        }
+        // Revert MATCHED postings to ACTIVE so truck appears in searches again
+        await tx.truckPosting.updateMany({
+          where: { truckId, status: "MATCHED" },
+          data: { status: "ACTIVE", updatedAt: new Date() },
+        });
+        // Audit log
+        await tx.loadEvent.create({
+          data: {
+            loadId,
+            eventType: "TRUCK_AVAILABILITY_RESET",
+            description: `Truck availability reset after trip ${newStatus.toLowerCase()}`,
+            userId: session.userId,
+            metadata: {
+              truckId,
+              tripId: load.trip.id,
+              reason:
+                newStatus === "COMPLETED" ? "trip_completed" : "trip_cancelled",
+            },
+          },
+        });
+      }
+
       return { updatedLoad, tripUpdated };
     });
 
@@ -403,84 +458,6 @@ export async function PATCH(
             },
           },
         });
-      }
-    }
-
-    // CRITICAL FIX (ISSUE #3): Auto-reset truck availability after trip completion or cancellation
-    // When trip ends (COMPLETED or CANCELLED), make the truck available again
-    if (
-      (newStatus === "COMPLETED" || newStatus === "CANCELLED") &&
-      load.trip?.id
-    ) {
-      try {
-        // Get the truck that was assigned to this trip
-        const trip = await db.trip.findUnique({
-          where: { id: load.trip.id },
-          select: { truckId: true },
-        });
-
-        if (trip?.truckId) {
-          // G-M24-1b: Only restore truck if no other active trips exist for this truck.
-          // Mirrors cancel route + PATCH handler otherActiveTrips guard.
-          const otherActiveTrips = await db.trip.count({
-            where: {
-              truckId: trip.truckId,
-              id: { not: load.trip!.id },
-              status: {
-                in: [
-                  "ASSIGNED",
-                  "PICKUP_PENDING",
-                  "IN_TRANSIT",
-                  "DELIVERED",
-                  "EXCEPTION",
-                ],
-              },
-            },
-          });
-          if (otherActiveTrips === 0) {
-            await db.truck.update({
-              where: { id: trip.truckId },
-              data: {
-                isAvailable: true,
-                updatedAt: new Date(),
-              },
-            });
-          }
-
-          // G-M24-1c: Revert MATCHED postings to ACTIVE (not EXPIRED) so truck
-          // posting can be reused — mirrors cancel route + PATCH handler.
-          await db.truckPosting.updateMany({
-            where: {
-              truckId: trip.truckId,
-              status: "MATCHED",
-            },
-            data: {
-              status: "ACTIVE",
-              updatedAt: new Date(),
-            },
-          });
-
-          // Log the truck availability reset
-          await db.loadEvent.create({
-            data: {
-              loadId,
-              eventType: "TRUCK_AVAILABILITY_RESET",
-              description: `Truck availability reset to available after trip ${newStatus.toLowerCase()}`,
-              userId: session.userId,
-              metadata: {
-                truckId: trip.truckId,
-                tripId: load.trip.id,
-                reason:
-                  newStatus === "COMPLETED"
-                    ? "trip_completed"
-                    : "trip_cancelled",
-              },
-            },
-          });
-        }
-      } catch (truckError) {
-        // Non-blocking: Log error but don't fail the status update
-        console.error("Failed to reset truck availability:", truckError);
       }
     }
 
@@ -646,6 +623,19 @@ export async function PATCH(
       tripSynced: tripUpdated,
     });
   } catch (error) {
+    // 5b FIX: P2025 from optimistic lock → 409 Conflict
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Trip status was modified concurrently. Please refresh and retry.",
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError(error, "Load status update error");
   }
 }

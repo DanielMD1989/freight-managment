@@ -97,10 +97,11 @@ jest.mock("@/lib/apiErrors", () => ({
   }),
 }));
 
-// Import handler AFTER mocks
+// Import handlers AFTER mocks
 const {
   POST: reassignTruck,
 } = require("@/app/api/trips/[tripId]/reassign-truck/route");
+const { GET: listTrucks } = require("@/app/api/trucks/route");
 
 describe("Truck Reassignment", () => {
   let seed: SeedData;
@@ -523,5 +524,67 @@ describe("Truck Reassignment", () => {
     // Old truck should NOT be freed — other active trip exists
     const oldTruck = await db.truck.findUnique({ where: { id: oldTruckId } });
     expect(oldTruck.isAvailable).toBe(false);
+  });
+
+  // ─── T13: carrierId filter for DISPATCHER ──────────────────────────────
+
+  it("T13: GET /api/trucks?carrierId=X works for DISPATCHER", async () => {
+    // Dispatcher user must exist in DB for trucks GET route
+    await db.user.create({
+      data: {
+        id: dispatcherSession.userId,
+        email: dispatcherSession.email,
+        role: "DISPATCHER",
+        organizationId: dispatcherSession.organizationId,
+        firstName: "Test",
+        lastName: "Dispatcher",
+        status: "ACTIVE",
+        isActive: true,
+      },
+    });
+
+    // Create trucks in two different carrier orgs
+    const otherCarrierId = "ra-other-carrier-org";
+    await db.organization.create({
+      data: {
+        id: otherCarrierId,
+        name: "Other Carrier",
+        type: "CARRIER",
+        status: "ACTIVE",
+        verificationStatus: "APPROVED",
+      },
+    });
+    await db.truck.create({
+      data: {
+        id: "ra-other-truck-1",
+        licensePlate: "OTHER-001",
+        truckType: "DRY_VAN",
+        carrierId: otherCarrierId,
+        isAvailable: true,
+        isApproved: true,
+      },
+    });
+
+    setAuthSession(dispatcherSession);
+
+    // Filter by seed carrier org
+    const req = createRequest(
+      "GET",
+      `http://localhost:3000/api/trucks?carrierId=${seed.carrierOrg.id}`
+    );
+    const res = await listTrucks(req);
+    expect(res.status).toBe(200);
+
+    const data = await parseResponse(res);
+    expect(data.trucks).toBeDefined();
+    // All returned trucks must belong to the requested carrier
+    for (const truck of data.trucks) {
+      expect(truck.carrierId).toBe(seed.carrierOrg.id);
+    }
+    // The other carrier's truck must NOT be in results
+    const otherTruckIds = data.trucks
+      .map((t: { id: string }) => t.id)
+      .filter((id: string) => id === "ra-other-truck-1");
+    expect(otherTruckIds).toHaveLength(0);
   });
 });

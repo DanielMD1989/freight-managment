@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import ReassignTruckModal from "./[id]/ReassignTruckModal";
 
 // L4 FIX: Use constant for page size
 const TRIPS_PAGE_SIZE = 20;
@@ -61,12 +62,16 @@ type StatusFilter =
   | "IN_TRANSIT"
   | "DELIVERED"
   | "COMPLETED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "EXCEPTION";
 
 export default function TripsClient() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Reassign modal
+  const [reassignTrip, setReassignTrip] = useState<Trip | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -143,6 +148,7 @@ export default function TripsClient() {
       DELIVERED: "bg-emerald-100 text-emerald-700",
       COMPLETED: "bg-slate-100 text-slate-700",
       CANCELLED: "bg-red-100 text-red-700",
+      EXCEPTION: "bg-orange-100 text-orange-700",
     };
     return styles[status] || "bg-slate-100 text-slate-600";
   };
@@ -194,6 +200,7 @@ export default function TripsClient() {
     { value: "DELIVERED", label: "Delivered" },
     { value: "COMPLETED", label: "Completed" },
     { value: "CANCELLED", label: "Cancelled" },
+    { value: "EXCEPTION", label: "Exception" },
   ];
 
   return (
@@ -443,14 +450,12 @@ export default function TripsClient() {
                     <td className="px-4 py-3">{getGpsStatus(trip)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {trip.load?.id && (
-                          <Link
-                            href={`/dispatcher/loads/${trip.load.id}`}
-                            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
-                          >
-                            Details
-                          </Link>
-                        )}
+                        <Link
+                          href={`/dispatcher/trips/${trip.id}`}
+                          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
+                        >
+                          Details
+                        </Link>
                         {(trip.status === "IN_TRANSIT" ||
                           trip.status === "PICKUP_PENDING") &&
                           trip.trackingEnabled && (
@@ -461,6 +466,14 @@ export default function TripsClient() {
                               View Map
                             </Link>
                           )}
+                        {trip.status === "EXCEPTION" && (
+                          <button
+                            onClick={() => setReassignTrip(trip)}
+                            className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-600"
+                          >
+                            Reassign Truck
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -494,6 +507,25 @@ export default function TripsClient() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Reassign Truck Modal */}
+      {reassignTrip && reassignTrip.truck && (
+        <ReassignTruckModal
+          trip={{
+            id: reassignTrip.id,
+            truckId: reassignTrip.truck.id,
+            truck: {
+              carrierId: reassignTrip.carrier?.id || "",
+              licensePlate: reassignTrip.truck.licensePlate,
+            },
+          }}
+          onSuccess={() => {
+            setReassignTrip(null);
+            fetchTrips();
+          }}
+          onClose={() => setReassignTrip(null)}
+        />
       )}
     </div>
   );

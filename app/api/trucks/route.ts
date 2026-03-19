@@ -334,8 +334,13 @@ export async function GET(request: NextRequest) {
       where.carrierId = user.organizationId;
     }
 
-    // Admin can filter by specific carrier
-    if (carrierId && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+    // Admin/Dispatcher can filter by specific carrier
+    if (
+      carrierId &&
+      (user.role === "ADMIN" ||
+        user.role === "SUPER_ADMIN" ||
+        user.role === "DISPATCHER")
+    ) {
       where.carrierId = carrierId;
     }
 
