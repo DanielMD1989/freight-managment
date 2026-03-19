@@ -101,6 +101,7 @@ describe("Format Utilities", () => {
       expect(formatTripStatus("PICKUP_PENDING")).toBeDefined();
       expect(formatTripStatus("IN_TRANSIT")).toBeDefined();
       expect(formatTripStatus("DELIVERED")).toBeDefined();
+      expect(formatTripStatus("EXCEPTION")).toBe("Exception");
     });
   });
 

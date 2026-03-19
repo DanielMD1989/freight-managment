@@ -84,6 +84,7 @@ export function formatTripStatus(status: string): string {
     IN_TRANSIT: "In Transit",
     DELIVERED: "Delivered",
     COMPLETED: "Completed",
+    EXCEPTION: "Exception",
     CANCELLED: "Cancelled",
   };
   return map[status] ?? status;

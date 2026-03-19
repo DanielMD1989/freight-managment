@@ -26,7 +26,7 @@ import type { Trip } from "../../src/types";
 export default function TripHistoryScreen() {
   const router = useRouter();
   const { data, isLoading, refetch, isRefetching } = useTrips({
-    status: "DELIVERED",
+    status: "DELIVERED,COMPLETED,CANCELLED",
   });
 
   const trips = useMemo(() => data?.trips ?? [], [data?.trips]);
@@ -36,12 +36,16 @@ export default function TripHistoryScreen() {
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const thisMonth = trips.filter((trip: Trip) => {
-      const deliveredDate = trip.deliveredAt
-        ? new Date(trip.deliveredAt)
-        : trip.updatedAt
-          ? new Date(trip.updatedAt)
-          : null;
-      return deliveredDate && deliveredDate >= thisMonthStart;
+      const endDate = trip.completedAt
+        ? new Date(trip.completedAt)
+        : trip.deliveredAt
+          ? new Date(trip.deliveredAt)
+          : trip.cancelledAt
+            ? new Date(trip.cancelledAt)
+            : trip.updatedAt
+              ? new Date(trip.updatedAt)
+              : null;
+      return endDate && endDate >= thisMonthStart;
     });
 
     return {
@@ -120,7 +124,7 @@ export default function TripHistoryScreen() {
           <View style={styles.statContent}>
             <Ionicons name="checkmark-done" size={24} color={colors.success} />
             <Text style={styles.statValue}>{stats.total}</Text>
-            <Text style={styles.statLabel}>Total Completed</Text>
+            <Text style={styles.statLabel}>Total Trips</Text>
           </View>
         </Card>
         <Card style={styles.statCard} padding="lg">
@@ -147,8 +151,8 @@ export default function TripHistoryScreen() {
           ListEmptyComponent={
             <EmptyState
               icon="trophy-outline"
-              title="No Completed Trips"
-              message="Your delivered trips will appear here"
+              title="No Trip History"
+              message="Your completed, delivered, and cancelled trips will appear here"
             />
           }
         />

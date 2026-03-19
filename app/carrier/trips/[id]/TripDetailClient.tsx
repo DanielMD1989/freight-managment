@@ -303,6 +303,11 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
         text: "text-green-800 dark:text-green-200",
         label: "Completed",
       },
+      EXCEPTION: {
+        bg: "bg-amber-100 dark:bg-amber-900",
+        text: "text-amber-800 dark:text-amber-200",
+        label: "Exception",
+      },
       CANCELLED: {
         bg: "bg-red-100 dark:bg-red-900",
         text: "text-red-800 dark:text-red-200",
@@ -416,7 +421,19 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
               >
                 {loading ? "Marking..." : "Mark Delivered"}
               </button>
+              <button
+                onClick={() => handleStatusChange("EXCEPTION")}
+                disabled={loading}
+                className="rounded-lg border border-amber-300 bg-amber-50 px-6 py-2 font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+              >
+                {loading ? "Reporting..." : "Report Exception"}
+              </button>
             </>
+          )}
+          {trip.status === "EXCEPTION" && (
+            <span className="rounded-lg border border-amber-300 bg-amber-50 px-6 py-2 font-medium text-amber-700">
+              Exception — Under Review
+            </span>
           )}
           {trip.status === "DELIVERED" && !trip.podSubmitted && (
             <button
@@ -659,6 +676,22 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                 {loading ? "Cancelling..." : "Cancel Trip"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exception Banner */}
+      {trip.status === "EXCEPTION" && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/20">
+          <span className="mt-0.5 text-xl text-amber-600">⚠</span>
+          <div>
+            <p className="font-semibold text-amber-800 dark:text-amber-200">
+              Exception Reported
+            </p>
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+              This trip has an active exception. An admin is reviewing the
+              situation. You will be notified when it is resolved.
+            </p>
           </div>
         </div>
       )}

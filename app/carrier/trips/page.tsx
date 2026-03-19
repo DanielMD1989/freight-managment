@@ -69,7 +69,7 @@ const TAB_CONFIG = {
   },
   active: {
     label: "Active Trips",
-    statuses: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"],
+    statuses: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED", "EXCEPTION"],
     emptyMessage:
       "No active trips. Start a trip from Ready to Start to see it here.",
   },
@@ -222,6 +222,10 @@ export default function CarrierTripsPage() {
         classes: "bg-slate-50 text-slate-600 border border-slate-200",
         label: "Completed",
       },
+      EXCEPTION: {
+        classes: "bg-orange-50 text-orange-700 border border-orange-200",
+        label: "Exception",
+      },
       // M2 FIX: Add CANCELLED status styling
       CANCELLED: {
         classes: "bg-red-50 text-red-700 border border-red-200",
@@ -327,9 +331,9 @@ export default function CarrierTripsPage() {
   useEffect(() => {
     const fetchAllCounts = async () => {
       try {
-        // Fetch trips for counts (ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED)
+        // Fetch trips for counts (ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, EXCEPTION)
         const response = await fetch(
-          "/api/trips?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT,DELIVERED"
+          "/api/trips?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT,DELIVERED,EXCEPTION"
         );
         if (response.ok) {
           const data = await response.json();

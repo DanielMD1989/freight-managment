@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -271,6 +272,36 @@ export default function CarrierTripDetailsScreen() {
             <DetailRow label="Receiver Phone" value={trip.receiverPhone} />
           )}
         </Card>
+
+        {/* Shipper Contact */}
+        {trip.shipper && (
+          <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>Shipper</Text>
+            <DetailRow label="Company" value={trip.shipper.name ?? "N/A"} />
+            {trip.shipper.contactPhone && (
+              <View style={styles.contactRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detailLabel}>Phone</Text>
+                  <Text style={styles.detailValue}>
+                    {trip.shipper.contactPhone}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.contactBtn}
+                  onPress={() =>
+                    Linking.openURL(`tel:${trip.shipper!.contactPhone}`)
+                  }
+                >
+                  <Ionicons
+                    name="call-outline"
+                    size={18}
+                    color={colors.primary600}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+          </Card>
+        )}
 
         {/* Exception Banner */}
         {isException && (
@@ -549,6 +580,21 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   actions: { padding: spacing.lg, gap: spacing.md },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate100,
+  },
+  contactBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   // Exception styles
   exceptionCard: {

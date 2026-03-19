@@ -27,6 +27,7 @@ const statusFilters = [
   "ASSIGNED",
   "PICKUP_PENDING",
   "IN_TRANSIT",
+  "EXCEPTION",
   "DELIVERED",
   "COMPLETED",
   "CANCELLED",
