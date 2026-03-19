@@ -109,15 +109,6 @@ export async function POST(request: NextRequest) {
           }
 
           // b) ALWAYS close the trip regardless of fee result
-          const matchedPostingIds: string[] = [];
-          if (trip.truckId) {
-            const matchedPostings = await db.truckPosting.findMany({
-              where: { truckId: trip.truckId, status: "MATCHED" },
-              select: { id: true },
-            });
-            matchedPostingIds.push(...matchedPostings.map((p) => p.id));
-          }
-
           await db.$transaction(async (tx) => {
             await tx.trip.update({
               where: { id: trip.id, status: "DELIVERED" },
@@ -135,18 +126,33 @@ export async function POST(request: NextRequest) {
               // settlementStatus stays PENDING if fee failed — Admin resolves
             });
 
+            // G-M22-1: Only restore truck if no other active trips on it
             if (trip.truckId) {
-              await tx.truck.update({
-                where: { id: trip.truckId },
-                data: { isAvailable: true },
+              const otherActiveTrips = await tx.trip.count({
+                where: {
+                  truckId: trip.truckId,
+                  id: { not: trip.id },
+                  status: {
+                    in: [
+                      "ASSIGNED",
+                      "PICKUP_PENDING",
+                      "IN_TRANSIT",
+                      "DELIVERED",
+                      "EXCEPTION",
+                    ],
+                  },
+                },
               });
-            }
-
-            if (matchedPostingIds.length > 0) {
-              await tx.truckPosting.updateMany({
-                where: { id: { in: matchedPostingIds } },
-                data: { status: "ACTIVE", updatedAt: new Date() },
-              });
+              if (otherActiveTrips === 0) {
+                await tx.truck.update({
+                  where: { id: trip.truckId },
+                  data: { isAvailable: true },
+                });
+                await tx.truckPosting.updateMany({
+                  where: { truckId: trip.truckId, status: "MATCHED" },
+                  data: { status: "ACTIVE", updatedAt: new Date() },
+                });
+              }
             }
 
             // CORRECTION 4: Audit trail loadEvent

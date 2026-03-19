@@ -604,6 +604,82 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       expect(trip.status).toBe("DELIVERED"); // Unchanged — already confirmed by shipper
     });
 
+    it("T-M22-1: Auto-close cron with another active trip → truck stays unavailable", async () => {
+      const tripId = "trip-m22-1-delivered";
+      const loadId = "load-m22-1";
+      const truckId = "truck-m22-1";
+      const oldDate = new Date(Date.now() - 49 * 60 * 60 * 1000);
+
+      // Create truck (unavailable — has active trips)
+      db.truck.create({
+        data: {
+          id: truckId,
+          carrierId: seed.carrierOrg.id,
+          isAvailable: false,
+          licensePlate: "M22-TRUCK",
+        },
+      });
+
+      // Trip 1: DELIVERED > 48h — cron target
+      db.load.create({
+        data: {
+          id: loadId,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          podSubmitted: false,
+        },
+      });
+      db.trip.create({
+        data: {
+          id: tripId,
+          loadId,
+          truckId,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          deliveredAt: oldDate,
+          shipperConfirmed: false,
+        },
+      });
+
+      // Trip 2: Same truck, still IN_TRANSIT — should block truck restore
+      db.load.create({
+        data: {
+          id: "load-m22-1-active",
+          shipperId: seed.shipperOrg.id,
+          status: "IN_TRANSIT",
+        },
+      });
+      db.trip.create({
+        data: {
+          id: "trip-m22-1-active",
+          loadId: "load-m22-1-active",
+          truckId,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "IN_TRANSIT",
+        },
+      });
+
+      process.env.CRON_SECRET = "test-cron-secret";
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/cron/trip-monitor",
+        { headers: { Authorization: "Bearer test-cron-secret" } }
+      );
+      const res = await callHandler(tripMonitorCron, req, {});
+      expect(res.status).toBe(200);
+
+      // Delivered trip should be closed
+      const closedTrip = await db.trip.findUnique({ where: { id: tripId } });
+      expect(closedTrip.status).toBe("COMPLETED");
+      expect(closedTrip.autoClosedAt).toBeTruthy();
+
+      // Truck should still be unavailable (other active trip exists)
+      const truck = await db.truck.findUnique({ where: { id: truckId } });
+      expect(truck.isAvailable).toBe(false);
+    });
+
     it("T-M21-7-7: Cron query filters by podSubmitted=false (structural check)", async () => {
       // The mock DB doesn't support nested relation filters (load: { podSubmitted: false }).
       // Verify the cron source code contains the correct filter.
