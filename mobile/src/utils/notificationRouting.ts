@@ -69,6 +69,13 @@ export function getNotificationRoute(
       return isCarrier ? "/(carrier)/trips" : "/(shipper)/trips";
     }
 
+    // ── Truck reassignment (M24) ─────────────────────────────────────────────
+    case "TRIP_REASSIGNED":
+      if (isCarrier) return "/(carrier)/trips";
+      if (isShipper) return "/(shipper)/trips";
+      if (isDispatcher || isAdmin) return "/(dispatcher)/trips";
+      return null;
+
     // ── Truck approval ───────────────────────────────────────────────────────
     case "TRUCK_APPROVED":
     case "TRUCK_REJECTED":

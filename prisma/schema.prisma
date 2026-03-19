@@ -1066,6 +1066,11 @@ model Trip {
   autoClosedAt DateTime? // Set by 48h auto-close cron
   exceptionAt  DateTime? // When exception was raised (status -> EXCEPTION)
 
+  // Truck reassignment (mid-trip breakdown)
+  previousTruckId    String?   // Truck before reassignment
+  reassignedAt       DateTime? // When reassignment occurred
+  reassignmentReason String?   // Why truck was reassigned
+
   // Delivery receiver info (captured when marking as DELIVERED)
   receiverName  String? // Name of person who received the delivery
   receiverPhone String? // Receiver's phone number

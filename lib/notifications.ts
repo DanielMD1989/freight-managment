@@ -96,6 +96,9 @@ export const NotificationType = {
 
   // Fee failure (M21)
   SERVICE_FEE_FAILED: "SERVICE_FEE_FAILED",
+
+  // Truck reassignment (M24)
+  TRIP_REASSIGNED: "TRIP_REASSIGNED",
 } as const;
 
 /**
