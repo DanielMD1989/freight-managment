@@ -508,7 +508,15 @@ export async function PUT(
               where: {
                 truckId: associatedTrip.truckId,
                 id: { not: associatedTrip.id },
-                status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+                status: {
+                  in: [
+                    "ASSIGNED",
+                    "PICKUP_PENDING",
+                    "IN_TRANSIT",
+                    "DELIVERED",
+                    "EXCEPTION",
+                  ],
+                },
               },
             });
             if (otherActiveTrips === 0) {

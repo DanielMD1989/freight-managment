@@ -285,13 +285,10 @@ export async function GET(
     const isShipper =
       session.role === "SHIPPER" && session.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    // Fix 11: Scope dispatcher access to their organization's trips
-    const isScopedDispatcher =
-      session.role === "DISPATCHER" &&
-      (trip.carrierId === session.organizationId ||
-        trip.shipperId === session.organizationId);
+    // G-M29-3: Dispatcher is platform-wide (role-only) — matches M24 fix
+    const isDispatcher = session.role === "DISPATCHER";
 
-    if (!isCarrier && !isShipper && !isAdmin && !isScopedDispatcher) {
+    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 

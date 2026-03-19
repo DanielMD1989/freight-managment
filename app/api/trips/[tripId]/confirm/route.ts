@@ -229,7 +229,15 @@ export async function POST(
           where: {
             truckId: trip.truckId,
             id: { not: tripId },
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
           },
         });
         if (otherActiveTrips === 0) {
