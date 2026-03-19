@@ -15,7 +15,7 @@ import {
   Linking,
   Alert,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   useTrip,
@@ -40,6 +40,7 @@ import { typography } from "../../../src/theme/typography";
 
 export default function ShipperTripDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { data: trip, isLoading } = useTrip(id);
   const { data: pods } = useTripPods(id);
   const confirmDelivery = useConfirmDelivery();
@@ -236,17 +237,37 @@ export default function ShipperTripDetailsScreen() {
             variant="primary"
             size="lg"
             fullWidth
-            onPress={() =>
-              Alert.alert(
-                "Track Shipment",
-                "Live tracking will open the map view for this trip."
-              )
-            }
+            onPress={() => router.push("/(shipper)/map")}
             icon={
               <Ionicons
                 name="navigate-outline"
                 size={18}
                 color={colors.white}
+              />
+            }
+          />
+        </View>
+      )}
+
+      {/* View Route History — available after trip completion */}
+      {trip.status === "COMPLETED" && trip.load?.id && (
+        <View style={styles.actions}>
+          <Button
+            title="View Route History"
+            variant="outline"
+            size="lg"
+            fullWidth
+            onPress={() =>
+              router.push({
+                pathname: "/(shipper)/route-history",
+                params: { loadId: trip.load!.id },
+              })
+            }
+            icon={
+              <Ionicons
+                name="map-outline"
+                size={18}
+                color={colors.primary600}
               />
             }
           />

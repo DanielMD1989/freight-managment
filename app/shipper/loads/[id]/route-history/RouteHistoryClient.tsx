@@ -3,11 +3,13 @@
 /**
  * Route History Client Component
  *
- * Fetches GET /api/gps/history?loadId= and displays route stats + polyline.
+ * G-M27-3: Added GoogleMap with route polyline above stats table.
+ * Fetches GET /api/gps/history?loadId= and displays map + route stats + coordinate table.
  * Blueprint v1.2: Shipper route replay after trip COMPLETED.
  */
 
 import { useEffect, useState } from "react";
+import GoogleMap, { type MapRoute } from "@/components/GoogleMap";
 
 interface GpsPoint {
   id: string;
@@ -83,13 +85,45 @@ export default function RouteHistoryClient({
     );
   }
 
-  const formatTime = (iso: string | null) => {
+  // Build route for GoogleMap — first point is origin, last is destination,
+  // middle points are waypoints for polyline rendering
+  const routeForMap: MapRoute[] = [];
+  if (data.positions.length >= 2) {
+    const first = data.positions[0];
+    const last = data.positions[data.positions.length - 1];
+    const waypoints = data.positions.slice(1, -1).map((p) => ({
+      lat: p.lat,
+      lng: p.lng,
+    }));
+    routeForMap.push({
+      id: `route-history-${loadId}`,
+      origin: { lat: first.lat, lng: first.lng },
+      destination: { lat: last.lat, lng: last.lng },
+      waypoints,
+      color: "#0ea5e9",
+    });
+  }
+
+  const formatDateTime = (iso: string | null) => {
     if (!iso) return "N/A";
-    return new Date(iso).toLocaleTimeString();
+    return new Date(iso).toLocaleString();
   };
 
   return (
     <div className="space-y-6">
+      {/* Route Map */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">Route Map</h2>
+        <div className="overflow-hidden rounded-lg border border-gray-200">
+          <GoogleMap
+            routes={routeForMap}
+            height="400px"
+            autoFitBounds={true}
+            refreshInterval={0}
+          />
+        </div>
+      </div>
+
       {/* Route Statistics */}
       <div>
         <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -122,8 +156,8 @@ export default function RouteHistoryClient({
           </div>
         </div>
         <div className="mt-3 flex gap-6 text-sm text-gray-500">
-          <span>Start: {formatTime(data.stats.startTime)}</span>
-          <span>End: {formatTime(data.stats.endTime)}</span>
+          <span>Start: {formatDateTime(data.stats.startTime)}</span>
+          <span>End: {formatDateTime(data.stats.endTime)}</span>
         </div>
       </div>
 
@@ -158,7 +192,7 @@ export default function RouteHistoryClient({
                 <tr key={pos.id} className="hover:bg-gray-50">
                   <td className="px-3 py-2 text-gray-500">{i + 1}</td>
                   <td className="px-3 py-2 font-mono text-xs">
-                    {new Date(pos.timestamp).toLocaleTimeString()}
+                    {new Date(pos.timestamp).toLocaleString()}
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">
                     {pos.lat.toFixed(5)}

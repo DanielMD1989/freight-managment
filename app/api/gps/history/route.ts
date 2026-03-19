@@ -97,7 +97,22 @@ async function getHandler(request: NextRequest) {
       }
       // Admin/Dispatcher can access any load
 
+      // G-M27-6: Find current trip to scope positions to this trip only.
+      // Cancelled trips have loadId nulled (M21-9), so this returns only
+      // the active/completed trip. Positions from previously cancelled trips
+      // predate currentTrip.createdAt and are excluded.
+      const currentTrip = await db.trip.findFirst({
+        where: { loadId: loadId },
+        select: { createdAt: true },
+      });
+
       where.loadId = loadId;
+      if (currentTrip) {
+        where.timestamp = {
+          ...((where.timestamp as Prisma.DateTimeFilter) || {}),
+          gte: currentTrip.createdAt,
+        };
+      }
     }
 
     if (truckId) {
@@ -131,14 +146,21 @@ async function getHandler(request: NextRequest) {
       where.truckId = truckId;
     }
 
-    // Date range filter
+    // Date range filter (merge with any existing timestamp filter from G-M27-6)
     if (from || to) {
-      where.timestamp = {};
+      const existing = (where.timestamp as Prisma.DateTimeFilter) || {};
+      where.timestamp = { ...existing };
       if (from) {
-        where.timestamp.gte = new Date(from);
+        // Use the later of G-M27-6 trip createdAt vs explicit from param
+        const fromDate = new Date(from);
+        const existingGte = existing.gte
+          ? new Date(existing.gte as string | Date)
+          : null;
+        (where.timestamp as Prisma.DateTimeFilter).gte =
+          existingGte && existingGte > fromDate ? existingGte : fromDate;
       }
       if (to) {
-        where.timestamp.lte = new Date(to);
+        (where.timestamp as Prisma.DateTimeFilter).lte = new Date(to);
       }
     }
 

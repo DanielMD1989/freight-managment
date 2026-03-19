@@ -99,6 +99,16 @@ async function postHandler(request: NextRequest) {
       select: { id: true },
     });
 
+    // G-M27-1: Find active trip for tripId linkage
+    // (M21-2 applied to batch only — applying here for consistency)
+    const activeTrip = await db.trip.findFirst({
+      where: {
+        truckId: data.truckId,
+        status: { in: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"] },
+      },
+      select: { id: true },
+    });
+
     // HIGH FIX #2: Wrap truck update + GPS position in transaction for atomicity
     const positionRecord = await db.$transaction(async (tx) => {
       // Update truck's current location
@@ -127,6 +137,7 @@ async function postHandler(request: NextRequest) {
             accuracy: data.accuracy,
             timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
             loadId: activeLoad?.id || null,
+            tripId: activeTrip?.id || null,
           },
           select: { id: true },
         });
