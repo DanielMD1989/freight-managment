@@ -7,14 +7,20 @@ import { tripService } from "../services/trip";
 const TRIPS_KEY = ["trips"] as const;
 
 /** Fetch trips */
-export function useTrips(params?: {
-  page?: number;
-  limit?: number;
-  status?: string;
-}) {
+export function useTrips(
+  params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  },
+  options?: { refetchInterval?: number }
+) {
   return useQuery({
     queryKey: [...TRIPS_KEY, params],
     queryFn: () => tripService.getTrips(params),
+    ...(options?.refetchInterval && {
+      refetchInterval: options.refetchInterval,
+    }),
   });
 }
 

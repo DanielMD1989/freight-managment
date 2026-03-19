@@ -51,6 +51,8 @@ const INITIAL_REGION = {
   longitudeDelta: 6,
 };
 
+const POLL_INTERVAL_MS = 30_000;
+
 export default function ShipperMapScreen() {
   const router = useRouter();
   const mapRef = useRef(null);
@@ -59,11 +61,8 @@ export default function ShipperMapScreen() {
     isLoading,
     refetch,
     isRefetching,
-  } = useTrips({
-    status: "IN_TRANSIT",
-  });
+  } = useTrips({ status: "IN_TRANSIT" }, { refetchInterval: POLL_INTERVAL_MS });
   const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
-
   const trips = tripsData?.trips ?? [];
   const selectedTrip = trips.find((t) => t.id === expandedTripId);
 

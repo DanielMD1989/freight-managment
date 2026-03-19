@@ -202,12 +202,8 @@ async function getHandler(request: NextRequest) {
       }
       activeLoadsWhere.shipperId = user.organizationId;
     } else if (session.role === "DISPATCHER") {
-      // Fix 16: Dispatcher scoped to their org — limit results
-      if (user?.organizationId) {
-        activeLoadsWhere.assignedTruck = {
-          carrierId: user.organizationId,
-        };
-      }
+      // G-M26-6: Dispatcher is platform-wide (Blueprint §5) — sees all active trucks.
+      // No org scoping — dispatcher org (LOGISTICS_AGENT) never matches any carrier.
     }
     // Admin/SUPER_ADMIN/PLATFORM_OPS see all active trips
 
