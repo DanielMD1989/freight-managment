@@ -140,13 +140,8 @@ export async function GET(
       carrierOrgId: trip.carrierId,
     });
 
-    // Dispatchers are org-scoped: they must belong to the shipper or carrier org
-    const isScopedDispatcher =
-      isDispatcher &&
-      (session.organizationId === trip.shipperId ||
-        session.organizationId === trip.carrierId);
-
-    if (!isShipper && !isCarrierView && !isAdminView && !isScopedDispatcher) {
+    // G-M24-2: Dispatcher is platform-wide (Blueprint §5) — role-only check.
+    if (!isShipper && !isCarrierView && !isAdminView && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -225,11 +220,9 @@ export async function PATCH(
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    // Dispatchers are org-scoped: they must belong to the shipper or carrier org
-    const isDispatcher =
-      session.role === "DISPATCHER" &&
-      (session.organizationId === trip.shipperId ||
-        session.organizationId === trip.carrierId);
+    // G-M24-2: Dispatcher is platform-wide (Blueprint §5) — role-only check,
+    // no org-scoping. Dispatcher org (LOGISTICS_AGENT) never matches carrier/shipper.
+    const isDispatcher = session.role === "DISPATCHER";
 
     if (!isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

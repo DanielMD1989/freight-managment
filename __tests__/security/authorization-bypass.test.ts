@@ -451,7 +451,7 @@ describe("Authorization Bypass Tests", () => {
       expect(res.status).toBe(403);
     });
 
-    it("should reject dispatcher updating trip status", async () => {
+    it("should reject dispatcher updating trip status to non-permitted value", async () => {
       const req = createRequest(
         "PATCH",
         "http://localhost:3000/api/trips/auth-test-trip",
@@ -463,7 +463,9 @@ describe("Authorization Bypass Tests", () => {
       const res = await callHandler(updateTrip, req, {
         tripId: "auth-test-trip",
       });
-      expect(res.status).toBe(404);
+      // G-M24-2: dispatcher is platform-wide so passes auth, but PICKUP_PENDING
+      // is not in DISPATCHER's allowed statuses → 403 (not 404)
+      expect(res.status).toBe(403);
     });
 
     it("should allow dispatcher to list trips (read-only)", async () => {

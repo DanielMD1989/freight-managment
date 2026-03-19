@@ -21,6 +21,8 @@ import { CacheInvalidation } from "@/lib/cache";
 import {
   notifyLoadStakeholders,
   createNotificationForRole,
+  notifyOrganization,
+  NotificationType,
 } from "@/lib/notifications";
 // CRITICAL FIX: Import trust metrics for analytics tracking
 import {
@@ -111,8 +113,12 @@ export async function PATCH(
           select: {
             id: true,
             status: true,
+            truckId: true,
+            carrierId: true,
           },
         },
+        pickupCity: true,
+        deliveryCity: true,
         // BUG-1 FIX: Include fee status for idempotency check on retry
         shipperFeeStatus: true,
         carrierFeeStatus: true,
@@ -310,6 +316,18 @@ export async function PATCH(
       let tripUpdated = false;
       const tripStatus = loadStatusToTripStatus[newStatus];
       if (load.trip?.id && tripStatus && load.trip.status !== tripStatus) {
+        // G-M24-1a + G-M24-1d: Full cleanup on CANCELLED — null loadId (M21-9),
+        // set trackingEnabled=false, record cancelledBy for audit trail.
+        const cancelledFields =
+          tripStatus === "CANCELLED"
+            ? {
+                loadId: null as string | null,
+                trackingEnabled: false,
+                cancelledBy: session.userId,
+                cancelReason: reason || "Cancelled via load status change",
+              }
+            : {};
+
         await tx.trip.update({
           where: { id: load.trip.id },
           data: {
@@ -318,6 +336,7 @@ export async function PATCH(
             // Set completion time for terminal states
             ...(tripStatus === "COMPLETED" && { completedAt: new Date() }),
             ...(tripStatus === "CANCELLED" && { cancelledAt: new Date() }),
+            ...cancelledFields,
           },
         });
 
@@ -401,23 +420,42 @@ export async function PATCH(
         });
 
         if (trip?.truckId) {
-          // Reset truck availability
-          await db.truck.update({
-            where: { id: trip.truckId },
-            data: {
-              isAvailable: true,
-              updatedAt: new Date(),
+          // G-M24-1b: Only restore truck if no other active trips exist for this truck.
+          // Mirrors cancel route + PATCH handler otherActiveTrips guard.
+          const otherActiveTrips = await db.trip.count({
+            where: {
+              truckId: trip.truckId,
+              id: { not: load.trip!.id },
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
             },
           });
+          if (otherActiveTrips === 0) {
+            await db.truck.update({
+              where: { id: trip.truckId },
+              data: {
+                isAvailable: true,
+                updatedAt: new Date(),
+              },
+            });
+          }
 
-          // Also update any MATCHED postings for this truck to EXPIRED/completed
+          // G-M24-1c: Revert MATCHED postings to ACTIVE (not EXPIRED) so truck
+          // posting can be reused — mirrors cancel route + PATCH handler.
           await db.truckPosting.updateMany({
             where: {
               truckId: trip.truckId,
               status: "MATCHED",
             },
             data: {
-              status: "EXPIRED",
+              status: "ACTIVE",
               updatedAt: new Date(),
             },
           });
@@ -489,6 +527,38 @@ export async function PATCH(
       `Load Status: ${newStatus}`,
       `Load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`
     );
+
+    // G-M24-1: Explicit notifications when shipper cancels a load with an active trip.
+    // Generic notifyLoadStakeholders is not enough — carrier needs explicit TRIP_CANCELLED notice.
+    if (newStatus === "CANCELLED" && load.trip?.id) {
+      if (load.trip.carrierId) {
+        notifyOrganization({
+          organizationId: load.trip.carrierId,
+          type: NotificationType.TRIP_CANCELLED,
+          title: "Load cancelled by shipper",
+          message: `The load for ${load.pickupCity} → ${load.deliveryCity} has been cancelled by the shipper. Your trip has been cancelled and your truck has been freed.`,
+          metadata: {
+            loadId,
+            tripId: load.trip.id,
+            cancelledBy: session.userId,
+            cancelledByRole: session.role,
+          },
+        }).catch(() => {});
+      }
+
+      createNotificationForRole({
+        role: "ADMIN",
+        type: NotificationType.TRIP_CANCELLED,
+        title: "Shipper cancelled assigned load",
+        message: `Shipper cancelled load ${load.pickupCity} → ${load.deliveryCity} while trip was ${load.trip.status}.`,
+        metadata: {
+          loadId,
+          tripId: load.trip.id,
+          tripStatus: load.trip.status,
+          cancelledBy: session.userId,
+        },
+      }).catch(() => {});
+    }
 
     // Notify all dispatchers when a load enters EXCEPTION state
     if (newStatus === "EXCEPTION") {

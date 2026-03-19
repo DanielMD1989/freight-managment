@@ -146,11 +146,9 @@ export async function POST(
     const isCarrier =
       session.role === "CARRIER" && session.organizationId === trip.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    // Dispatchers are org-scoped: they must belong to the shipper or carrier org
-    const isDispatcher =
-      session.role === "DISPATCHER" &&
-      (session.organizationId === trip.shipperId ||
-        session.organizationId === trip.carrierId);
+    // G-M24-2: Dispatcher is platform-wide (Blueprint §5) — role-only check,
+    // no org-scoping. Dispatcher org (LOGISTICS_AGENT) never matches carrier/shipper.
+    const isDispatcher = session.role === "DISPATCHER";
 
     if (!isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

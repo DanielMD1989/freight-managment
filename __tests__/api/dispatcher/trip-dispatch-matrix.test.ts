@@ -394,20 +394,24 @@ describe("Trip Dispatch Matrix — Round U2-FULL", () => {
     expect(data.error).toMatch(/only admins can resolve/i);
   });
 
-  // ─── TDM-4: Unscoped DISPATCHER → 404 ────────────────────────────────────────
+  // ─── TDM-4: G-M24-2 — Dispatcher is platform-wide, any org → 200 ─────────────
 
-  it("TDM-4 — DISPATCHER (org ≠ carrierId AND ≠ shipperId) PATCH → 404", async () => {
-    const { tripId } = await createTrip("ASSIGNED");
+  it("TDM-4 — G-M24-2: DISPATCHER (any org) PATCH → 200 (platform-wide)", async () => {
+    const { tripId } = await createTrip("IN_TRANSIT");
     setAuthSession(dispatcherUnscopedSession);
 
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${tripId}`,
-      { body: { status: "PICKUP_PENDING" } }
+      { body: { status: "EXCEPTION" } }
     );
 
     const res = await callHandler(updateTrip, req, { tripId });
-    expect(res.status).toBe(404);
+    // G-M24-2: dispatcher is platform-wide — no org match required
+    expect(res.status).toBe(200);
+
+    const data = await parseResponse(res);
+    expect(data.trip.status).toBe("EXCEPTION");
   });
 
   // ─── TDM-5: SHIPPER PATCH trip → 404 ─────────────────────────────────────────

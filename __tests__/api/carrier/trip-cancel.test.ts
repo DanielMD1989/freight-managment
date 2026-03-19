@@ -564,9 +564,9 @@ describe("Trip Cancellation", () => {
       expect(data.trip.status).toBe("CANCELLED");
     });
 
-    it("dispatcher (unscoped — no org match) → 404", async () => {
+    it("G-M24-2: dispatcher (platform-wide, any org) can cancel → 200", async () => {
       setAuthSession(dispatcherSession);
-      const { tripId } = await createCancellableTrip();
+      const { tripId, loadId } = await createCancellableTrip();
 
       const req = createRequest(
         "POST",
@@ -574,26 +574,7 @@ describe("Trip Cancellation", () => {
         { body: { reason: "Dispatch override" } }
       );
       const res = await callHandler(cancelTrip, req, { tripId });
-      // dispatcher-org-1 is not carrier-org or shipper-org → 404
-      expect(res.status).toBe(404);
-    });
-
-    it("dispatcher (scoped to carrier org) can cancel → 200", async () => {
-      const scopedDispatcher = createMockSession({
-        userId: "scoped-dispatcher-user",
-        email: "scoped-dispatcher@test.com",
-        role: "DISPATCHER",
-        organizationId: seed.carrierOrg.id,
-      });
-      setAuthSession(scopedDispatcher);
-      const { tripId, loadId } = await createCancellableTrip();
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/trips/${tripId}/cancel`,
-        { body: { reason: "Dispatcher initiated cancel" } }
-      );
-      const res = await callHandler(cancelTrip, req, { tripId });
+      // G-M24-2: dispatcher is platform-wide — no org match required
       expect(res.status).toBe(200);
 
       const data = await parseResponse(res);
@@ -710,13 +691,8 @@ describe("Trip Cancellation", () => {
     });
 
     it("G-A11-3: dispatcher cancel notifies BOTH shipper and carrier", async () => {
-      const scopedDispatcher = createMockSession({
-        userId: "scoped-d2",
-        email: "d2@test.com",
-        role: "DISPATCHER",
-        organizationId: seed.carrierOrg.id,
-      });
-      setAuthSession(scopedDispatcher);
+      // G-M24-2: dispatcher is platform-wide — use standard dispatcher session
+      setAuthSession(dispatcherSession);
       const { tripId } = await createCancellableTrip("ASSIGNED");
       const { notifyOrganization } = require("@/lib/notifications");
 

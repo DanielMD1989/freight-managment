@@ -842,14 +842,15 @@ describe("Data Privacy & Isolation Tests", () => {
       expect(data.error).toBe("Trip not found");
     });
 
-    it("unscoped dispatcher cannot view trip → 404", async () => {
+    it("G-M24-2: dispatcher (platform-wide) CAN view any trip → 200", async () => {
       setAuthSession(dispatcherSession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/trips/priv-tripA"
       );
       const res = await callHandler(getTrip, req, { tripId: "priv-tripA" });
-      expect(res.status).toBe(404);
+      // G-M24-2: dispatcher is platform-wide — can view all trips
+      expect(res.status).toBe(200);
     });
   });
 

@@ -133,15 +133,46 @@ Awaiting Truck Approval        ← Admin reviews truck registration documents
 
 ## 5. Dispatcher Role
 
-| Capability           | Details                                                                                                                                                                          |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full Visibility      | Sees ALL trucks and ALL shipper loads across the platform simultaneously                                                                                                         |
-| Propose Matches Only | Proposes load-truck matches on behalf of Carrier or Shipper — **cannot** accept or reject on their behalf. Notification goes to actual Carrier/Shipper; decision belongs to them |
-| Monitor All Trips    | Tracks every active trip; if accepted but not started, can contact carrier/shipper                                                                                               |
-| Handle Cancellations | Monitors trips cancelled or rejected multiple times; facilitates intervention                                                                                                    |
+Platform-level operator role, created by Admin. Works under Admin authority but operates across the entire platform — **not affiliated with any specific carrier or shipper organization**.
+
+### Full Visibility (Platform-Wide)
+
+- Sees ALL trucks, ALL loads, ALL trips, ALL truck-postings across ALL organizations simultaneously
+- GPS live tracking and route history for any active trip
+- Dashboard metrics (operational — no financial/revenue data)
+
+### Explicit Capabilities
+
+| CAN                                     | Details                                                                                                     |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| View all loads                          | All statuses, all orgs — platform-wide                                                                      |
+| View all trucks                         | All statuses, all orgs — platform-wide                                                                      |
+| View all truck-postings                 | All statuses — platform-wide                                                                                |
+| View all trips                          | All statuses, all orgs — platform-wide                                                                      |
+| View GPS live + route history           | Any trip in IN_TRANSIT or COMPLETED                                                                         |
+| Propose matches                         | Load-truck match proposals on behalf of Carrier or Shipper — notification goes to actual party for decision |
+| Set trip EXCEPTION                      | Flag an active trip (IN_TRANSIT) as EXCEPTION for Admin resolution                                          |
+| Set trip ASSIGNED                       | Reassign a trip back to ASSIGNED (e.g., after EXCEPTION resolution by Admin)                                |
+| Cancel trips (ASSIGNED, PICKUP_PENDING) | Cancel pre-pickup trips — notifies both shipper and carrier                                                 |
+| Set load EXCEPTION                      | Flag a load as EXCEPTION for Admin resolution                                                               |
+| Truck reassignment on EXCEPTION         | Propose replacement truck from same carrier org (Admin approves)                                            |
+
+| CANNOT                       | Reason                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| Accept/reject load requests  | Blueprint §5: decision belongs to Carrier/Shipper — dispatcher proposes only |
+| Accept/reject truck requests | Same — carrier-only authority                                                |
+| Approve match proposals      | Same — actual party decides                                                  |
+| Edit load details            | Shipper-only (or Admin)                                                      |
+| Delete loads                 | Shipper-only (or Admin)                                                      |
+| Manage trucks (edit, delete) | Carrier-only (or Admin)                                                      |
+| Resolve EXCEPTION trips      | Admin-only — dispatcher can raise but not resolve                            |
+| View financial/revenue data  | Admin/SuperAdmin only — dispatcher sees `null` for revenue fields            |
+| Approve/reject registrations | Admin-only                                                                   |
 
 > **Key constraint:** Dispatcher has NO accept/reject authority. Any UI or endpoint that
 > lets Dispatcher accept/reject on behalf of another party is a bug.
+>
+> **Authorization model:** All dispatcher endpoints use **role-only** checks (`role === "DISPATCHER"`), never org-scoped checks. Dispatcher's organization (type `LOGISTICS_AGENT`) does not match any carrier or shipper org.
 
 ---
 
@@ -164,6 +195,37 @@ DRAFT → POSTED → SEARCHING / OFFERED → ASSIGNED → PICKUP_PENDING → IN_
 
 > Purple states (ASSIGNED through COMPLETED) mirror the Trip state machine.
 > Load state changes are synced from Trip state transitions.
+
+### Cancellation Policy
+
+#### Shipper Load Cancellation
+
+| Load State     | Can Cancel? | Effect                                                                     |
+| -------------- | ----------- | -------------------------------------------------------------------------- |
+| DRAFT          | Yes         | Load deleted or set to CANCELLED — no external impact                      |
+| POSTED         | Yes         | Load set to CANCELLED freely — no trip exists                              |
+| SEARCHING      | Yes         | Load set to CANCELLED — pending requests voided                            |
+| OFFERED        | Yes         | Load set to CANCELLED — pending requests voided                            |
+| ASSIGNED       | Yes         | Load → CANCELLED, linked trip → CANCELLED, truck freed, notifications sent |
+| PICKUP_PENDING | Yes         | Same as ASSIGNED — carrier notified, truck freed                           |
+| IN_TRANSIT     | No          | Blocked — cargo is on the truck. Must go through EXCEPTION first           |
+| DELIVERED      | No          | Blocked — cargo already delivered. Cannot cancel post-delivery             |
+| COMPLETED      | No          | Terminal state — no changes allowed                                        |
+
+> When a shipper cancels a load that has an active trip (ASSIGNED or PICKUP_PENDING), the trip cancellation must include: `loadId` nulled on trip, `trackingEnabled` set to false, `cancelledBy` set to shipper userId, truck availability restored (with `otherActiveTrips` guard), and TruckPosting reverted to ACTIVE (not EXPIRED).
+
+#### Carrier Trip Cancellation
+
+| Trip State     | Can Cancel?  | Route                       | Effect                                                             |
+| -------------- | ------------ | --------------------------- | ------------------------------------------------------------------ |
+| ASSIGNED       | Yes          | POST /api/trips/{id}/cancel | Trip → CANCELLED, load → POSTED (re-bookable), truck freed         |
+| PICKUP_PENDING | Yes          | POST /api/trips/{id}/cancel | Same — carrier hasn't loaded cargo yet                             |
+| IN_TRANSIT     | No           | Blocked                     | Must raise EXCEPTION first → Admin resolves to CANCELLED if needed |
+| DELIVERED      | No           | Blocked                     | Cargo delivered — cancellation would cause payment disputes        |
+| EXCEPTION      | No (carrier) | Blocked for carrier         | Admin-only resolution — carrier cannot self-resolve                |
+| COMPLETED      | No           | N/A                         | Terminal state                                                     |
+
+> **Audit fields:** Every cancellation records `cancelledBy` (userId), `cancelReason` (user-provided text), and `cancelledAt` (timestamp). The cancel route requires a reason (`z.string().min(1).max(500)`).
 
 ---
 
@@ -212,6 +274,42 @@ IN_TRANSIT → must use EXCEPTION path first → then Admin may resolve to CANCE
 
 - CARRIER or DISPATCHER can cancel from any state except IN_TRANSIT.
 - Direct IN_TRANSIT → CANCELLED is blocked; must go through EXCEPTION first.
+
+### Truck Reassignment (Mid-Trip)
+
+When a truck breaks down or becomes unavailable mid-trip, the truck can be swapped without cancelling the trip.
+
+**Who:** Admin or Dispatcher
+**Prerequisites:** Trip must be in EXCEPTION status. Replacement truck must belong to the same carrier organization. Replacement truck must be available (no active trips).
+
+**Flow:**
+
+```
+1. Carrier (or Dispatcher) raises EXCEPTION on IN_TRANSIT trip
+2. Admin or Dispatcher selects replacement truck from same carrier org
+3. POST /api/trips/{id}/reassign-truck
+     body: { newTruckId, reason }
+4. System validates: trip is EXCEPTION, new truck is same carrier, new truck is available
+5. Transaction:
+     a. trip.truckId → newTruckId
+     b. trip.previousTruckId → old truckId (audit trail)
+     c. trip.reassignedAt → now
+     d. trip.reassignmentReason → reason
+     e. Old truck: restore availability (if no other active trips)
+     f. New truck: set isAvailable = false
+     g. Load.assignedTruckId → newTruckId
+     h. TruckPosting for new truck: ACTIVE → MATCHED
+6. Trip status → IN_TRANSIT (resumes)
+7. Notifications: shipper org, carrier org, admin audit
+```
+
+**Schema additions:**
+
+- `Trip.previousTruckId` — String? (references Truck)
+- `Trip.reassignedAt` — DateTime?
+- `Trip.reassignmentReason` — String?
+
+**Endpoint:** `POST /api/trips/{id}/reassign-truck`
 
 ---
 
