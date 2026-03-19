@@ -38,11 +38,14 @@ const STATUS_TABS = [
   { key: "", label: "All" },
   { key: "DRAFT", label: "Draft" },
   { key: "POSTED", label: "Posted" },
+  { key: "SEARCHING", label: "Searching" },
+  { key: "UNPOSTED", label: "Unposted" },
   { key: "ASSIGNED", label: "Assigned" },
   { key: "IN_TRANSIT", label: "In Transit" },
   { key: "DELIVERED", label: "Delivered" },
   { key: "COMPLETED", label: "Completed" },
   { key: "CANCELLED", label: "Cancelled" },
+  { key: "EXCEPTION", label: "Exception" },
 ];
 
 export default function ShipperLoadsScreen() {

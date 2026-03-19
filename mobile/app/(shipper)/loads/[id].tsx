@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,7 +35,7 @@ import {
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
-import type { LoadRequest } from "../../../src/types";
+import type { Load, LoadRequest } from "../../../src/types";
 
 export default function ShipperLoadDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -126,6 +127,33 @@ export default function ShipperLoadDetailsScreen() {
     );
   };
 
+  // G-M25-9: Cancel load (ASSIGNED / PICKUP_PENDING only)
+  const handleCancelLoad = () => {
+    Alert.alert(
+      "Cancel Load",
+      "Cancel this load? The assigned carrier will be notified.",
+      [
+        { text: "Keep Load", style: "cancel" },
+        {
+          text: "Cancel Load",
+          style: "destructive",
+          onPress: () => {
+            updateLoad.mutate(
+              { id: load.id, data: { status: "CANCELLED" } as never },
+              {
+                onSuccess: () => {
+                  Alert.alert("Cancelled", "Load has been cancelled.");
+                  router.back();
+                },
+                onError: (err) => Alert.alert("Error", err.message),
+              }
+            );
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Card style={styles.card}>
@@ -176,6 +204,64 @@ export default function ShipperLoadDetailsScreen() {
           <DetailRow label="Instructions" value={load.specialInstructions} />
         )}
       </Card>
+
+      {/* G-M25-1: Assigned Carrier — shown after load is ASSIGNED or beyond */}
+      {[
+        "ASSIGNED",
+        "PICKUP_PENDING",
+        "IN_TRANSIT",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION",
+      ].includes(load.status) &&
+        load.assignedTruck && (
+          <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>Assigned Carrier</Text>
+            {load.assignedTruck.carrier?.name && (
+              <DetailRow
+                label="Carrier"
+                value={load.assignedTruck.carrier.name}
+              />
+            )}
+            <DetailRow
+              label="Truck Plate"
+              value={load.assignedTruck.licensePlate}
+            />
+            <DetailRow
+              label="Truck Type"
+              value={formatTruckType(load.assignedTruck.truckType)}
+            />
+            {load.assignedTruck.contactName && (
+              <DetailRow
+                label="Driver"
+                value={load.assignedTruck.contactName}
+              />
+            )}
+            {load.assignedTruck.contactPhone && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Phone</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const url = `tel:${load.assignedTruck!.contactPhone}`;
+                    Linking.openURL(url);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      {
+                        color: colors.primary600,
+                        textDecorationLine: "underline",
+                      },
+                    ]}
+                  >
+                    {load.assignedTruck.contactPhone}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Card>
+        )}
 
       {/* Service Fee */}
       {load.serviceFeeEtb != null && (
@@ -244,29 +330,92 @@ export default function ShipperLoadDetailsScreen() {
               style={styles.actionBtn}
             />
           )}
-        <Button
-          title="Edit"
-          onPress={() => router.push(`/(shipper)/loads/edit?id=${load.id}`)}
-          variant="outline"
-          icon={
-            <Ionicons
-              name="create-outline"
-              size={18}
-              color={colors.primary600}
+        {/* G-M25-2: View Trip Details — when trip exists and load is post-assignment */}
+        {load.trip?.id &&
+          [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+            "DELIVERED",
+            "COMPLETED",
+          ].includes(load.status) && (
+            <Button
+              title="View Trip"
+              onPress={() => router.push(`/(shipper)/trips/${load.trip!.id}`)}
+              variant="outline"
+              icon={
+                <Ionicons
+                  name="navigate-outline"
+                  size={18}
+                  color={colors.primary600}
+                />
+              }
+              style={styles.actionBtn}
             />
-          }
-          style={styles.actionBtn}
-        />
-        <Button
-          title="Delete"
-          onPress={handleDelete}
-          variant="destructive"
-          loading={deleteLoad.isPending}
-          icon={
-            <Ionicons name="trash-outline" size={18} color={colors.white} />
-          }
-          style={styles.actionBtn}
-        />
+          )}
+        {/* G-M25-2: Track Live — IN_TRANSIT with tracking enabled */}
+        {load.status === "IN_TRANSIT" && load.trip?.trackingEnabled && (
+          <Button
+            title="Track Live"
+            onPress={() => router.push("/(shipper)/map")}
+            variant="primary"
+            icon={
+              <Ionicons
+                name="location-outline"
+                size={18}
+                color={colors.white}
+              />
+            }
+            style={styles.actionBtn}
+          />
+        )}
+        {/* Edit + Delete: only for pre-assignment statuses */}
+        {["DRAFT", "POSTED", "UNPOSTED"].includes(load.status) && (
+          <Button
+            title="Edit"
+            onPress={() => router.push(`/(shipper)/loads/edit?id=${load.id}`)}
+            variant="outline"
+            icon={
+              <Ionicons
+                name="create-outline"
+                size={18}
+                color={colors.primary600}
+              />
+            }
+            style={styles.actionBtn}
+          />
+        )}
+        {["DRAFT", "POSTED", "UNPOSTED", "CANCELLED", "EXPIRED"].includes(
+          load.status
+        ) && (
+          <Button
+            title="Delete"
+            onPress={handleDelete}
+            variant="destructive"
+            loading={deleteLoad.isPending}
+            icon={
+              <Ionicons name="trash-outline" size={18} color={colors.white} />
+            }
+            style={styles.actionBtn}
+          />
+        )}
+        {/* G-M25-9: Cancel load — ASSIGNED/PICKUP_PENDING only */}
+        {(load.status === "ASSIGNED" || load.status === "PICKUP_PENDING") && (
+          <Button
+            title="Cancel Load"
+            onPress={handleCancelLoad}
+            variant="destructive"
+            loading={updateLoad.isPending}
+            icon={
+              <Ionicons
+                name="close-circle-outline"
+                size={18}
+                color={colors.white}
+              />
+            }
+            style={styles.actionBtn}
+          />
+        )}
       </View>
 
       {/* Pending requests - prominent */}

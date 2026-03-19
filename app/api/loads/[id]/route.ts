@@ -175,6 +175,8 @@ export async function GET(
             licensePlate: true,
             truckType: true,
             capacity: true,
+            contactName: true,
+            contactPhone: true,
             carrier: {
               select: {
                 id: true,
@@ -182,6 +184,14 @@ export async function GET(
                 isVerified: true,
               },
             },
+          },
+        },
+        // G-M25-2: Include trip relation so mobile can navigate to trip detail
+        trip: {
+          select: {
+            id: true,
+            status: true,
+            trackingEnabled: true,
           },
         },
         documents: true,

@@ -282,6 +282,9 @@ export interface Load {
   assignedTruck?: Truck | null;
   assignedAt?: Date | null;
 
+  // G-M25-2: Trip relation (populated in GET /api/loads/[id])
+  trip?: { id: string; status: string; trackingEnabled: boolean } | null;
+
   // G-M17-5: Carrier's pending request for this load (populated in GET /api/loads/[id])
   myPendingRequest?: { id: string; status: string; createdAt: string } | null;
 

@@ -437,33 +437,27 @@ export async function PUT(
         });
       });
 
-      // Notify shipper about fee deduction
+      // G-M25-6: Notify ALL active shipper users (was take:1)
       if (load.shipperId) {
-        const shipperOrg = await db.organization.findUnique({
-          where: { id: load.shipperId },
-          select: { users: { select: { id: true }, take: 1 } },
-        });
-        const shipperUserId = shipperOrg?.users?.[0]?.id;
-        if (shipperUserId) {
-          await createNotification({
-            userId: shipperUserId,
-            type: NotificationType.SETTLEMENT_COMPLETE,
-            title: "Settlement Completed",
-            message: `Service fee of ${feeResult.shipperFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
-            metadata: { loadId, fee: feeResult.shipperFee },
-          });
-        }
+        notifyOrganization({
+          organizationId: load.shipperId,
+          type: NotificationType.SETTLEMENT_COMPLETE,
+          title: "Settlement Completed",
+          message: `Service fee of ${feeResult.shipperFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
+          metadata: { loadId, fee: feeResult.shipperFee },
+        }).catch(() => {});
       }
 
-      // Notify carrier about fee deduction
-      if (carrierUserId) {
-        await createNotification({
-          userId: carrierUserId,
+      // G-M25-6: Notify ALL active carrier users (same take:1 fix)
+      const carrierOrgId = loadWithCarrier?.assignedTruck?.carrierId;
+      if (carrierOrgId) {
+        notifyOrganization({
+          organizationId: carrierOrgId,
           type: NotificationType.SETTLEMENT_COMPLETE,
           title: "Settlement Completed",
           message: `Service fee of ${feeResult.carrierFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
           metadata: { loadId, fee: feeResult.carrierFee },
-        });
+        }).catch(() => {});
       }
 
       settlementResult = {

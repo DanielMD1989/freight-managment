@@ -68,6 +68,8 @@ mockStorage();
 // Custom notifications mock with POD-specific types
 jest.mock("@/lib/notifications", () => ({
   createNotification: jest.fn(async () => ({ id: "notif-1" })),
+  createNotificationForRole: jest.fn(async () => {}),
+  notifyOrganization: jest.fn(async () => {}),
   NotificationType: {
     LOAD_REQUEST: "LOAD_REQUEST",
     TRUCK_REQUEST: "TRUCK_REQUEST",

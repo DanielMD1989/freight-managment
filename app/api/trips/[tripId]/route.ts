@@ -686,6 +686,20 @@ export async function PATCH(
             raisedByRole: session.role,
           },
         });
+        // G-M25-5: Notify shipper — their cargo is at risk, they must know immediately
+        if (trip.shipperId) {
+          await notifyOrganization({
+            organizationId: trip.shipperId,
+            type: NotificationType.EXCEPTION_CREATED,
+            title: "Delivery exception — your cargo",
+            message: `An exception has been reported on your load from ${updatedTrip.load?.pickupCity} to ${updatedTrip.load?.deliveryCity}. Our team is investigating. You will be updated when the issue is resolved.`,
+            metadata: {
+              tripId,
+              loadId: tripLoadId,
+              previousStatus: trip.status,
+            },
+          });
+        }
       } catch (notifyError) {
         // Non-blocking: trip state is persisted; notification failure is non-fatal
         console.error("Exception notification failed:", notifyError);
