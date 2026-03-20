@@ -39,6 +39,7 @@ import {
   canCancelTrip,
 } from "../../../src/utils/foundation-rules";
 import {
+  formatCurrency,
   formatDate,
   formatDistance,
   formatTripStatus,
@@ -300,6 +301,21 @@ export default function CarrierTripDetailsScreen() {
                 </TouchableOpacity>
               </View>
             )}
+          </Card>
+        )}
+
+        {/* Service Fee — shown for DELIVERED/COMPLETED/CANCELLED */}
+        {trip.load?.carrierServiceFee != null && (
+          <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>Service Fee</Text>
+            <DetailRow
+              label="Platform Fee"
+              value={formatCurrency(Number(trip.load.carrierServiceFee))}
+            />
+            <DetailRow
+              label="Status"
+              value={trip.load.carrierFeeStatus ?? "PENDING"}
+            />
           </Card>
         )}
 

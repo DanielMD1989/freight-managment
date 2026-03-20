@@ -82,6 +82,8 @@ export async function GET(
             podUrl: true,
             podSubmitted: true,
             podVerified: true,
+            carrierServiceFee: true,
+            carrierFeeStatus: true,
           },
         },
         truck: {

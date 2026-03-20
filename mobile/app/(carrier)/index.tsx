@@ -18,6 +18,7 @@ import { useCarrierDashboard } from "../../src/hooks/useDashboard";
 import { useAuthStore } from "../../src/stores/auth";
 import { Card } from "../../src/components/Card";
 import { LoadingSpinner } from "../../src/components/LoadingSpinner";
+import { formatCurrency } from "../../src/utils/format";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
@@ -63,6 +64,18 @@ export default function CarrierDashboard() {
       value: data?.pendingApprovals ?? 0,
       icon: "time" as const,
       color: colors.warning,
+    },
+    {
+      label: "Wallet",
+      value: formatCurrency(data?.wallet?.balance ?? 0),
+      icon: "wallet" as const,
+      color: colors.primary600,
+    },
+    {
+      label: "Fees Paid",
+      value: formatCurrency(data?.totalServiceFeesPaid ?? 0),
+      icon: "receipt" as const,
+      color: colors.slate500,
     },
   ];
 

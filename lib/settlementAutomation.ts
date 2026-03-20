@@ -17,7 +17,7 @@ const SettlementStatus = {
   PENDING: "PENDING",
   IN_PROGRESS: "IN_PROGRESS",
   PAID: "PAID",
-  DISPUTED: "DISPUTED",
+  FAILED: "FAILED",
 } as const;
 
 /**

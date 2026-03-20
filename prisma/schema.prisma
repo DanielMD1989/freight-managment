@@ -667,7 +667,7 @@ model Load {
   podSubmittedAt   DateTime? // When POD was uploaded
   podVerified      Boolean   @default(false) // POD verified by shipper
   podVerifiedAt    DateTime? // When POD was verified
-  settlementStatus String?   @default("PENDING") // PENDING, IN_PROGRESS, PAID, DISPUTED
+  settlementStatus String?   @default("PENDING") // PENDING, IN_PROGRESS, PAID, FAILED
   settledAt        DateTime? // When commission was deducted
 
   // Assignment

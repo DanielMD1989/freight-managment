@@ -466,10 +466,22 @@ export async function PUT(
         carrierFee: feeResult.carrierFee,
       };
     } else if (feeResult.success && feeResult.totalPlatformFee === 0) {
-      // Fees waived (no corridor match) — still mark settled
-      await db.load.update({
-        where: { id: loadId },
-        data: { settlementStatus: "PAID", settledAt: new Date() },
+      // G-M30-4: Fees waived (no corridor match) — wrap in transaction for atomicity
+      await db.$transaction(async (tx) => {
+        await tx.load.update({
+          where: { id: loadId },
+          data: { settlementStatus: "PAID", settledAt: new Date() },
+        });
+
+        await tx.loadEvent.create({
+          data: {
+            loadId,
+            eventType: "SETTLEMENT_COMPLETED",
+            description: "Auto-settlement: fees waived (no corridor match)",
+            userId: session.userId,
+            metadata: { trigger: "pod_verification", waived: true },
+          },
+        });
       });
       settlementResult = { status: "paid_waived" };
     } else {
