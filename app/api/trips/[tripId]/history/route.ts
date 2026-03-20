@@ -78,13 +78,9 @@ export async function GET(
     const isShipper =
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
-    // Fix 11: Scope dispatcher access to their organization's trips
-    const isScopedDispatcher =
-      session.role === "DISPATCHER" &&
-      (trip.carrierId === session.organizationId ||
-        trip.shipperId === session.organizationId);
+    const isDispatcher = session.role === "DISPATCHER";
 
-    if (!isAdmin && !isScopedDispatcher && !isCarrier && !isShipper) {
+    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

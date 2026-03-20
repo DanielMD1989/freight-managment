@@ -81,9 +81,7 @@ export default function TripHistoryPlayback({
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `/api/gps/history?loadId=${tripId}&includeRoute=true`
-        );
+        const response = await fetch(`/api/trips/${tripId}/history`);
 
         if (!response.ok) {
           throw new Error("Failed to fetch trip history");
@@ -96,32 +94,64 @@ export default function TripHistoryPlayback({
           return;
         }
 
+        // Map positions from API shape (latitude/longitude) to component shape (lat/lng)
+        const mappedPositions = data.positions.map(
+          (p: {
+            latitude: number;
+            longitude: number;
+            speed?: number;
+            heading?: number;
+            timestamp: string;
+          }) => ({
+            lat: p.latitude,
+            lng: p.longitude,
+            speed: p.speed,
+            heading: p.heading,
+            timestamp: p.timestamp,
+          })
+        );
+
         setTripData({
           id: tripId,
-          loadId: data.loadId,
-          truckPlate: data.truckPlate || "Unknown",
-          carrierName: data.carrierName || "Unknown Carrier",
-          shipperName: data.shipperName,
-          pickupLocation: data.pickupLocation || {
-            lat: data.positions[0].lat,
-            lng: data.positions[0].lng,
-            address: "Pickup",
-          },
-          deliveryLocation: data.deliveryLocation || {
-            lat: data.positions[data.positions.length - 1].lat,
-            lng: data.positions[data.positions.length - 1].lng,
-            address: "Delivery",
-          },
-          startedAt: data.startedAt || data.positions[0].timestamp,
+          loadId: data.load?.id,
+          truckPlate: data.truck?.licensePlate || "Unknown",
+          carrierName: data.carrier?.name || "Unknown Carrier",
+          shipperName: data.shipper?.name,
+          pickupLocation: data.origin?.latitude
+            ? {
+                lat: data.origin.latitude,
+                lng: data.origin.longitude,
+                address: data.origin.city || data.origin.address || "Pickup",
+              }
+            : {
+                lat: mappedPositions[0].lat,
+                lng: mappedPositions[0].lng,
+                address: "Pickup",
+              },
+          deliveryLocation: data.destination?.latitude
+            ? {
+                lat: data.destination.latitude,
+                lng: data.destination.longitude,
+                address:
+                  data.destination.city ||
+                  data.destination.address ||
+                  "Delivery",
+              }
+            : {
+                lat: mappedPositions[mappedPositions.length - 1].lat,
+                lng: mappedPositions[mappedPositions.length - 1].lng,
+                address: "Delivery",
+              },
+          startedAt: data.timing?.startedAt || mappedPositions[0].timestamp,
           completedAt:
-            data.completedAt ||
-            data.positions[data.positions.length - 1].timestamp,
-          positions: data.positions,
-          totalDistanceKm: data.totalDistanceKm || 0,
-          totalDurationMinutes: data.totalDurationMinutes || 0,
+            data.timing?.completedAt ||
+            mappedPositions[mappedPositions.length - 1].timestamp,
+          positions: mappedPositions,
+          totalDistanceKm: data.distance?.actualKm || 0,
+          totalDurationMinutes: data.timing?.durationMinutes || 0,
         });
 
-        setCurrentPosition(data.positions[0]);
+        setCurrentPosition(mappedPositions[0]);
       } catch (err) {
         console.error("Error fetching trip history:", err);
         setError("Failed to load trip history");

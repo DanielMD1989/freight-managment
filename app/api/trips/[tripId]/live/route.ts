@@ -76,11 +76,7 @@ export async function GET(
 
     // Check permissions
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    // Fix 28: Dispatcher scoped to their org's carrier or shipper
-    const isDispatcher =
-      session.role === "DISPATCHER" &&
-      (trip.carrierId === session.organizationId ||
-        trip.shipperId === session.organizationId);
+    const isDispatcher = session.role === "DISPATCHER";
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isShipper =

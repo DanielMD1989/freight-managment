@@ -42,6 +42,10 @@ interface Trip {
   deliveryDate: string | null;
   pickupAddress: string | null;
   deliveryAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
   pickupDockHours: string | null;
   deliveryDockHours: string | null;
   cargoDescription: string | null;
@@ -154,6 +158,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   const [tripProgress, setTripProgress] = useState({
     percent: trip.tripProgressPercent || 0,
     remainingKm: trip.remainingDistanceKm,
+    estimatedArrival: null as string | null,
   });
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -258,6 +263,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
         setTripProgress({
           percent: data.progress?.percent || 0,
           remainingKm: data.progress?.remainingKm || null,
+          estimatedArrival: data.progress?.estimatedArrival || null,
         });
         if (data.progress?.currentLocation) {
           setCurrentLocation(data.progress.currentLocation);
@@ -301,7 +307,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     // Pickup marker
     markers.push({
       id: "pickup",
-      position: { lat: 9.03, lng: 38.74 }, // Default Addis Ababa - would use actual coords
+      position: { lat: trip.pickupLat || 9.03, lng: trip.pickupLng || 38.74 },
       title: `Pickup: ${trip.pickupCity}`,
       type: "pickup",
     });
@@ -309,7 +315,10 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     // Delivery marker
     markers.push({
       id: "delivery",
-      position: { lat: 9.31, lng: 42.12 }, // Default Harar - would use actual coords
+      position: {
+        lat: trip.deliveryLat || 9.31,
+        lng: trip.deliveryLng || 42.12,
+      },
       title: `Delivery: ${trip.deliveryCity}`,
       type: "delivery",
     });
@@ -645,6 +654,15 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
           {tripProgress.remainingKm && (
             <p className="mt-2 text-center text-sm text-slate-500">
               {tripProgress.remainingKm.toFixed(1)} km remaining
+            </p>
+          )}
+          {tripProgress.estimatedArrival && (
+            <p className="mt-1 text-center text-sm font-medium text-teal-600">
+              ETA:{" "}
+              {new Date(tripProgress.estimatedArrival).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           )}
         </div>

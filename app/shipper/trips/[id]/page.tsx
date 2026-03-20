@@ -272,6 +272,10 @@ export default async function ShipperTripDetailPage({
       deliveryDate: load?.deliveryDate?.toISOString() || null,
       pickupAddress: tripData.pickupAddress || load?.pickupAddress,
       deliveryAddress: tripData.deliveryAddress || load?.deliveryAddress,
+      pickupLat: tripData.pickupLat ? Number(tripData.pickupLat) : null,
+      pickupLng: tripData.pickupLng ? Number(tripData.pickupLng) : null,
+      deliveryLat: tripData.deliveryLat ? Number(tripData.deliveryLat) : null,
+      deliveryLng: tripData.deliveryLng ? Number(tripData.deliveryLng) : null,
       pickupDockHours: load?.pickupDockHours,
       deliveryDockHours: load?.deliveryDockHours,
       cargoDescription: load?.cargoDescription,
@@ -354,6 +358,18 @@ export default async function ShipperTripDetailPage({
       deliveryDate: load.deliveryDate?.toISOString() || null,
       pickupAddress: load.pickupAddress,
       deliveryAddress: load.deliveryAddress,
+      pickupLat: load.pickupLocation?.latitude
+        ? Number(load.pickupLocation.latitude)
+        : null,
+      pickupLng: load.pickupLocation?.longitude
+        ? Number(load.pickupLocation.longitude)
+        : null,
+      deliveryLat: load.deliveryLocation?.latitude
+        ? Number(load.deliveryLocation.latitude)
+        : null,
+      deliveryLng: load.deliveryLocation?.longitude
+        ? Number(load.deliveryLocation.longitude)
+        : null,
       pickupDockHours: load.pickupDockHours,
       deliveryDockHours: load.deliveryDockHours,
       cargoDescription: load.cargoDescription,
