@@ -30,6 +30,17 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["@prisma/client", "date-fns", "lodash"],
   },
 
+  // G-W3-1: Rewrite /uploads/* → /api/uploads/* so stored fileUrl paths
+  // route through the authenticated file-serving endpoint
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: "/api/uploads/:path*",
+      },
+    ];
+  },
+
   // Headers for security and caching
   async headers() {
     return [

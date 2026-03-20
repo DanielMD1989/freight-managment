@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         db.companyDocument.findMany({
           where: {
             verificationStatus: status,
+            deletedAt: null,
           },
           include: {
             organization: {
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest) {
         db.companyDocument.count({
           where: {
             verificationStatus: status,
+            deletedAt: null,
           },
         }),
       ]);
@@ -125,6 +127,7 @@ export async function GET(request: NextRequest) {
         db.truckDocument.findMany({
           where: {
             verificationStatus: status,
+            deletedAt: null,
           },
           include: {
             truck: {
@@ -166,6 +169,7 @@ export async function GET(request: NextRequest) {
         db.truckDocument.count({
           where: {
             verificationStatus: status,
+            deletedAt: null,
           },
         }),
       ]);

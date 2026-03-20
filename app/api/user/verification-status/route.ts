@@ -58,7 +58,7 @@ export async function GET() {
 
     // Check if user has uploaded any company registration documents
     const documentCount = await db.companyDocument.count({
-      where: { organizationId: user.organization?.id ?? "" },
+      where: { organizationId: user.organization?.id ?? "", deletedAt: null },
     });
 
     const hasDocuments = documentCount > 0 && !!user.organization?.id;

@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // Build where clauses
-    const companyWhere: Prisma.CompanyDocumentWhereInput = {};
-    const truckWhere: Prisma.TruckDocumentWhereInput = {};
+    // Build where clauses (G-W3-3: exclude soft-deleted)
+    const companyWhere: Prisma.CompanyDocumentWhereInput = { deletedAt: null };
+    const truckWhere: Prisma.TruckDocumentWhereInput = { deletedAt: null };
 
     if (status) {
       companyWhere.verificationStatus = status;

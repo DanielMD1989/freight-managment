@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
       // FIX: Use Prisma type instead of any
       const where: Prisma.CompanyDocumentWhereInput = {
         organizationId: entityId,
+        deletedAt: null,
       };
 
       // FIX: Use proper enum types
@@ -152,6 +153,7 @@ export async function GET(request: NextRequest) {
       // FIX: Use Prisma type instead of any
       const where: Prisma.TruckDocumentWhereInput = {
         truckId: entityId,
+        deletedAt: null,
       };
 
       // FIX: Use proper enum types

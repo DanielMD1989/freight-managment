@@ -89,7 +89,11 @@ export async function GET(
     const organizationId = path[1]; // organization ID
 
     // Verify user has access to this organization's files
-    if (session.organizationId !== organizationId && session.role !== "ADMIN") {
+    if (
+      session.organizationId !== organizationId &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json(
         { error: "You do not have permission to access this file" },
         { status: 403 }

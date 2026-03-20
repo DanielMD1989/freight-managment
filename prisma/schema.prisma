@@ -1685,6 +1685,7 @@ model CompanyDocument {
   // Metadata
   uploadedAt DateTime  @default(now())
   expiresAt  DateTime? // License expiration
+  deletedAt  DateTime? // G-W3-3: Soft delete timestamp
 
   // Relations
   organizationId String
@@ -1721,6 +1722,7 @@ model TruckDocument {
   // Metadata
   uploadedAt DateTime  @default(now())
   expiresAt  DateTime?
+  deletedAt  DateTime? // G-W3-3: Soft delete timestamp
 
   // Relations
   truckId      String

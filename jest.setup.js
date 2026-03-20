@@ -178,9 +178,11 @@ jest.mock("@/lib/db", () => {
     systemSettings: {},
     companyDocument: {
       verificationStatus: "PENDING",
+      deletedAt: null,
     },
     truckDocument: {
       verificationStatus: "PENDING",
+      deletedAt: null,
     },
     auditLog: {
       severity: "INFO",

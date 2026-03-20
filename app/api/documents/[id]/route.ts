@@ -496,9 +496,10 @@ export async function DELETE(
         );
       }
 
-      // Soft delete (just mark as deleted, keep for audit)
-      await db.companyDocument.delete({
+      // G-W3-3: Soft delete — mark as deleted, keep for audit
+      await db.companyDocument.update({
         where: { id },
+        data: { deletedAt: new Date() },
       });
 
       return NextResponse.json({
@@ -560,9 +561,10 @@ export async function DELETE(
         );
       }
 
-      // Soft delete
-      await db.truckDocument.delete({
+      // G-W3-3: Soft delete — mark as deleted, keep for audit
+      await db.truckDocument.update({
         where: { id },
+        data: { deletedAt: new Date() },
       });
 
       return NextResponse.json({
