@@ -10,6 +10,15 @@ import { verifyToken } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import AdminTripDetailClient from "./AdminTripDetailClient";
 
+export interface LoadEventEntry {
+  id: string;
+  eventType: string;
+  description: string | null;
+  createdAt: string;
+  userId: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
 export interface TripDetail {
   id: string;
   status: string;
@@ -24,6 +33,10 @@ export interface TripDetail {
   carrierServiceFee: number | null;
   shipperFeeStatus: string;
   carrierFeeStatus: string;
+  // G-M33-2: Reassignment fields
+  previousTruckId: string | null;
+  reassignedAt: string | null;
+  reassignmentReason: string | null;
   load: {
     id: string;
     status: string;
@@ -33,6 +46,8 @@ export interface TripDetail {
   } | null;
   carrier: { id: string; name: string } | null;
   truck: { id: string; licensePlate: string } | null;
+  // G-M33-4: Audit trail (admin-only)
+  loadEvents?: LoadEventEntry[];
 }
 
 async function getTrip(tripId: string): Promise<{ trip: TripDetail } | null> {
@@ -52,7 +67,12 @@ async function getTrip(tripId: string): Promise<{ trip: TripDetail } | null> {
     if (response.status === 404) return null;
     if (!response.ok) return null;
 
-    return await response.json();
+    const data = await response.json();
+    // G-M33-4: Merge loadEvents into trip for client component
+    if (data.loadEvents) {
+      data.trip.loadEvents = data.loadEvents;
+    }
+    return data;
   } catch {
     return null;
   }

@@ -159,7 +159,28 @@ export async function GET(
       };
     }
 
-    return NextResponse.json({ trip: responseTrip });
+    // G-M33-4: Admin-only audit trail — load events for this trip's load.
+    let loadEvents: unknown[] = [];
+    if (isAdminView && trip.loadId) {
+      loadEvents = await db.loadEvent.findMany({
+        where: { loadId: trip.loadId },
+        select: {
+          id: true,
+          eventType: true,
+          description: true,
+          createdAt: true,
+          userId: true,
+          metadata: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      });
+    }
+
+    return NextResponse.json({
+      trip: responseTrip,
+      ...(isAdminView && { loadEvents }),
+    });
   } catch (error) {
     return handleApiError(error, "Get trip error");
   }

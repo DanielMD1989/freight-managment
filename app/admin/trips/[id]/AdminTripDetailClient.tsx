@@ -301,6 +301,81 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
         </div>
       </div>
 
+      {/* G-M33-2: Truck Reassignment */}
+      {trip.reassignedAt && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6">
+          <h3 className="mb-4 text-sm font-medium tracking-wider text-amber-700 uppercase">
+            Truck Reassignment
+          </h3>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <dt className="text-sm text-gray-600">Reassigned At</dt>
+              <dd className="mt-1 text-sm font-medium text-gray-900">
+                {formatDate(trip.reassignedAt)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-gray-600">Reason</dt>
+              <dd className="mt-1 text-sm font-medium text-gray-900">
+                {trip.reassignmentReason || "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-gray-600">Previous Truck</dt>
+              <dd className="mt-1 font-mono text-sm font-medium text-gray-900">
+                {trip.previousTruckId
+                  ? trip.previousTruckId.slice(0, 8) + "..."
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-gray-600">Current Truck</dt>
+              <dd className="mt-1 text-sm font-medium text-gray-900">
+                {trip.truck?.licensePlate || "—"}
+              </dd>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* G-M33-4: Audit Trail */}
+      {trip.loadEvents && trip.loadEvents.length > 0 && (
+        <div className="rounded-lg bg-white p-6 shadow">
+          <h3 className="mb-4 text-sm font-medium tracking-wider text-gray-500 uppercase">
+            Audit Trail
+          </h3>
+          <div className="space-y-3">
+            {trip.loadEvents.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700">
+                      {event.eventType}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {event.userId
+                        ? `by ${event.userId.slice(0, 8)}...`
+                        : "System"}
+                    </span>
+                  </div>
+                  {event.description && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      {event.description}
+                    </p>
+                  )}
+                </div>
+                <span className="ml-4 shrink-0 text-xs text-gray-400">
+                  {formatDate(event.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Back Link */}
       <div>
         <Link
