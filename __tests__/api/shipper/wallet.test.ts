@@ -311,10 +311,10 @@ describe("Shipper Wallet — GET /api/wallet/transactions", () => {
       (tx: any) => tx.type === "COMMISSION"
     );
     expect(commissionTx).toBeDefined();
-    // Shipper's line is isDebit=true → amount should be positive
-    expect(commissionTx!.amount).toBeGreaterThan(0);
-    // Must be 100 (shipper's line), not 50 (carrier's line)
-    expect(commissionTx!.amount).toBe(100);
+    // G-M31-C1: isDebit=true → money OUT → negative amount for user
+    expect(commissionTx!.amount).toBeLessThan(0);
+    // Must be -100 (shipper's line), not -50 (carrier's line)
+    expect(commissionTx!.amount).toBe(-100);
   });
 });
 

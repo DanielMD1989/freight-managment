@@ -170,8 +170,11 @@ export async function GET(request: NextRequest) {
           description: tx.description,
           reference: tx.reference,
           loadId: tx.loadId,
-          // Debit to wallet = money IN; Credit to wallet = money OUT
-          amount: walletOnDebitSide ? amount : -amount,
+          // G-M31-C1: isDebit true = money OUT (negative for user),
+          // isDebit false = money IN (positive for user).
+          // accountId position is always true (creditAccountId never set) —
+          // must use isDebit flag for correct sign.
+          amount: walletLine.isDebit ? -amount : amount,
           createdAt: tx.createdAt,
         };
       })

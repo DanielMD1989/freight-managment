@@ -253,4 +253,40 @@ describe("Admin Wallet Topup → WALLET_TOPUP_CONFIRMED Notification (G-W-N4-1)"
     );
     expect(walletTopupCalls).toHaveLength(1);
   });
+
+  // G-M31-C1 T4: Topup creates JournalLine with isDebit: false (money IN)
+  it("T4: topup JournalLine has isDebit=false (G-M31-C1)", async () => {
+    useAdminSession();
+
+    const res = await callTopup(shipperUserId, {
+      amount: 500,
+      paymentMethod: "MANUAL",
+    });
+    expect(res.status).toBe(200);
+
+    const data = await parseResponse(res);
+    expect(data.transactionId).toBeDefined();
+
+    // Find the journal entry created by the topup
+    const je = await db.journalEntry.findUnique({
+      where: { id: data.transactionId },
+    });
+    expect(je).toBeDefined();
+    expect(je!.transactionType).toBe("DEPOSIT");
+
+    // Verify the nested lines data has isDebit: false
+    // Mock stores lines as { create: [...] } from the route's Prisma call
+    const linesData = je!.lines;
+    // Lines may be stored as the create array or as a nested object
+    const linesList = Array.isArray(linesData)
+      ? linesData
+      : linesData?.create
+        ? Array.isArray(linesData.create)
+          ? linesData.create
+          : [linesData.create]
+        : [];
+    const walletLine = linesList.find((l: any) => l.accountId === walletId);
+    expect(walletLine).toBeDefined();
+    expect(walletLine!.isDebit).toBe(false);
+  });
 });

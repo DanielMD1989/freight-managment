@@ -503,4 +503,220 @@ describe("Carrier Wallet", () => {
       expect(typeof data.pagination.hasMore).toBe("boolean");
     });
   });
+
+  // ─── G-M31-C1: Sign convention tests ──────────────────────────────────────
+
+  describe("G-M31-C1 sign convention", () => {
+    const signOrgId = "sign-test-org";
+    const signWalletId = "sign-test-wallet";
+
+    const signSession = createMockSession({
+      userId: "sign-test-user",
+      email: "sign@test.com",
+      role: "CARRIER",
+      organizationId: signOrgId,
+    });
+
+    beforeAll(async () => {
+      await db.organization.create({
+        data: {
+          id: signOrgId,
+          name: "Sign Test Org",
+          type: "CARRIER_COMPANY",
+          contactEmail: "sign@test.com",
+          contactPhone: "+251911099001",
+        },
+      });
+
+      await db.user.create({
+        data: {
+          id: "sign-test-user",
+          email: "sign@test.com",
+          passwordHash: "hashed_Test1234!",
+          firstName: "Sign",
+          lastName: "Test",
+          phone: "+251911099001",
+          role: "CARRIER",
+          status: "ACTIVE",
+          organizationId: signOrgId,
+        },
+      });
+
+      await db.financialAccount.create({
+        data: {
+          id: signWalletId,
+          organizationId: signOrgId,
+          accountType: "CARRIER_WALLET",
+          balance: 5000,
+          currency: "ETB",
+        },
+      });
+
+      // T1: Fee deduction — isDebit: true, money OUT
+      await db.journalEntry.create({
+        data: {
+          id: "je-sign-deduct",
+          transactionType: "SERVICE_FEE_DEDUCT",
+          description: "Fee deduction for load",
+          reference: "LOAD-SIGN-1",
+          lines: [
+            {
+              amount: 300,
+              isDebit: true,
+              accountId: signWalletId,
+              creditAccountId: null,
+            },
+          ],
+        },
+      });
+
+      // T2: Deposit — isDebit: false (G-M31-C1 fix), money IN
+      await db.journalEntry.create({
+        data: {
+          id: "je-sign-deposit",
+          transactionType: "DEPOSIT",
+          description: "Admin topup",
+          reference: "TOPUP-SIGN-1",
+          lines: [
+            {
+              amount: 1000,
+              isDebit: false,
+              accountId: signWalletId,
+              creditAccountId: null,
+            },
+          ],
+        },
+      });
+
+      // T3: Refund — isDebit: false, money IN
+      await db.journalEntry.create({
+        data: {
+          id: "je-sign-refund",
+          transactionType: "SERVICE_FEE_REFUND",
+          description: "Fee refund for cancelled load",
+          reference: "LOAD-SIGN-2",
+          lines: [
+            {
+              amount: 200,
+              isDebit: false,
+              accountId: signWalletId,
+              creditAccountId: null,
+            },
+          ],
+        },
+      });
+    });
+
+    it("T1: fee deduction returns negative amount", async () => {
+      setAuthSession(signSession);
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/transactions?type=SERVICE_FEE_DEDUCT"
+      );
+      const res = await getTransactions(req);
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      const deductTx = data.transactions.find(
+        (t: any) => t.type === "SERVICE_FEE_DEDUCT"
+      );
+      expect(deductTx).toBeDefined();
+      expect(deductTx.amount).toBeLessThan(0);
+      expect(deductTx.amount).toBe(-300);
+    });
+
+    it("T2: deposit returns positive amount", async () => {
+      setAuthSession(signSession);
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/transactions?type=DEPOSIT"
+      );
+      const res = await getTransactions(req);
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      const depositTx = data.transactions.find(
+        (t: any) => t.type === "DEPOSIT"
+      );
+      expect(depositTx).toBeDefined();
+      expect(depositTx.amount).toBeGreaterThan(0);
+      expect(depositTx.amount).toBe(1000);
+    });
+
+    it("T3: refund returns positive amount", async () => {
+      setAuthSession(signSession);
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/transactions?type=SERVICE_FEE_REFUND"
+      );
+      const res = await getTransactions(req);
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      const refundTx = data.transactions.find(
+        (t: any) => t.type === "SERVICE_FEE_REFUND"
+      );
+      expect(refundTx).toBeDefined();
+      expect(refundTx.amount).toBeGreaterThan(0);
+      expect(refundTx.amount).toBe(200);
+    });
+
+    it("T4: total withdrawn excludes deposits — only deductions are negative", async () => {
+      // Verify the API sign convention: deposits (isDebit: false) return positive,
+      // fee deductions (isDebit: true) return negative. The carrier wallet page
+      // aggregates "total withdrawn" from isDebit: true lines — deposits must
+      // NOT appear there.
+      setAuthSession(signSession);
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/transactions"
+      );
+      const res = await getTransactions(req);
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      // Negative amounts = money OUT (fee deductions, withdrawals)
+      const negativeTxs = data.transactions.filter((t: any) => t.amount < 0);
+      // Only the fee deduction (-300) should be negative.
+      // The deposit (+1000) must NOT be negative.
+      for (const tx of negativeTxs) {
+        expect(tx.type).not.toBe("DEPOSIT");
+      }
+      const deductTx = negativeTxs.find(
+        (t: any) => t.type === "SERVICE_FEE_DEDUCT"
+      );
+      expect(deductTx).toBeDefined();
+      expect(deductTx.amount).toBe(-300);
+    });
+
+    it("T5: deposits appear as positive — included in total deposited", async () => {
+      // Verify that deposits (isDebit: false) return positive amounts.
+      // The shipper wallet page aggregates "total deposited" from
+      // isDebit: false + transactionType: DEPOSIT lines.
+      setAuthSession(signSession);
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/transactions?type=DEPOSIT"
+      );
+      const res = await getTransactions(req);
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      const depositTxs = data.transactions.filter(
+        (t: any) => t.type === "DEPOSIT"
+      );
+      // All deposits must be positive
+      for (const tx of depositTxs) {
+        expect(tx.amount).toBeGreaterThan(0);
+      }
+      // Our test deposit of 1000 should be present and positive
+      const ourDeposit = depositTxs.find((t: any) => t.amount === 1000);
+      expect(ourDeposit).toBeDefined();
+    });
+  });
 });

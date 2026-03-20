@@ -132,7 +132,9 @@ export async function POST(
               {
                 accountId: wallet.id,
                 amount,
-                isDebit: true, // Debit to wallet = increase balance
+                // G-M31-C1: Deposits are CREDITS to wallet (money IN).
+                // isDebit: false = money IN — matches all other writers.
+                isDebit: false,
               },
             ],
           },
