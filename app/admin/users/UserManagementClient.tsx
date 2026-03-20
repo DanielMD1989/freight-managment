@@ -42,10 +42,9 @@ const ROLES = [
   { value: "", label: "All Roles" },
   { value: "SHIPPER", label: "Shipper" },
   { value: "CARRIER", label: "Carrier" },
-  { value: "LOGISTICS_AGENT", label: "Logistics Agent" },
-  { value: "DRIVER", label: "Driver" },
-  { value: "SUPER_ADMIN", label: "Platform Ops" },
+  { value: "DISPATCHER", label: "Dispatcher" },
   { value: "ADMIN", label: "Admin" },
+  { value: "SUPER_ADMIN", label: "Super Admin" },
 ];
 
 function formatDate(dateString: string | null): string {
@@ -63,11 +62,10 @@ function formatDate(dateString: string | null): string {
 function getRoleBadgeColor(role: string): string {
   const colors: Record<string, string> = {
     ADMIN: "bg-purple-100 text-purple-800",
-    PLATFORM_OPS: "bg-blue-100 text-blue-800",
+    SUPER_ADMIN: "bg-blue-100 text-blue-800",
     SHIPPER: "bg-green-100 text-green-800",
     CARRIER: "bg-yellow-100 text-yellow-800",
-    LOGISTICS_AGENT: "bg-pink-100 text-pink-800",
-    DRIVER: "bg-gray-100 text-gray-800",
+    DISPATCHER: "bg-pink-100 text-pink-800",
   };
   return colors[role] || "bg-gray-100 text-gray-800";
 }

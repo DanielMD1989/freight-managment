@@ -267,7 +267,12 @@ export default function UserDetailClient({
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess("User updated successfully");
+        // G-M34-3: Show warning if server returned one (e.g. active trips)
+        if (data.warning) {
+          setSuccess(`User updated successfully. ${data.warning}`);
+        } else {
+          setSuccess("User updated successfully");
+        }
         setIsEditing(false);
         router.refresh();
       } else {

@@ -32,6 +32,8 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 import { revokeAllSessions } from "@/lib/auth";
+// G-M34-4: Audit logging for admin actions
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 // H2-H6, M12 FIX: Import types for proper typing
 import type { UserUpdateData } from "@/lib/types/admin";
 
@@ -331,6 +333,34 @@ export async function PATCH(
     // Invalidate user cache so status changes take effect immediately
     await CacheInvalidation.user(userId);
 
+    // G-M34-3: Warn admin if carrier/shipper has active trips (not a hard block)
+    let warningMessage: string | null = null;
+    if (
+      validatedData.status === "SUSPENDED" &&
+      targetUser.organizationId &&
+      (targetUser.role === "CARRIER" || targetUser.role === "SHIPPER")
+    ) {
+      const activeTrips = await db.trip.count({
+        where: {
+          ...(targetUser.role === "CARRIER"
+            ? { carrierId: targetUser.organizationId }
+            : { shipperId: targetUser.organizationId }),
+          status: {
+            in: [
+              "ASSIGNED",
+              "PICKUP_PENDING",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
+          },
+        },
+      });
+      if (activeTrips > 0) {
+        warningMessage = `Warning: This ${targetUser.role.toLowerCase()} has ${activeTrips} active trip(s). Suspending will not auto-cancel them.`;
+      }
+    }
+
     // G-A17-2: Revoke all sessions when suspending so requireAuth() endpoints are also blocked
     if (validatedData.status === "SUSPENDED") {
       await revokeAllSessions(userId);
@@ -368,10 +398,36 @@ export async function PATCH(
       }
     }
 
+    // G-M34-4: Audit log for admin user updates
+    const isStatusChange = validatedData.status !== undefined;
+    await writeAuditLog({
+      eventType: isStatusChange
+        ? AuditEventType.ACCOUNT_UPDATED
+        : AuditEventType.ADMIN_ACTION,
+      severity:
+        validatedData.status === "SUSPENDED"
+          ? AuditSeverity.WARNING
+          : AuditSeverity.INFO,
+      userId: session.userId,
+      resource: "user",
+      resourceId: userId,
+      action: "UPDATE_USER",
+      result: "SUCCESS",
+      message: `Admin ${session.userId} updated user ${targetUser.email}: ${changes.join(", ")}`,
+      metadata: {
+        targetUserId: userId,
+        targetEmail: targetUser.email,
+        targetRole: targetUser.role,
+        changes,
+      },
+      timestamp: new Date(),
+    }).catch((err) => console.error("Audit log failed:", err));
+
     return NextResponse.json({
       message: "User updated successfully",
       user: updatedUser,
       changes,
+      ...(warningMessage && { warning: warningMessage }),
     });
   } catch (error) {
     return handleApiError(error, "Update user error");
@@ -491,6 +547,24 @@ export async function DELETE(
 
     // G-A17-2: Revoke all sessions so requireAuth() endpoints are also blocked
     await revokeAllSessions(userId);
+
+    // G-M34-4: Audit log for user deletion
+    await writeAuditLog({
+      eventType: AuditEventType.ACCOUNT_DELETED,
+      severity: AuditSeverity.CRITICAL,
+      userId: session.userId,
+      resource: "user",
+      resourceId: userId,
+      action: "DELETE_USER",
+      result: "SUCCESS",
+      message: `Admin ${session.userId} deleted user ${targetUser.email} (${targetUser.role})`,
+      metadata: {
+        targetUserId: userId,
+        targetEmail: targetUser.email,
+        targetRole: targetUser.role,
+      },
+      timestamp: new Date(),
+    }).catch((err) => console.error("Audit log failed:", err));
 
     return NextResponse.json({
       message: "User deleted successfully",

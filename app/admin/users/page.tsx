@@ -103,7 +103,10 @@ export default async function AdminUsersPage({
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || session.role !== "ADMIN") {
+  if (
+    !session ||
+    (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")
+  ) {
     redirect("/unauthorized");
   }
 
