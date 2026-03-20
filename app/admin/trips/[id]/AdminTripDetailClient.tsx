@@ -51,12 +51,12 @@ function formatCurrency(amount: number | null): string {
 
 export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
   const router = useRouter();
-  const [resolving, setResolving] = useState<"ASSIGNED" | "CANCELLED" | null>(
-    null
-  );
+  const [resolving, setResolving] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
 
-  const handleResolve = async (newStatus: "ASSIGNED" | "CANCELLED") => {
+  const handleResolve = async (
+    newStatus: "ASSIGNED" | "IN_TRANSIT" | "COMPLETED" | "CANCELLED"
+  ) => {
     setResolving(newStatus);
     setResolveError(null);
 
@@ -163,7 +163,18 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
             </div>
           )}
 
-          <div className="flex gap-3">
+          {/* G-M32-6: All four EXCEPTION resolution options. Order:
+              IN_TRANSIT (most common), ASSIGNED, COMPLETED, CANCELLED (destructive last). */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => handleResolve("IN_TRANSIT")}
+              disabled={resolving !== null}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {resolving === "IN_TRANSIT"
+                ? "Resuming..."
+                : "Resume Transit → IN_TRANSIT"}
+            </button>
             <button
               onClick={() => handleResolve("ASSIGNED")}
               disabled={resolving !== null}
@@ -172,6 +183,15 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
               {resolving === "ASSIGNED"
                 ? "Restarting..."
                 : "Restart Trip → ASSIGNED"}
+            </button>
+            <button
+              onClick={() => handleResolve("COMPLETED")}
+              disabled={resolving !== null}
+              className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {resolving === "COMPLETED"
+                ? "Completing..."
+                : "Force Complete → COMPLETED"}
             </button>
             <button
               onClick={() => handleResolve("CANCELLED")}
