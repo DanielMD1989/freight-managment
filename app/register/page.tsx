@@ -28,6 +28,8 @@ export default function RegisterPage() {
     companyName: "",
     carrierType: "CARRIER_COMPANY",
     associationId: "",
+    organizationId: "",
+    taxId: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -49,9 +51,28 @@ export default function RegisterPage() {
     }
   }, [formData.role, formData.carrierType]);
 
+  // G-W1-4: Client-side password policy (mirrors lib/auth.ts validatePasswordPolicy)
+  const passwordChecks = [
+    { label: "At least 8 characters", met: formData.password.length >= 8 },
+    { label: "Uppercase letter", met: /[A-Z]/.test(formData.password) },
+    { label: "Lowercase letter", met: /[a-z]/.test(formData.password) },
+    { label: "Number", met: /[0-9]/.test(formData.password) },
+    {
+      label: "Special character",
+      met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password),
+    },
+  ];
+  const passwordValid =
+    formData.password.length === 0 || passwordChecks.every((c) => c.met);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+
+    if (!passwordChecks.every((c) => c.met)) {
+      setError("Password does not meet security requirements");
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -73,10 +94,21 @@ export default function RegisterPage() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           role: formData.role,
-          companyName: formData.companyName || undefined,
+          companyName:
+            formData.role !== "DISPATCHER"
+              ? formData.companyName || undefined
+              : undefined,
           carrierType:
             formData.role === "CARRIER" ? formData.carrierType : undefined,
           associationId: formData.associationId || undefined,
+          organizationId:
+            formData.role === "DISPATCHER"
+              ? formData.organizationId || undefined
+              : undefined,
+          taxId:
+            formData.role !== "DISPATCHER"
+              ? formData.taxId || undefined
+              : undefined,
         }),
       });
 
@@ -336,14 +368,17 @@ export default function RegisterPage() {
                     companyName: "",
                     carrierType: "CARRIER_COMPANY",
                     associationId: "",
+                    organizationId: "",
+                    taxId: "",
                   })
                 }
                 className={selectClassName}
               >
                 <option value="SHIPPER">Shipper - I need to ship goods</option>
                 <option value="CARRIER">Carrier - I transport goods</option>
-                <option value="LOGISTICS_AGENT">Logistics Agent (3PL)</option>
-                <option value="DRIVER">Driver</option>
+                <option value="DISPATCHER">
+                  Dispatcher - Platform operator
+                </option>
               </select>
             </div>
 
@@ -464,6 +499,52 @@ export default function RegisterPage() {
               </>
             )}
 
+            {/* Dispatcher — Organization ID */}
+            {formData.role === "DISPATCHER" && (
+              <div>
+                <label htmlFor="organizationId" className={labelClassName}>
+                  Organization ID (from invitation)
+                </label>
+                <input
+                  id="organizationId"
+                  name="organizationId"
+                  type="text"
+                  value={formData.organizationId}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      organizationId: e.target.value,
+                    })
+                  }
+                  className={inputClassName}
+                  placeholder="Paste organization ID from invitation"
+                />
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  Required if you received an invitation to join an organization
+                </p>
+              </div>
+            )}
+
+            {/* Tax ID — Shipper & Carrier */}
+            {(formData.role === "SHIPPER" || formData.role === "CARRIER") && (
+              <div>
+                <label htmlFor="taxId" className={labelClassName}>
+                  Tax ID / TIN (optional)
+                </label>
+                <input
+                  id="taxId"
+                  name="taxId"
+                  type="text"
+                  value={formData.taxId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, taxId: e.target.value })
+                  }
+                  className={inputClassName}
+                  placeholder="Organization TIN"
+                />
+              </div>
+            )}
+
             {/* Password Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -508,9 +589,25 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {/* G-W1-4: Password strength indicators */}
+            {formData.password.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                {passwordChecks.map((check) => (
+                  <span
+                    key={check.label}
+                    className={check.met ? "text-green-600" : "text-slate-400"}
+                  >
+                    {check.met ? "\u2713" : "\u2022"} {check.label}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={
+                isLoading || (!passwordValid && formData.password.length > 0)
+              }
               className="from-primary-700 to-primary-600 hover:from-primary-800 hover:to-primary-700 shadow-primary-500/25 hover:shadow-primary-500/30 mt-6 flex w-full justify-center rounded-xl bg-gradient-to-r px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? (
