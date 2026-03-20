@@ -268,6 +268,8 @@ export async function seedAdminTestData(): Promise<AdminSeedData> {
       settlementStatus: "PENDING",
       serviceFeeEtb: 250,
       serviceFeeStatus: "DEDUCTED",
+      shipperFeeStatus: "DEDUCTED",
+      carrierFeeStatus: "DEDUCTED",
       corridorId: corridor.id,
     },
   });

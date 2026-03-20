@@ -328,6 +328,10 @@ export async function PATCH(
               }
             : {};
 
+        // G-M32-4: Restore GPS tracking when EXCEPTION → IN_TRANSIT.
+        const resumeFields =
+          tripStatus === "IN_TRANSIT" ? { trackingEnabled: true } : {};
+
         // 5b FIX: Optimistic lock — prevent race condition where trip
         // was already COMPLETED or CANCELLED by another path (P2025 → 409).
         await tx.trip.update({
@@ -342,6 +346,7 @@ export async function PATCH(
             ...(tripStatus === "COMPLETED" && { completedAt: new Date() }),
             ...(tripStatus === "CANCELLED" && { cancelledAt: new Date() }),
             ...cancelledFields,
+            ...resumeFields,
           },
         });
 

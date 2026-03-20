@@ -32,7 +32,7 @@ export async function POST(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    await requirePermission(Permission.MANAGE_SETTLEMENTS);
+    const session = await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { id: loadId } = await params;
 
@@ -44,6 +44,8 @@ export async function POST(
         status: true,
         podVerified: true,
         settlementStatus: true,
+        shipperFeeStatus: true,
+        carrierFeeStatus: true,
         pickupCity: true,
         deliveryCity: true,
         serviceFeeEtb: true,
@@ -84,6 +86,28 @@ export async function POST(
       );
     }
 
+    // G-M32-1: Verify fees are deducted before marking settlement as PAID.
+    // Client-side guard exists but API must enforce server-side.
+    if (load.shipperFeeStatus !== "DEDUCTED") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot approve settlement: shipper fees have not been deducted. Use the manual settle action to deduct fees first.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (load.carrierFeeStatus !== "DEDUCTED") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot approve settlement: carrier fees have not been deducted. Use the manual settle action to deduct fees first.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (load.settlementStatus === "PAID") {
       return NextResponse.json(
         { error: "Settlement has already been processed" },
@@ -113,11 +137,13 @@ export async function POST(
     });
 
     // Create audit log entry
+    // G-M32-2: Include userId for admin action traceability.
     await db.loadEvent.create({
       data: {
         loadId,
         eventType: "SETTLEMENT_APPROVED",
         description: "Settlement manually approved by administrator",
+        userId: session.userId,
       },
     });
 
