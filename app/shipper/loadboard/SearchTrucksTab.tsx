@@ -173,7 +173,17 @@ export default function SearchTrucksTab({
 
       const url = `/api/truck-postings?${params.toString()}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch trucks");
+      if (response.status === 402) {
+        const data = await response.json();
+        setFetchError(
+          data.error ||
+            "Insufficient wallet balance for marketplace access. Please top up your wallet."
+        );
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("Failed to fetch trucks");
+      }
       const data = await response.json();
       setTrucks(data.truckPostings || []);
     } catch (error) {

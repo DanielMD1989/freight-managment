@@ -521,6 +521,11 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
     const includeMatchCount = searchParams.get("includeMatchCount") === "true";
+    const availableFrom = searchParams.get("availableFrom");
+    const minLength = searchParams.get("minLength");
+    const maxWeight = searchParams.get("maxWeight");
+    const ageHours = searchParams.get("ageHours");
+    const companyVerified = searchParams.get("companyVerified");
 
     // Valid PostingStatus values from Prisma schema
     const validStatuses = [
@@ -658,6 +663,18 @@ export async function GET(request: NextRequest) {
       where.fullPartial = fullPartial;
     }
 
+    // G-W7-1: availableFrom filter — show trucks available by the requested date
+    if (availableFrom) {
+      where.availableFrom = { lte: new Date(availableFrom) };
+    }
+
+    // G-W7-1: ageHours filter — only show postings created within N hours
+    if (ageHours) {
+      const cutoff = new Date();
+      cutoff.setHours(cutoff.getHours() - parseInt(ageHours));
+      where.createdAt = { gte: cutoff };
+    }
+
     // G-A7-2 + G-A7-3: Exclude trucks on active trips at query level (not just response).
     // PICKUP_PENDING is included because a truck heading to pickup is already committed.
     // Uses the Trip relation (hasMany, supports 'none') rather than assignedLoad (one-to-one).
@@ -665,6 +682,12 @@ export async function GET(request: NextRequest) {
     where.truck = {
       ...(truckType ? { truckType } : {}),
       approvalStatus: "APPROVED", // G-M12-1b: Only show approved trucks in marketplace
+      // G-W7-1: minLength filter
+      ...(minLength ? { lengthM: { gte: parseFloat(minLength) } } : {}),
+      // G-W7-1: maxWeight filter — truck capacity must handle the load weight
+      ...(maxWeight ? { capacity: { gte: parseFloat(maxWeight) } } : {}),
+      // G-W7-1: companyVerified filter
+      ...(companyVerified === "true" ? { carrier: { isVerified: true } } : {}),
       trips: {
         none: {
           status: {
