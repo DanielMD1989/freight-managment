@@ -373,31 +373,6 @@ export default function TruckManagementClient({
         </div>
       }
 
-      {/* Add Truck Button for pending/rejected tabs */}
-      {activeTab !== "approved" && (
-        <div className="flex justify-end">
-          <Link
-            href={ROUTES.carrier.trucks.add}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 font-medium text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Add Truck
-          </Link>
-        </div>
-      )}
-
       {/* Pending/Rejected Info Banner */}
       {activeTab === "pending" && pendingCount > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5">

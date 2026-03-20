@@ -98,12 +98,12 @@ async function getTrucks(
 export default async function TrucksPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     page?: string;
     truckType?: string;
     status?: string;
     tab?: string;
-  };
+  }>;
 }) {
   // Verify authentication
   const cookieStore = await cookies();
@@ -124,10 +124,11 @@ export default async function TrucksPage({
   }
 
   // Parse params
-  const page = parseInt(searchParams.page || "1");
-  const truckType = searchParams.truckType;
-  const status = searchParams.status;
-  const activeTab = searchParams.tab || "approved";
+  const resolvedSearchParams = await searchParams;
+  const page = parseInt(resolvedSearchParams.page || "1");
+  const truckType = resolvedSearchParams.truckType;
+  const status = resolvedSearchParams.status;
+  const activeTab = resolvedSearchParams.tab || "approved";
 
   // Sprint 18: Fetch approved and pending trucks separately
   const [approvedData, pendingData, rejectedData] = await Promise.all([

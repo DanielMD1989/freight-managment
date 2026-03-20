@@ -41,10 +41,16 @@ interface Truck {
   volume?: number | null;
   currentCity?: string | null;
   currentRegion?: string | null;
+  currentLat?: number | null;
+  currentLng?: number | null;
   isAvailable: boolean;
   status: string;
   approvalStatus: string;
   rejectionReason?: string | null;
+  lengthM?: number | null;
+  ownerName?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
 }
 
 interface EditTruckFormProps {
@@ -65,7 +71,13 @@ export default function EditTruckForm({
     volume: truck.volume?.toString() || "",
     currentCity: truck.currentCity || "",
     currentRegion: truck.currentRegion || "",
+    currentLat: truck.currentLat ?? (undefined as number | undefined),
+    currentLng: truck.currentLng ?? (undefined as number | undefined),
     isAvailable: truck.isAvailable,
+    lengthM: truck.lengthM?.toString() || "",
+    ownerName: truck.ownerName || "",
+    contactName: truck.contactName || "",
+    contactPhone: truck.contactPhone || "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,11 +106,15 @@ export default function EditTruckForm({
         ...formData,
         currentCity: place.city || value,
         currentRegion: place.region || "",
+        currentLat: place.coordinates.lat,
+        currentLng: place.coordinates.lng,
       });
     } else {
       setFormData({
         ...formData,
         currentCity: value,
+        currentLat: undefined,
+        currentLng: undefined,
       });
     }
   };
@@ -155,7 +171,13 @@ export default function EditTruckForm({
         volume: formData.volume ? parseFloat(formData.volume) : null,
         currentCity: formData.currentCity || null,
         currentRegion: formData.currentRegion || null,
+        currentLat: formData.currentLat,
+        currentLng: formData.currentLng,
         isAvailable: formData.isAvailable,
+        lengthM: formData.lengthM ? parseFloat(formData.lengthM) : null,
+        ownerName: formData.ownerName || null,
+        contactName: formData.contactName || null,
+        contactPhone: formData.contactPhone || null,
       };
 
       const response = await fetch(`/api/trucks/${truck.id}`, {
@@ -360,6 +382,58 @@ export default function EditTruckForm({
             </select>
             <p className={hintClass}>Auto-populated when selecting a city</p>
           </div>
+        </div>
+
+        {/* Length */}
+        <div>
+          <label className={labelClass}>Length (m)</label>
+          <input
+            type="number"
+            name="lengthM"
+            value={formData.lengthM}
+            onChange={handleChange}
+            min="0.01"
+            step="0.01"
+            placeholder="e.g., 12"
+            className={inputClass}
+          />
+        </div>
+
+        {/* Owner & Contact */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div>
+            <label className={labelClass}>Owner Name</label>
+            <input
+              type="text"
+              name="ownerName"
+              value={formData.ownerName}
+              onChange={handleChange}
+              placeholder="Vehicle owner"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Contact Name</label>
+            <input
+              type="text"
+              name="contactName"
+              value={formData.contactName}
+              onChange={handleChange}
+              placeholder="Driver or contact"
+              className={inputClass}
+            />
+          </div>
+        </div>
+        <div>
+          <label className={labelClass}>Contact Phone</label>
+          <input
+            type="tel"
+            name="contactPhone"
+            value={formData.contactPhone}
+            onChange={handleChange}
+            placeholder="+251..."
+            className={inputClass}
+          />
         </div>
 
         {/* Is Available */}
