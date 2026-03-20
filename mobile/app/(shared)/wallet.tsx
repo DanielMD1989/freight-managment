@@ -28,11 +28,20 @@ interface WalletBalance {
   currency: string;
   pendingCredits: number;
   pendingDebits: number;
+  wallets?: Array<{ minimumBalance?: number }>;
 }
 
 interface WalletTransaction {
   id: string;
-  type: "COMMISSION" | "PAYMENT" | "REFUND" | "ADJUSTMENT";
+  type:
+    | "DEPOSIT"
+    | "WITHDRAWAL"
+    | "COMMISSION"
+    | "SETTLEMENT"
+    | "REFUND"
+    | "SERVICE_FEE_RESERVE"
+    | "SERVICE_FEE_DEDUCT"
+    | "SERVICE_FEE_REFUND";
   amount: number;
   description: string;
   createdAt: string;
@@ -82,10 +91,25 @@ export default function WalletScreen() {
     Alert.alert("Coming Soon", "This feature is under development.");
 
   const txIconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+    DEPOSIT: "arrow-down-circle-outline",
+    WITHDRAWAL: "arrow-up-circle-outline",
+    SERVICE_FEE_DEDUCT: "remove-circle-outline",
+    SERVICE_FEE_REFUND: "add-circle-outline",
+    SERVICE_FEE_RESERVE: "time-outline",
     COMMISSION: "cash-outline",
-    PAYMENT: "card-outline",
-    REFUND: "refresh-outline",
-    ADJUSTMENT: "options-outline",
+    SETTLEMENT: "checkmark-circle-outline",
+    REFUND: "return-up-back-outline",
+  };
+
+  const txColorMap: Record<string, string> = {
+    DEPOSIT: colors.success,
+    REFUND: colors.success,
+    SERVICE_FEE_REFUND: colors.success,
+    WITHDRAWAL: colors.error,
+    SERVICE_FEE_DEDUCT: colors.error,
+    COMMISSION: colors.error,
+    SERVICE_FEE_RESERVE: colors.error,
+    SETTLEMENT: colors.textTertiary,
   };
 
   return (
@@ -120,6 +144,13 @@ export default function WalletScreen() {
                   +{formatCurrency(balance?.pendingCredits ?? 0)} pending
                 </Text>
               </View>
+            )}
+
+            {(balance?.wallets?.[0]?.minimumBalance ?? 0) > 0 && (
+              <Text style={styles.minBalanceText}>
+                Minimum balance required:{" "}
+                {formatCurrency(balance?.wallets?.[0]?.minimumBalance ?? 0)}
+              </Text>
             )}
           </>
         )}
@@ -169,7 +200,10 @@ export default function WalletScreen() {
                   <Ionicons
                     name={txIconMap[tx.type] ?? "receipt-outline"}
                     size={20}
-                    color={tx.amount >= 0 ? colors.success : colors.error}
+                    color={
+                      txColorMap[tx.type] ??
+                      (tx.amount >= 0 ? colors.success : colors.error)
+                    }
                   />
                 </View>
                 <View style={styles.txInfo}>
@@ -234,6 +268,11 @@ const styles = StyleSheet.create({
   pendingText: {
     ...typography.bodySmall,
     color: colors.success,
+  },
+  minBalanceText: {
+    ...typography.bodySmall,
+    color: colors.primary200,
+    marginTop: spacing.sm,
   },
   actionsRow: {
     flexDirection: "row",

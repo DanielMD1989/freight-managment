@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
         accountType: true,
         balance: true,
         currency: true,
+        minimumBalance: true,
         updatedAt: true,
       },
     });
@@ -89,6 +90,7 @@ export async function GET(request: NextRequest) {
         type: account.accountType,
         balance: Number(account.balance),
         currency: account.currency,
+        minimumBalance: Number(account.minimumBalance ?? 0),
         updatedAt: account.updatedAt,
       })),
       totalBalance,
