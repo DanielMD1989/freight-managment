@@ -184,15 +184,20 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
                 ? "Restarting..."
                 : "Restart Trip → ASSIGNED"}
             </button>
-            <button
-              onClick={() => handleResolve("COMPLETED")}
-              disabled={resolving !== null}
-              className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {resolving === "COMPLETED"
-                ? "Completing..."
-                : "Force Complete → COMPLETED"}
-            </button>
+            <div className="flex flex-col items-start">
+              <button
+                onClick={() => handleResolve("COMPLETED")}
+                disabled={resolving !== null}
+                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resolving === "COMPLETED"
+                  ? "Completing..."
+                  : "Force Complete → COMPLETED"}
+              </button>
+              <span className="mt-1 text-xs text-gray-500">
+                Requires POD uploaded by carrier
+              </span>
+            </div>
             <button
               onClick={() => handleResolve("CANCELLED")}
               disabled={resolving !== null}

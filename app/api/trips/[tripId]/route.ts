@@ -302,6 +302,7 @@ export async function PATCH(
           break;
         case "IN_TRANSIT":
           updateData.pickedUpAt = new Date();
+          updateData.trackingEnabled = true; // G-M32-4b: restore GPS on EXCEPTION → IN_TRANSIT
           break;
         case "DELIVERED":
           updateData.deliveredAt = new Date();

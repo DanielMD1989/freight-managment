@@ -510,15 +510,23 @@ export async function PATCH(
       `Load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`
     );
 
-    // G-M24-1: Explicit notifications when shipper cancels a load with an active trip.
+    // G-M24-1: Explicit notifications when load with active trip is cancelled.
     // Generic notifyLoadStakeholders is not enough — carrier needs explicit TRIP_CANCELLED notice.
     if (newStatus === "CANCELLED" && load.trip?.id) {
+      // G-M32-7: Role-aware notification text (was hardcoded "by shipper").
+      const cancelActorLabel =
+        session.role === "ADMIN" || session.role === "SUPER_ADMIN"
+          ? "admin"
+          : session.role === "DISPATCHER"
+            ? "dispatcher"
+            : "shipper";
+
       if (load.trip.carrierId) {
         notifyOrganization({
           organizationId: load.trip.carrierId,
           type: NotificationType.TRIP_CANCELLED,
-          title: "Load cancelled by shipper",
-          message: `The load for ${load.pickupCity} → ${load.deliveryCity} has been cancelled by the shipper. Your trip has been cancelled and your truck has been freed.`,
+          title: `Load cancelled by ${cancelActorLabel}`,
+          message: `The load for ${load.pickupCity} → ${load.deliveryCity} has been cancelled by the ${cancelActorLabel}. Your trip has been cancelled and your truck has been freed.`,
           metadata: {
             loadId,
             tripId: load.trip.id,
@@ -531,8 +539,8 @@ export async function PATCH(
       createNotificationForRole({
         role: "ADMIN",
         type: NotificationType.TRIP_CANCELLED,
-        title: "Shipper cancelled assigned load",
-        message: `Shipper cancelled load ${load.pickupCity} → ${load.deliveryCity} while trip was ${load.trip.status}.`,
+        title: `${cancelActorLabel.charAt(0).toUpperCase() + cancelActorLabel.slice(1)} cancelled assigned load`,
+        message: `${cancelActorLabel.charAt(0).toUpperCase() + cancelActorLabel.slice(1)} cancelled load ${load.pickupCity} → ${load.deliveryCity} while trip was ${load.trip.status}.`,
         metadata: {
           loadId,
           tripId: load.trip.id,
