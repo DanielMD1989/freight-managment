@@ -21,6 +21,9 @@ interface VerificationData {
     name: string;
     type: string;
     isVerified: boolean;
+    verificationStatus: string;
+    rejectionReason: string | null;
+    documentsLockedAt: string | null;
   } | null;
   verification: {
     steps: VerificationStep[];
@@ -157,6 +160,17 @@ export function VerificationStatusClient({
                 ? "/dispatcher"
                 : "/";
         router.push(redirectPath);
+        return;
+      }
+
+      // G-W5-1: Redirect on rejection or suspension
+      if (result.status === "REJECTED") {
+        router.push("/account-rejected");
+        return;
+      }
+      if (result.status === "SUSPENDED") {
+        router.push("/account-suspended");
+        return;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
