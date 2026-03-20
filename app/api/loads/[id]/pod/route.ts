@@ -365,7 +365,8 @@ export async function PUT(
     // TD-007 FIX: Invalidate cache after POD verification
     await CacheInvalidation.load(loadId, load.shipperId);
 
-    // Notify carrier that POD has been verified
+    // G-M29-G1: Notify ALL active carrier org users (was take:1 single user).
+    // Uses notifyOrganization — matches confirm/route.ts:309-317 and other paths.
     const loadWithCarrier = await db.load.findUnique({
       where: { id: loadId },
       select: {
@@ -374,24 +375,15 @@ export async function PUT(
         assignedTruck: {
           select: {
             carrierId: true,
-            carrier: {
-              select: {
-                users: {
-                  select: { id: true },
-                  take: 1,
-                },
-              },
-            },
           },
         },
       },
     });
 
-    const carrierUserId =
-      loadWithCarrier?.assignedTruck?.carrier?.users?.[0]?.id;
-    if (carrierUserId) {
-      await createNotification({
-        userId: carrierUserId,
+    const carrierOrgId = loadWithCarrier?.assignedTruck?.carrierId;
+    if (carrierOrgId) {
+      await notifyOrganization({
+        organizationId: carrierOrgId,
         type: NotificationType.POD_VERIFIED,
         title: "POD Verified",
         message: `Your POD for load ${loadWithCarrier.pickupCity} → ${loadWithCarrier.deliveryCity} has been verified. Settlement can now proceed.`,

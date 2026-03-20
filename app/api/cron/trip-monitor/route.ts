@@ -120,10 +120,19 @@ export async function POST(request: NextRequest) {
               },
             });
 
+            // G-M29-D1: Set settlement + podVerified when fee collected — matches Paths 1-3.
+            // Stays PENDING if fee failed — admin resolves.
             await tx.load.update({
               where: { id: trip.loadId! },
-              data: { status: "COMPLETED" },
-              // settlementStatus stays PENDING if fee failed — Admin resolves
+              data: {
+                status: "COMPLETED",
+                ...(feeSucceeded && {
+                  settlementStatus: "PAID",
+                  settledAt: new Date(),
+                  podVerified: true,
+                  podVerifiedAt: new Date(),
+                }),
+              },
             });
 
             // G-M22-1: Only restore truck if no other active trips on it
@@ -148,11 +157,13 @@ export async function POST(request: NextRequest) {
                   where: { id: trip.truckId },
                   data: { isAvailable: true },
                 });
-                await tx.truckPosting.updateMany({
-                  where: { truckId: trip.truckId, status: "MATCHED" },
-                  data: { status: "ACTIVE", updatedAt: new Date() },
-                });
               }
+              // G-M29-E1: Always revert MATCHED postings regardless of other active trips —
+              // matches Paths 1-3 (route.ts:514-517, confirm/route.ts:250-253, pod/route.ts:540-543).
+              await tx.truckPosting.updateMany({
+                where: { truckId: trip.truckId, status: "MATCHED" },
+                data: { status: "ACTIVE", updatedAt: new Date() },
+              });
             }
 
             // CORRECTION 4: Audit trail loadEvent

@@ -473,6 +473,11 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       expect(trip.status).toBe("COMPLETED");
       expect(trip.autoClosedAt).toBeTruthy();
       expect(trip.completedAt).toBeTruthy();
+
+      // G-M29-D1: When fee succeeds, cron now sets settlementStatus + podVerified
+      const load = await db.load.findUnique({ where: { id: loadId } });
+      expect(load.settlementStatus).toBe("PAID");
+      expect(load.podVerified).toBe(true);
     });
 
     it("T-M21-7-4: Auto-close with fee failure → trip still closes, settlementStatus stays PENDING", async () => {
@@ -502,6 +507,15 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
         },
       });
 
+      // G-M29-D1: Force fee failure to test the PENDING path
+      const { deductServiceFee } = jest.requireMock(
+        "@/lib/serviceFeeManagement"
+      );
+      deductServiceFee.mockResolvedValueOnce({
+        success: false,
+        error: "Insufficient balance",
+      });
+
       process.env.CRON_SECRET = "test-cron-secret";
       const req = createRequest(
         "POST",
@@ -517,7 +531,7 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       expect(trip.status).toBe("COMPLETED");
       expect(trip.autoClosedAt).toBeTruthy();
 
-      // Fee failed but trip still closed — settlementStatus untouched
+      // Fee failed → trip still closed but settlementStatus stays PENDING (admin resolves)
       const load = await db.load.findUnique({ where: { id: loadId } });
       expect(load.status).toBe("COMPLETED");
       expect(load.settlementStatus).toBe("PENDING");
