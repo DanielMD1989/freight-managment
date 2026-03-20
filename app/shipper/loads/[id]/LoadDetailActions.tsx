@@ -41,6 +41,31 @@ export default function LoadDetailActions({
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [unposting, setUnposting] = useState(false);
+
+  const handleUnpost = async () => {
+    setUnposting(true);
+    try {
+      const res = await csrfFetch(`/api/loads/${loadId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "UNPOSTED" }),
+      });
+      if (res.ok) {
+        toast.success("Load unposted");
+        router.refresh();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to unpost load");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to unpost load";
+      toast.error(message);
+    } finally {
+      setUnposting(false);
+    }
+  };
 
   const handleVerifyPod = async () => {
     setVerifyingPod(true);
@@ -94,7 +119,12 @@ export default function LoadDetailActions({
     }
   };
 
-  const canCancel = status === "ASSIGNED" || status === "PICKUP_PENDING";
+  const canCancel =
+    status === "POSTED" ||
+    status === "SEARCHING" ||
+    status === "OFFERED" ||
+    status === "ASSIGNED" ||
+    status === "PICKUP_PENDING";
   const showViewTrip =
     tripId &&
     [
@@ -106,6 +136,7 @@ export default function LoadDetailActions({
     ].includes(status);
   const showTrackOnMap = status === "IN_TRANSIT";
   const showFindTrucks = status === "POSTED";
+  const showUnpost = status === "POSTED";
   const showEditLoad = status === "DRAFT" || status === "POSTED";
   const showPodSection = status === "DELIVERED" && podSubmitted;
 
@@ -201,6 +232,17 @@ export default function LoadDetailActions({
           >
             Find Trucks
           </Link>
+        )}
+
+        {/* Unpost Load */}
+        {showUnpost && (
+          <button
+            onClick={handleUnpost}
+            disabled={unposting}
+            className="block w-full rounded-lg border border-amber-300 px-4 py-2 text-center text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
+          >
+            {unposting ? "Unposting..." : "Unpost Load"}
+          </button>
         )}
 
         {/* Edit Load */}

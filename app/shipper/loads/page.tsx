@@ -56,6 +56,8 @@ const STATUS_MAP: Record<string, string> = {
   draft: "DRAFT",
   posted: "POSTED",
   unposted: "UNPOSTED",
+  exception: "EXCEPTION",
+  expired: "EXPIRED",
 };
 
 async function getLoads(

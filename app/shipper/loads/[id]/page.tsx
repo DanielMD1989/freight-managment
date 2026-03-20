@@ -37,7 +37,7 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
   }
 
   // Fetch load with related data
-  const load = await db.load.findUnique({
+  const loadResult = await db.load.findUnique({
     where: { id },
     include: {
       shipper: {
@@ -77,6 +77,11 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
       },
     },
   });
+
+  const load = loadResult as typeof loadResult & {
+    cancelReason: string | null;
+    exceptionAt: Date | null;
+  };
 
   if (!load) {
     return (
@@ -180,6 +185,58 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
           {load.status}
         </span>
       </div>
+
+      {/* Cancellation Reason Banner */}
+      {load.status === "CANCELLED" && load.cancelReason && (
+        <div className="mb-6 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4">
+          <svg
+            className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <p className="font-medium text-rose-800">Cancellation Reason</p>
+            <p className="mt-1 text-sm text-rose-700">{load.cancelReason}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Exception Banner */}
+      {load.status === "EXCEPTION" && (
+        <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <svg
+            className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <div>
+            <p className="font-medium text-amber-800">
+              This load is in EXCEPTION status
+            </p>
+            <p className="mt-1 text-sm text-amber-700">
+              Admin has been notified and is reviewing the situation.
+              {load.exceptionAt &&
+                ` Exception reported: ${formatDate(load.exceptionAt)}`}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Details */}

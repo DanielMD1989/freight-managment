@@ -52,6 +52,8 @@ const STATUS_OPTIONS = [
   { value: "delivered", label: "Delivered" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "exception", label: "Exception" },
+  { value: "expired", label: "Expired" },
 ];
 
 function formatDate(dateString: string): string {
