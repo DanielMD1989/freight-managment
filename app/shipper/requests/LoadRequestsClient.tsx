@@ -107,7 +107,7 @@ export default function LoadRequestsClient({
           r.id === requestId
             ? {
                 ...r,
-                status: approve ? "APPROVED" : "REJECTED",
+                status: approve ? "SHIPPER_APPROVED" : "REJECTED",
                 respondedAt: new Date().toISOString(),
               }
             : r
