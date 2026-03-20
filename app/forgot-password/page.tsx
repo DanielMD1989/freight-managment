@@ -95,13 +95,14 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Password strength indicator
+  // G-W2-1: Password strength — mirrors server validatePasswordPolicy (5 rules)
   const getPasswordStrength = (password: string) => {
     let strength = 0;
     if (password.length >= 8) strength++;
     if (/[A-Z]/.test(password)) strength++;
     if (/[a-z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
+    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) strength++;
     return strength;
   };
 
@@ -206,7 +207,7 @@ export default function ForgotPasswordPage() {
                 {newPassword && (
                   <div className="mt-2">
                     <div className="flex gap-1">
-                      {[1, 2, 3, 4].map((level) => (
+                      {[1, 2, 3, 4, 5].map((level) => (
                         <div
                           key={level}
                           className={`h-1 flex-1 rounded ${
@@ -217,7 +218,9 @@ export default function ForgotPasswordPage() {
                                   ? "bg-orange-500"
                                   : passwordStrength <= 3
                                     ? "bg-yellow-500"
-                                    : "bg-green-500"
+                                    : passwordStrength <= 4
+                                      ? "bg-lime-500"
+                                      : "bg-green-500"
                               : "bg-gray-200 dark:bg-gray-700"
                           }`}
                         />
@@ -226,8 +229,9 @@ export default function ForgotPasswordPage() {
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       {passwordStrength <= 1 && "Weak"}
                       {passwordStrength === 2 && "Fair"}
-                      {passwordStrength === 3 && "Good"}
-                      {passwordStrength === 4 && "Strong"}
+                      {passwordStrength === 3 && "Moderate"}
+                      {passwordStrength === 4 && "Good"}
+                      {passwordStrength === 5 && "Strong"}
                     </p>
                   </div>
                 )}
@@ -257,6 +261,18 @@ export default function ForgotPasswordPage() {
                     }
                   >
                     {/[0-9]/.test(newPassword) ? "✓" : "○"} One number
+                  </li>
+                  <li
+                    className={
+                      /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)
+                        ? "text-green-600"
+                        : ""
+                    }
+                  >
+                    {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)
+                      ? "✓"
+                      : "○"}{" "}
+                    One special character
                   </li>
                 </ul>
               </div>
@@ -288,7 +304,7 @@ export default function ForgotPasswordPage() {
                 type="submit"
                 disabled={
                   isLoading ||
-                  passwordStrength < 4 ||
+                  passwordStrength < 5 ||
                   newPassword !== confirmPassword
                 }
                 className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"

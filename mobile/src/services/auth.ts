@@ -104,12 +104,17 @@ class AuthService {
     }
   }
 
-  /** Reset password with token */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
+  /** Reset password with OTP */
+  async resetPassword(
+    email: string,
+    otp: string,
+    newPassword: string
+  ): Promise<void> {
     try {
       await apiClient.post("/api/auth/reset-password", {
-        token,
-        password: newPassword,
+        email,
+        otp,
+        newPassword,
       });
     } catch (error) {
       throw new Error(getErrorMessage(error));

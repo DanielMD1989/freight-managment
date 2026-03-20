@@ -29,31 +29,33 @@ describe("Auth Service — Extended", () => {
   // ---- resetPassword ----
 
   describe("resetPassword", () => {
-    it("should call POST /api/auth/reset-password with { token, password }", async () => {
+    it("should call POST /api/auth/reset-password with { email, otp, newPassword }", async () => {
       mockPost.mockResolvedValue({ data: { success: true } });
 
-      await authService.resetPassword("reset-token-abc", "NewPass123!");
+      await authService.resetPassword("user@test.com", "123456", "NewPass123!");
       expect(mockPost).toHaveBeenCalledWith("/api/auth/reset-password", {
-        token: "reset-token-abc",
-        password: "NewPass123!",
+        email: "user@test.com",
+        otp: "123456",
+        newPassword: "NewPass123!",
       });
     });
 
-    it("should send 'password' (not 'newPassword') as the field name", async () => {
+    it("should send email, otp, and newPassword fields", async () => {
       mockPost.mockResolvedValue({ data: {} });
 
-      await authService.resetPassword("tok", "pass");
+      await authService.resetPassword("a@b.com", "999999", "pass");
       const [, body] = mockPost.mock.calls[0];
-      expect(body).toHaveProperty("password", "pass");
-      expect(body).not.toHaveProperty("newPassword");
+      expect(body).toHaveProperty("email", "a@b.com");
+      expect(body).toHaveProperty("otp", "999999");
+      expect(body).toHaveProperty("newPassword", "pass");
     });
 
     it("should propagate errors", async () => {
-      mockPost.mockRejectedValue(new Error("Token expired"));
+      mockPost.mockRejectedValue(new Error("Invalid OTP"));
 
       await expect(
-        authService.resetPassword("bad-token", "pass")
-      ).rejects.toThrow("Token expired");
+        authService.resetPassword("a@b.com", "000000", "pass")
+      ).rejects.toThrow("Invalid OTP");
     });
   });
 
