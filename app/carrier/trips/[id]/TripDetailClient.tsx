@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { csrfFetch } from "@/lib/csrfFetch";
 
@@ -102,6 +102,40 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
   // Cancel modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Trip progress state (for IN_TRANSIT — matches shipper W9 pattern)
+  const [tripProgress, setTripProgress] = useState({
+    percent: trip.tripProgressPercent || 0,
+    remainingKm: trip.remainingDistanceKm,
+    estimatedArrival: null as string | null,
+  });
+
+  const isActiveTrip = trip.status === "IN_TRANSIT";
+
+  const fetchTripProgress = useCallback(async () => {
+    if (!trip.loadId) return;
+    try {
+      const response = await fetch(`/api/loads/${trip.loadId}/progress`);
+      if (response.ok) {
+        const data = await response.json();
+        setTripProgress({
+          percent: data.progress?.percent || 0,
+          remainingKm: data.progress?.remainingKm || null,
+          estimatedArrival: data.progress?.estimatedArrival || null,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch trip progress:", error);
+    }
+  }, [trip.loadId]);
+
+  useEffect(() => {
+    if (isActiveTrip) {
+      fetchTripProgress();
+      const interval = setInterval(fetchTripProgress, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isActiveTrip, fetchTripProgress]);
 
   // Auto-open POD upload modal if query param is present (only if POD not already submitted)
   useEffect(() => {
@@ -700,28 +734,36 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
         {/* Main Details */}
         <div className="space-y-6 lg:col-span-2">
           {/* Trip Progress (for IN_TRANSIT) */}
-          {trip.status === "IN_TRANSIT" &&
-            trip.tripProgressPercent !== null && (
-              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-                <h3 className="mb-2 text-sm font-medium text-blue-800 dark:text-blue-200">
-                  Trip Progress
-                </h3>
-                <div className="h-3 w-full rounded-full bg-blue-200 dark:bg-blue-800">
-                  <div
-                    className="h-3 rounded-full bg-blue-600 transition-all duration-500"
-                    style={{ width: `${trip.tripProgressPercent}%` }}
-                  />
-                </div>
-                <div className="mt-2 flex justify-between text-sm text-blue-700 dark:text-blue-300">
-                  <span>{trip.tripProgressPercent}% complete</span>
-                  {trip.remainingDistanceKm && (
-                    <span>
-                      {trip.remainingDistanceKm.toFixed(1)} km remaining
-                    </span>
+          {trip.status === "IN_TRANSIT" && tripProgress.percent > 0 && (
+            <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+              <h3 className="mb-2 text-sm font-medium text-blue-800 dark:text-blue-200">
+                Trip Progress
+              </h3>
+              <div className="h-3 w-full rounded-full bg-blue-200 dark:bg-blue-800">
+                <div
+                  className="h-3 rounded-full bg-blue-600 transition-all duration-500"
+                  style={{ width: `${tripProgress.percent}%` }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between text-sm text-blue-700 dark:text-blue-300">
+                <span>{tripProgress.percent}% complete</span>
+                {tripProgress.remainingKm && (
+                  <span>
+                    {tripProgress.remainingKm.toFixed(1)} km remaining
+                  </span>
+                )}
+              </div>
+              {tripProgress.estimatedArrival && (
+                <div className="mt-1 text-sm text-blue-600 dark:text-blue-400">
+                  ETA:{" "}
+                  {new Date(tripProgress.estimatedArrival).toLocaleTimeString(
+                    [],
+                    { hour: "2-digit", minute: "2-digit" }
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
           {/* Load Details */}
           <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
