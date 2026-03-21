@@ -231,6 +231,24 @@ export async function PATCH(
 
     // Update document based on entity type
     if (entityType === "company") {
+      // G-AD5-1: Guard against approving/rejecting soft-deleted documents
+      const companyDoc = await db.companyDocument.findUnique({
+        where: { id },
+        select: { id: true, deletedAt: true },
+      });
+      if (!companyDoc) {
+        return NextResponse.json(
+          { error: "Document not found" },
+          { status: 404 }
+        );
+      }
+      if (companyDoc.deletedAt) {
+        return NextResponse.json(
+          { error: "Document has been deleted" },
+          { status: 404 }
+        );
+      }
+
       const updated = await db.companyDocument.update({
         where: { id },
         data: {
@@ -303,6 +321,24 @@ export async function PATCH(
         document: updated,
       });
     } else {
+      // G-AD5-1: Guard against approving/rejecting soft-deleted documents
+      const truckDoc = await db.truckDocument.findUnique({
+        where: { id },
+        select: { id: true, deletedAt: true },
+      });
+      if (!truckDoc) {
+        return NextResponse.json(
+          { error: "Document not found" },
+          { status: 404 }
+        );
+      }
+      if (truckDoc.deletedAt) {
+        return NextResponse.json(
+          { error: "Document has been deleted" },
+          { status: 404 }
+        );
+      }
+
       const updated = await db.truckDocument.update({
         where: { id },
         data: {
