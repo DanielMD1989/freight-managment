@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { getCSRFToken } from "@/lib/csrfFetch";
 import ReassignTruckModal from "./ReassignTruckModal";
 
 interface TripDetail {
@@ -64,6 +65,46 @@ export default function TripDetailClient({ tripId }: { tripId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showReassign, setShowReassign] = useState(false);
+
+  // Cancel modal state
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const handleCancelTrip = async () => {
+    if (!cancelReason.trim()) {
+      setCancelError("Please provide a reason for cancellation");
+      return;
+    }
+
+    setCancelling(true);
+    setCancelError(null);
+
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch(`/api/trips/${tripId}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to cancel trip");
+      }
+
+      setShowCancelModal(false);
+      fetchTrip();
+    } catch (err: unknown) {
+      setCancelError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const fetchTrip = useCallback(async () => {
     setLoading(true);
@@ -365,7 +406,69 @@ export default function TripDetailClient({ tripId }: { tripId: string }) {
               View Map
             </Link>
           )}
+        {(trip.status === "ASSIGNED" || trip.status === "PICKUP_PENDING") && (
+          <button
+            onClick={() => setShowCancelModal(true)}
+            className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+          >
+            Cancel Trip
+          </button>
+        )}
       </div>
+
+      {/* Cancel Trip Modal */}
+      {showCancelModal && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">
+              Cancel Trip
+            </h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Are you sure you want to cancel this trip? The load will be
+              returned to the marketplace for re-booking.
+            </p>
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Reason for cancellation *
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Please explain why you are cancelling..."
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900"
+                required
+              />
+            </div>
+
+            {cancelError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {cancelError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelError(null);
+                }}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleCancelTrip}
+                disabled={cancelling || !cancelReason.trim()}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling..." : "Cancel Trip"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reassign Truck Modal */}
       {showReassign && trip.truck && (

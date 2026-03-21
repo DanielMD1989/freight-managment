@@ -44,6 +44,8 @@ const updateTripSchema = z.object({
   receiverName: z.string().max(100).optional(),
   receiverPhone: z.string().max(20).optional(),
   deliveryNotes: z.string().max(500).optional(),
+  // Exception reason (for EXCEPTION status)
+  exceptionReason: z.string().max(500).optional(),
 });
 
 // Use canonical trip state machine (lib/tripStateMachine.ts)
@@ -344,6 +346,9 @@ export async function PATCH(
           break;
         case "EXCEPTION":
           updateData.exceptionAt = new Date();
+          if (validatedData.exceptionReason) {
+            updateData.exceptionReason = validatedData.exceptionReason;
+          }
           break;
         case "CANCELLED":
           updateData.cancelledAt = new Date();

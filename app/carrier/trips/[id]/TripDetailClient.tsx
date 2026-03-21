@@ -103,6 +103,10 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
+  // Exception modal state
+  const [showExceptionModal, setShowExceptionModal] = useState(false);
+  const [exceptionReason, setExceptionReason] = useState("");
+
   // Trip progress state (for IN_TRANSIT — matches shipper W9 pattern)
   const [tripProgress, setTripProgress] = useState({
     percent: trip.tripProgressPercent || 0,
@@ -456,11 +460,11 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                 {loading ? "Marking..." : "Mark Delivered"}
               </button>
               <button
-                onClick={() => handleStatusChange("EXCEPTION")}
+                onClick={() => setShowExceptionModal(true)}
                 disabled={loading}
                 className="rounded-lg border border-amber-300 bg-amber-50 px-6 py-2 font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
               >
-                {loading ? "Reporting..." : "Report Exception"}
+                Report Exception
               </button>
             </>
           )}
@@ -719,6 +723,56 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                 className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {loading ? "Cancelling..." : "Cancel Trip"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Exception Modal */}
+      {showExceptionModal && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Report Exception
+            </h2>
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+              Describe the issue preventing this trip from continuing. An admin
+              will review and resolve it.
+            </p>
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Reason for exception *
+              </label>
+              <textarea
+                value={exceptionReason}
+                onChange={(e) => setExceptionReason(e.target.value)}
+                placeholder="e.g., Vehicle breakdown, road closure, cargo damage..."
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                required
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExceptionModal(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  handleStatusChange("EXCEPTION", {
+                    exceptionReason,
+                  });
+                  setShowExceptionModal(false);
+                }}
+                disabled={loading || exceptionReason.trim().length < 10}
+                className="flex-1 rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {loading ? "Reporting..." : "Report Exception"}
               </button>
             </div>
           </div>

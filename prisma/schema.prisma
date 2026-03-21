@@ -1064,7 +1064,8 @@ model Trip {
   deliveredAt DateTime? // When load was delivered (status -> DELIVERED)
   completedAt  DateTime? // When POD confirmed (status -> COMPLETED)
   autoClosedAt DateTime? // Set by 48h auto-close cron
-  exceptionAt  DateTime? // When exception was raised (status -> EXCEPTION)
+  exceptionAt     DateTime? // When exception was raised (status -> EXCEPTION)
+  exceptionReason String?   // Reason provided when raising exception
 
   // Truck reassignment (mid-trip breakdown)
   previousTruckId    String?   // Truck before reassignment
