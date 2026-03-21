@@ -23,6 +23,8 @@ interface TripDetail {
   reassignedAt: string | null;
   reassignmentReason: string | null;
   previousTruckId: string | null;
+  exceptionReason: string | null;
+  exceptionAt: string | null;
   load?: {
     id: string;
     pickupCity: string;
@@ -231,7 +233,18 @@ export default function TripDetailClient({ tripId }: { tripId: string }) {
               <p className="text-sm font-medium text-orange-800">
                 This trip has an active exception
               </p>
-              <p className="text-sm text-orange-600">
+              {trip.exceptionReason && (
+                <p className="mt-1 text-sm text-orange-700">
+                  <span className="font-medium">Reason:</span>{" "}
+                  {trip.exceptionReason}
+                </p>
+              )}
+              {trip.exceptionAt && (
+                <p className="mt-0.5 text-xs text-orange-500">
+                  Raised {new Date(trip.exceptionAt).toLocaleString()}
+                </p>
+              )}
+              <p className="mt-1 text-sm text-orange-600">
                 Assign a replacement truck to resume transit.
               </p>
             </div>
