@@ -48,7 +48,12 @@ export default async function EditLoadPage({ params }: PageProps) {
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== "SHIPPER" && session.role !== "ADMIN")) {
+  if (
+    !session ||
+    (session.role !== "SHIPPER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN")
+  ) {
     redirect("/unauthorized");
   }
 
@@ -96,7 +101,11 @@ export default async function EditLoadPage({ params }: PageProps) {
   }
 
   // Check ownership
-  if (load.shipperId !== session.organizationId && session.role !== "ADMIN") {
+  if (
+    load.shipperId !== session.organizationId &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
     redirect("/unauthorized");
   }
 

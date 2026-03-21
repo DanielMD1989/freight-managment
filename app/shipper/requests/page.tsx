@@ -114,7 +114,11 @@ async function getLoadRequests(userId: string) {
 export default async function ShipperRequestsPage() {
   const session = await requireAuth();
 
-  if (session.role !== "SHIPPER" && session.role !== "ADMIN") {
+  if (
+    session.role !== "SHIPPER" &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
     redirect("/shipper");
   }
 

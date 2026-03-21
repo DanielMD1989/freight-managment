@@ -33,7 +33,12 @@ export default async function CarrierLoadDetailsPage({
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== "CARRIER" && session.role !== "ADMIN")) {
+  if (
+    !session ||
+    (session.role !== "CARRIER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN")
+  ) {
     redirect("/unauthorized");
   }
 
@@ -108,7 +113,7 @@ export default async function CarrierLoadDetailsPage({
   const isAssignedCarrier =
     load.assignedTruck?.carrier?.id === session.organizationId;
   const isPostedLoad = load.status === "POSTED";
-  const isAdmin = session.role === "ADMIN";
+  const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
   if (!isAssignedCarrier && !isPostedLoad && !isAdmin) {
     redirect("/unauthorized");

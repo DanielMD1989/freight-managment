@@ -35,7 +35,11 @@ export async function GET(request: NextRequest) {
     const session = await requireActiveUser();
 
     // Check if user is a shipper or admin
-    if (session.role !== "SHIPPER" && session.role !== "ADMIN") {
+    if (
+      session.role !== "SHIPPER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json(
         { error: "Access denied. Shipper role required." },
         { status: 403 }

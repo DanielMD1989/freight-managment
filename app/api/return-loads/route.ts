@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
     if (
       session.role !== "CARRIER" &&
       session.role !== "DISPATCHER" &&
-      session.role !== "ADMIN"
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json(
         { error: "Unauthorized - Carrier access required" },
