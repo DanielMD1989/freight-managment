@@ -47,6 +47,7 @@ export default async function WalletPage() {
       id: true,
       balance: true,
       currency: true,
+      minimumBalance: true,
       createdAt: true,
     },
   });
@@ -182,6 +183,7 @@ export default async function WalletPage() {
     totalSpent:
       Number(totalServiceFees._sum.amount || 0) +
       Number(totalWithdrawals._sum.amount || 0),
+    minimumBalance: Number(walletAccount?.minimumBalance || 0),
     transactions,
   };
 

@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 type TransactionType =
   | "ALL"
@@ -40,6 +41,7 @@ interface WalletData {
   pendingTripsCount: number;
   totalDeposited: number;
   totalSpent: number;
+  minimumBalance: number;
   transactions: Transaction[];
 }
 
@@ -121,7 +123,75 @@ export default function ShipperWalletClient({
 }: ShipperWalletClientProps) {
   const [filterType, setFilterType] = useState<TransactionType>("ALL");
   const [page, setPage] = useState(1);
+  const [showDepositInfo, setShowDepositInfo] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawBankName, setWithdrawBankName] = useState("");
+  const [withdrawAccount, setWithdrawAccount] = useState("");
+  const [withdrawHolder, setWithdrawHolder] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
   const pageSize = 10;
+
+  const handleWithdraw = async () => {
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setWithdrawError("Please enter a valid amount");
+      return;
+    }
+    if (!withdrawBankName.trim()) {
+      setWithdrawError("Bank name is required");
+      return;
+    }
+    if (!withdrawAccount.trim()) {
+      setWithdrawError("Account number is required");
+      return;
+    }
+    if (!withdrawHolder.trim()) {
+      setWithdrawError("Account holder name is required");
+      return;
+    }
+
+    setWithdrawing(true);
+    setWithdrawError(null);
+
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch("/api/financial/withdraw", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        body: JSON.stringify({
+          amount,
+          bankName: withdrawBankName,
+          bankAccount: withdrawAccount,
+          accountHolder: withdrawHolder,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to submit withdrawal request");
+      }
+
+      setWithdrawSuccess(
+        "Withdrawal request submitted. Admin will process within 1-2 business days."
+      );
+      setWithdrawAmount("");
+      setWithdrawBankName("");
+      setWithdrawAccount("");
+      setWithdrawHolder("");
+    } catch (err: unknown) {
+      setWithdrawError(
+        err instanceof Error ? err.message : "An error occurred"
+      );
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   // Filter transactions
   const filteredTransactions = walletData.transactions.filter((t) => {
@@ -161,6 +231,12 @@ export default function ShipperWalletClient({
             <p className="text-4xl font-bold">
               {formatCurrency(walletData.balance, walletData.currency)}
             </p>
+            {walletData.minimumBalance > 0 && (
+              <p className="mt-1 text-sm text-white/70">
+                Minimum Balance:{" "}
+                {formatCurrency(walletData.minimumBalance, walletData.currency)}
+              </p>
+            )}
           </div>
           <div>
             <p className="mb-1 text-sm font-medium text-white/80">
@@ -182,11 +258,7 @@ export default function ShipperWalletClient({
         {/* Quick Actions */}
         <div className="mt-6 flex flex-wrap gap-3 border-t border-white/20 pt-6">
           <button
-            onClick={() =>
-              alert(
-                "Deposit functionality coming soon. Please contact support for manual deposits."
-              )
-            }
+            onClick={() => setShowDepositInfo(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 font-semibold text-teal-700 transition-all hover:bg-white/90"
           >
             <svg
@@ -203,6 +275,29 @@ export default function ShipperWalletClient({
               />
             </svg>
             Deposit Funds
+          </button>
+          <button
+            onClick={() => {
+              setShowWithdrawModal(true);
+              setWithdrawError(null);
+              setWithdrawSuccess(null);
+            }}
+            className="inline-flex items-center gap-2 rounded-lg bg-white/20 px-5 py-2.5 font-medium text-white transition-all hover:bg-white/30"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            Withdraw
           </button>
           <a
             href="#transactions"
@@ -225,6 +320,18 @@ export default function ShipperWalletClient({
           </a>
         </div>
       </div>
+
+      {/* Minimum Balance Warning */}
+      {walletData.minimumBalance > 0 &&
+        walletData.balance < walletData.minimumBalance && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              Your balance is below the minimum required for marketplace access
+              ({formatCurrency(walletData.minimumBalance, walletData.currency)}
+              ). Please top up to resume activity.
+            </p>
+          </div>
+        )}
 
       {/* Financial Summary Cards */}
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -503,6 +610,162 @@ export default function ShipperWalletClient({
           </div>
         )}
       </div>
+
+      {/* Deposit Info Modal */}
+      {showDepositInfo && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              How to Deposit Funds
+            </h2>
+            <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
+              <p>To add funds to your wallet:</p>
+              <ol className="list-inside list-decimal space-y-2">
+                <li>
+                  Transfer funds to our bank account:
+                  <div className="mt-1 ml-4 rounded bg-gray-50 p-2 text-xs dark:bg-slate-700">
+                    <p>
+                      <strong>Bank:</strong> Commercial Bank of Ethiopia
+                    </p>
+                    <p>
+                      <strong>Account:</strong> 1000-XXXX-XXXX
+                    </p>
+                    <p>
+                      <strong>Reference:</strong> Your email address
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  Send your transfer receipt to:{" "}
+                  <strong>support@freightflow.app</strong>
+                </li>
+                <li>
+                  Admin will verify and credit your wallet within 1-2 business
+                  days.
+                </li>
+              </ol>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowDepositInfo(false)}
+                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Withdraw Funds
+            </h2>
+
+            {withdrawSuccess ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                  {withdrawSuccess}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      setShowWithdrawModal(false);
+                      setWithdrawSuccess(null);
+                    }}
+                    className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">
+                      Amount (ETB) *
+                    </label>
+                    <input
+                      type="number"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      min="0.01"
+                      step="0.01"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">
+                      Bank Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={withdrawBankName}
+                      onChange={(e) => setWithdrawBankName(e.target.value)}
+                      placeholder="e.g., Commercial Bank of Ethiopia"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">
+                      Account Number *
+                    </label>
+                    <input
+                      type="text"
+                      value={withdrawAccount}
+                      onChange={(e) => setWithdrawAccount(e.target.value)}
+                      placeholder="Bank account number"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">
+                      Account Holder Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={withdrawHolder}
+                      onChange={(e) => setWithdrawHolder(e.target.value)}
+                      placeholder="Name on the bank account"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {withdrawError && (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                    {withdrawError}
+                  </div>
+                )}
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowWithdrawModal(false);
+                      setWithdrawError(null);
+                    }}
+                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={withdrawing || !withdrawAmount}
+                    className="flex-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                  >
+                    {withdrawing ? "Submitting..." : "Submit Withdrawal"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

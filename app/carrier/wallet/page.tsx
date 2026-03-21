@@ -46,6 +46,7 @@ export default async function CarrierWalletPage() {
       id: true,
       balance: true,
       currency: true,
+      minimumBalance: true,
       createdAt: true,
     },
   });
@@ -156,6 +157,7 @@ export default async function CarrierWalletPage() {
     totalWithdrawals: Number(totalWithdrawals._sum.amount || 0),
     pendingTripsCount: pendingTrips._count,
     completedTripsCount,
+    minimumBalance: Number(walletAccount?.minimumBalance || 0),
     transactions,
   };
 

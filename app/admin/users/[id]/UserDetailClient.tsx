@@ -38,6 +38,7 @@ interface UserDetail {
 interface WalletData {
   id: string;
   balance: number;
+  minimumBalance: number;
   currency: string;
   accountType: string;
 }
@@ -122,6 +123,11 @@ export default function UserDetailClient({
   const [topUpReference, setTopUpReference] = useState("");
   const [topUpNote, setTopUpNote] = useState("");
   const [topUpLoading, setTopUpLoading] = useState(false);
+  const [minBalanceInput, setMinBalanceInput] = useState("");
+  const [minBalanceSaving, setMinBalanceSaving] = useState(false);
+  const [minBalanceSuccess, setMinBalanceSuccess] = useState<string | null>(
+    null
+  );
 
   // Check if current user can edit this user
   const canEdit =
@@ -146,6 +152,7 @@ export default function UserDetailClient({
         if (data.wallet) {
           setWallet(data.wallet);
           setTransactions(data.transactions || []);
+          setMinBalanceInput(String(data.wallet.minimumBalance || 0));
         }
       } else {
         // L41 FIX: Set wallet error state instead of silently failing
@@ -745,6 +752,86 @@ export default function UserDetailClient({
                 <p className="mt-2 text-sm opacity-80">
                   {wallet.accountType.replace(/_/g, " ")} Account
                 </p>
+              </div>
+
+              {/* Minimum Balance Setting */}
+              <div className="rounded-lg border border-gray-200 p-4">
+                <h4 className="mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase">
+                  Marketplace Gate
+                </h4>
+                <p className="mb-2 text-sm text-gray-600">
+                  Current minimum balance:{" "}
+                  <strong>{formatCurrency(wallet.minimumBalance || 0)}</strong>
+                </p>
+                {canEdit && (
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-xs font-medium text-gray-600">
+                        Set Minimum Balance (ETB)
+                      </label>
+                      <input
+                        type="number"
+                        value={minBalanceInput}
+                        onChange={(e) => setMinBalanceInput(e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const val = parseFloat(minBalanceInput);
+                        if (isNaN(val) || val < 0) {
+                          setError("Invalid minimum balance value");
+                          return;
+                        }
+                        setMinBalanceSaving(true);
+                        setMinBalanceSuccess(null);
+                        setError(null);
+                        try {
+                          const csrfToken = await getCSRFToken();
+                          const response = await fetch(
+                            `/api/admin/users/${user.id}/wallet`,
+                            {
+                              method: "PATCH",
+                              headers: {
+                                "Content-Type": "application/json",
+                                ...(csrfToken && {
+                                  "X-CSRF-Token": csrfToken,
+                                }),
+                              },
+                              body: JSON.stringify({ minimumBalance: val }),
+                            }
+                          );
+                          if (response.ok) {
+                            setMinBalanceSuccess(
+                              `Minimum balance set to ${formatCurrency(val)}`
+                            );
+                            setWallet({ ...wallet, minimumBalance: val });
+                          } else {
+                            const data = await response.json();
+                            setError(
+                              data.error || "Failed to update minimum balance"
+                            );
+                          }
+                        } catch {
+                          setError("An error occurred");
+                        } finally {
+                          setMinBalanceSaving(false);
+                        }
+                      }}
+                      disabled={minBalanceSaving}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {minBalanceSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                )}
+                {minBalanceSuccess && (
+                  <p className="mt-2 text-sm text-green-600">
+                    {minBalanceSuccess}
+                  </p>
+                )}
               </div>
 
               {/* Recent Transactions */}

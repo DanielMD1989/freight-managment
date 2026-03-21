@@ -119,6 +119,7 @@ export async function GET(
         id: true,
         accountType: true,
         balance: true,
+        minimumBalance: true,
         currency: true,
         updatedAt: true,
       },
@@ -183,6 +184,7 @@ export async function GET(
       wallet: {
         id: wallet.id,
         balance: Number(wallet.balance),
+        minimumBalance: Number(wallet.minimumBalance || 0),
         currency: wallet.currency,
         accountType: wallet.accountType,
         updatedAt: wallet.updatedAt,
