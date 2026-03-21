@@ -125,6 +125,15 @@ export async function POST(
       );
     }
 
+    // G-AD3-1: Expire active truck postings when carrier org is rejected
+    await db.truckPosting.updateMany({
+      where: {
+        truck: { carrierId: orgId },
+        status: "ACTIVE",
+      },
+      data: { status: "EXPIRED" },
+    });
+
     // G-M13-5: Unpost active loads and cancel pending requests for rejected org
     const activeLoads = await db.load.findMany({
       where: {
