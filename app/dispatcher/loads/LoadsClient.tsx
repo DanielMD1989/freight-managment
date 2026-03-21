@@ -29,7 +29,18 @@ interface Load {
   };
 }
 
-type StatusFilter = "ALL" | "POSTED" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED";
+type StatusFilter =
+  | "ALL"
+  | "POSTED"
+  | "SEARCHING"
+  | "OFFERED"
+  | "ASSIGNED"
+  | "PICKUP_PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "EXCEPTION"
+  | "CANCELLED";
 
 export default function LoadsClient() {
   const [loads, setLoads] = useState<Load[]>([]);
@@ -117,10 +128,17 @@ export default function LoadsClient() {
     const styles: Record<string, string> = {
       DRAFT: "bg-slate-100 text-slate-600",
       POSTED: "bg-blue-100 text-blue-700",
-      ASSIGNED: "bg-amber-100 text-amber-700",
-      IN_TRANSIT: "bg-teal-100 text-teal-700",
-      DELIVERED: "bg-emerald-100 text-emerald-700",
+      SEARCHING: "bg-indigo-100 text-indigo-700",
+      OFFERED: "bg-violet-100 text-violet-700",
+      ASSIGNED: "bg-purple-100 text-purple-700",
+      PICKUP_PENDING: "bg-yellow-100 text-yellow-700",
+      IN_TRANSIT: "bg-orange-100 text-orange-700",
+      DELIVERED: "bg-teal-100 text-teal-700",
+      COMPLETED: "bg-green-100 text-green-700",
+      EXCEPTION: "bg-amber-100 text-amber-700",
       CANCELLED: "bg-red-100 text-red-700",
+      EXPIRED: "bg-stone-100 text-stone-700",
+      UNPOSTED: "bg-gray-100 text-gray-700",
     };
     return styles[status] || "bg-slate-100 text-slate-600";
   };
@@ -187,9 +205,15 @@ export default function LoadsClient() {
             >
               <option value="ALL">All Statuses</option>
               <option value="POSTED">Posted</option>
+              <option value="SEARCHING">Searching</option>
+              <option value="OFFERED">Offered</option>
               <option value="ASSIGNED">Assigned</option>
+              <option value="PICKUP_PENDING">Pickup Pending</option>
               <option value="IN_TRANSIT">In Transit</option>
               <option value="DELIVERED">Delivered</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="EXCEPTION">Exception</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
 
