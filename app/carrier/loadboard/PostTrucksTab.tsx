@@ -30,7 +30,7 @@ interface PostTrucksTabProps {
   user: CarrierUser;
 }
 
-type TruckStatus = "POSTED" | "UNPOSTED" | "EXPIRED";
+type TruckStatus = "POSTED" | "UNPOSTED" | "MATCHED" | "EXPIRED";
 type LoadTab = "all" | "preferred" | "blocked";
 type MainTab = "postings" | "matching";
 
@@ -265,12 +265,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       const counts: Record<string, number> = {
         POSTED: 0,
         UNPOSTED: 0,
+        MATCHED: 0,
         EXPIRED: 0,
       };
 
-      // Fetch POSTED (ACTIVE postings) and EXPIRED counts from truck-postings API
+      // Fetch POSTED (ACTIVE), MATCHED, and EXPIRED counts from truck-postings API
       const postingStatusPromises = [
         { key: "POSTED", apiStatus: "ACTIVE" },
+        { key: "MATCHED", apiStatus: "MATCHED" },
         { key: "EXPIRED", apiStatus: "EXPIRED" },
       ].map(async ({ key, apiStatus }) => {
         const res = await fetch(
@@ -623,10 +625,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
-   * Status tabs configuration - Active, Unposted, Expired
+   * Status tabs configuration - Active, Active Trips, Unposted, Expired
    */
   const statusTabs: StatusTab[] = [
     { key: "POSTED", label: "Active", count: statusCounts.POSTED },
+    { key: "MATCHED", label: "Active Trips", count: statusCounts.MATCHED },
     { key: "UNPOSTED", label: "Unposted", count: statusCounts.UNPOSTED },
     { key: "EXPIRED", label: "Expired", count: statusCounts.EXPIRED },
   ];
