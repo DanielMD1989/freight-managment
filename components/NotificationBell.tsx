@@ -277,10 +277,11 @@ export default function NotificationBell() {
         return isDispatcher ? `/dispatcher/escalations` : null;
 
       case "ESCALATION_RESOLVED":
+      case "EXCEPTION_RESOLVED":
         if (metadata?.loadId) {
-          return isCarrier
-            ? `/carrier/trips/${metadata.loadId}`
-            : `/shipper/loads/${metadata.loadId}`;
+          if (isCarrier) return `/carrier/trips/${metadata.loadId}`;
+          if (isShipper) return `/shipper/loads/${metadata.loadId}`;
+          if (isAdmin) return `/admin/trips`;
         }
         return null;
 
@@ -289,6 +290,9 @@ export default function NotificationBell() {
       case "SERVICE_FEE_REFUNDED":
       case "SERVICE_FEE_RESERVED":
         return isCarrier ? `/carrier/wallet` : `/shipper/wallet`;
+
+      case "SERVICE_FEE_FAILED":
+        return isAdmin ? `/admin/settlement/review` : null;
 
       case "WALLET_TOPUP_CONFIRMED":
         if (isCarrier) return `/carrier/wallet`;
@@ -310,8 +314,8 @@ export default function NotificationBell() {
       case "ACCOUNT_FLAGGED":
         return isAdmin ? `/admin/users` : null;
 
-      case "DOCUMENT_SUBMITTED":
-        return isAdmin ? `/admin/verification/queue` : null;
+      case "DOCUMENTS_SUBMITTED":
+        return isAdmin ? `/admin/verification` : null;
 
       // ── Carrier request flow ──────────────────────────────────────────────
       case "LOAD_REQUEST_APPROVED":
@@ -341,8 +345,60 @@ export default function NotificationBell() {
       case "TRIP_STARTED":
       case "TRIP_COMPLETED":
         return metadata?.loadId ? `/carrier/trips/${metadata.loadId}` : null;
+
+      case "TRIP_CANCELLED":
+        if (isCarrier) return `/carrier/trips`;
+        if (isShipper) return `/shipper/trips`;
+        if (isAdmin || isDispatcher) return `/admin/trips`;
+        return null;
+
+      case "DELIVERY_CONFIRMED": {
+        const entityId = metadata?.tripId ?? metadata?.loadId;
+        if (entityId) {
+          return isCarrier
+            ? `/carrier/trips/${entityId}`
+            : `/shipper/trips/${entityId}`;
+        }
+        return isCarrier ? `/carrier/trips` : `/shipper/trips`;
+      }
+
+      case "TRIP_REASSIGNED":
+        if (isCarrier) return `/carrier/trips`;
+        if (isDispatcher) return `/dispatcher/trips`;
+        if (isAdmin) return `/admin/trips`;
+        return null;
+
+      case "TRIP_DELIVERED":
+        if (isShipper && metadata?.loadId)
+          return `/shipper/loads/${metadata.loadId}`;
+        if (isCarrier && metadata?.loadId)
+          return `/carrier/trips/${metadata.loadId}`;
+        return null;
+
+      case "TRIP_IN_TRANSIT":
+        if (isShipper && metadata?.loadId)
+          return `/shipper/loads/${metadata.loadId}`;
+        return null;
+
+      case "POD_SUBMITTED":
+        if (isShipper && metadata?.loadId)
+          return `/shipper/loads/${metadata.loadId}`;
+        if (isAdmin) return `/admin/loads`;
+        return null;
+
+      case "POD_VERIFIED":
+        return metadata?.loadId ? `/carrier/trips/${metadata.loadId}` : null;
+
       case "POD_UPLOADED":
         return metadata?.loadId ? `/shipper/loads/${metadata.loadId}` : null;
+
+      case "LOAD_ASSIGNED":
+        if (isShipper && metadata?.loadId)
+          return `/shipper/loads/${metadata.loadId}`;
+        if (isCarrier && metadata?.loadId)
+          return `/carrier/trips/${metadata.loadId}`;
+        return null;
+
       case "SETTLEMENT_COMPLETE":
         if (metadata?.settlementId)
           return isCarrier
@@ -359,6 +415,15 @@ export default function NotificationBell() {
       // ── User / verification ───────────────────────────────────────────────
       case "USER_STATUS_CHANGED":
         return `/settings`;
+
+      case "ACCOUNT_APPROVED":
+        return isShipper ? `/shipper` : `/carrier/trucks`;
+
+      case "REGISTRATION_RESUBMITTED":
+        return isAdmin ? `/admin/verification` : null;
+
+      case "TRUCK_RESUBMITTED":
+        return isAdmin ? `/admin/trucks` : null;
 
       default:
         return null;

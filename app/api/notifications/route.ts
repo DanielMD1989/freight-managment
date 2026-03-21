@@ -3,20 +3,19 @@
  * GET /api/notifications - Get user notifications with unread count
  */
 
-import { NextResponse } from "next/server";
-import { getSessionAny } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireActiveUser } from "@/lib/auth";
 import { getRecentNotifications, getUnreadCount } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getSessionAny();
+    const session = await requireActiveUser();
 
-    if (!session?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const limitParam = request.nextUrl.searchParams.get("limit");
+    const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 20;
 
-    const notifications = await getRecentNotifications(session.userId, 20);
+    const notifications = await getRecentNotifications(session.userId, limit);
     const unreadCount = await getUnreadCount(session.userId);
 
     return NextResponse.json({

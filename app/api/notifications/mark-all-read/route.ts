@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionAny } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { markAllAsRead } from "@/lib/notifications";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
@@ -15,11 +15,7 @@ export async function PUT(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await getSessionAny();
-
-    if (!session?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session = await requireActiveUser();
 
     await markAllAsRead(session.userId);
 

@@ -64,21 +64,6 @@ const notificationCategories: NotificationCategory[] = [
         label: "GPS Offline",
         description: "When a truck GPS goes offline",
       },
-      {
-        id: "TRUCK_AT_PICKUP",
-        label: "Pickup Arrival",
-        description: "When truck arrives at pickup",
-      },
-      {
-        id: "TRUCK_AT_DELIVERY",
-        label: "Delivery Arrival",
-        description: "When truck arrives at delivery",
-      },
-      {
-        id: "BYPASS_WARNING",
-        label: "Bypass Alerts",
-        description: "Route bypass detection alerts",
-      },
     ],
   },
   {
@@ -92,7 +77,7 @@ const notificationCategories: NotificationCategory[] = [
         description: "When proof of delivery is uploaded",
       },
       {
-        id: "SETTLEMENT_COMPLETED",
+        id: "SETTLEMENT_COMPLETE",
         label: "Settlement Complete",
         description: "When settlement is processed",
       },
@@ -104,14 +89,14 @@ const notificationCategories: NotificationCategory[] = [
     description: "Account-related notifications",
     types: [
       {
-        id: "SECURITY_ALERT",
-        label: "Security Alerts",
-        description: "Unusual login activity",
+        id: "USER_STATUS_CHANGED",
+        label: "Account Status Changes",
+        description: "When your account status changes",
       },
       {
-        id: "ACCOUNT_UPDATE",
-        label: "Account Updates",
-        description: "Important account changes",
+        id: "LOW_BALANCE_WARNING",
+        label: "Low Balance Warning",
+        description: "When wallet balance is below minimum",
       },
     ],
   },
