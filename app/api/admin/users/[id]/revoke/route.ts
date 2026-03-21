@@ -23,6 +23,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 import { createNotification } from "@/lib/notifications";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 
 // Roles that Admin cannot manage (only SuperAdmin can)
 const ADMIN_PROTECTED_ROLES: UserRole[] = ["ADMIN", "SUPER_ADMIN"];
@@ -140,6 +141,33 @@ export async function POST(
       );
     }
 
+    // G-SA3-2: Warn admin if target has active trips (non-blocking)
+    let warningMessage: string | null = null;
+    if (
+      targetUser.organizationId &&
+      (targetUser.role === "CARRIER" || targetUser.role === "SHIPPER")
+    ) {
+      const activeTrips = await db.trip.count({
+        where: {
+          ...(targetUser.role === "CARRIER"
+            ? { carrierId: targetUser.organizationId }
+            : { shipperId: targetUser.organizationId }),
+          status: {
+            in: [
+              "ASSIGNED",
+              "PICKUP_PENDING",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
+          },
+        },
+      });
+      if (activeTrips > 0) {
+        warningMessage = `Warning: This ${targetUser.role.toLowerCase()} has ${activeTrips} active trip(s). Revoking will not auto-cancel them.`;
+      }
+    }
+
     const revokedAt = new Date();
 
     // 1. Persist revocation
@@ -199,10 +227,29 @@ export async function POST(
       skipPreferenceCheck: true,
     });
 
+    // G-SA3-1: Audit log for revoke action
+    await writeAuditLog({
+      eventType: AuditEventType.ACCOUNT_UPDATED,
+      severity: AuditSeverity.WARNING,
+      userId: session.userId,
+      resource: "user",
+      resourceId: targetUserId,
+      action: "USER_REVOKED",
+      result: "SUCCESS",
+      message: `Admin ${session.userId} revoked access for user ${targetUserId}`,
+      metadata: {
+        targetUserId,
+        targetRole: targetUser.role,
+        reason,
+      },
+      timestamp: new Date(),
+    }).catch((err) => console.error("Audit log failed:", err));
+
     return NextResponse.json({
       message: "Access revoked",
       userId: targetUserId,
       revokedAt,
+      ...(warningMessage && { warning: warningMessage }),
     });
   } catch (error) {
     return handleApiError(error, "Revoke access error");
