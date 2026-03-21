@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Prisma, UserRole } from "@prisma/client";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { hashPassword } from "@/lib/auth";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
 // M1 FIX: Add CSRF validation
@@ -92,6 +94,99 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// G-SA1-1: POST /api/admin/users - Create admin user (SUPER_ADMIN only)
+const createAdminSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  email: z.string().email(),
+  phone: z.string().min(10).max(20).optional(),
+  password: z.string().min(8).max(128),
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
+    const session = await requirePermission(Permission.CREATE_ADMIN);
+
+    const body = await request.json();
+    const data = createAdminSchema.parse(body);
+
+    // Check if email already exists
+    const existing = await db.user.findUnique({
+      where: { email: data.email },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "A user with this email already exists" },
+        { status: 409 }
+      );
+    }
+
+    const passwordHash = await hashPassword(data.password);
+
+    const user = await db.user.create({
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || null,
+        passwordHash,
+        role: "ADMIN",
+        status: "ACTIVE",
+        isActive: true,
+        isEmailVerified: true,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    await writeAuditLog({
+      eventType: AuditEventType.ADMIN_ACTION,
+      severity: AuditSeverity.WARNING,
+      userId: session.userId,
+      resource: "user",
+      resourceId: user.id,
+      action: "ADMIN_CREATED",
+      result: "SUCCESS",
+      message: `SuperAdmin ${session.userId} created admin account ${user.email}`,
+      metadata: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: "ADMIN",
+      },
+      timestamp: new Date(),
+    }).catch((err) => console.error("Audit log failed:", err));
+
+    return NextResponse.json({ user }, { status: 201 });
+  } catch (error) {
+    console.error("Create admin error:", error);
+
+    if (error instanceof Error && error.name === "ForbiddenError") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+
+    if (error instanceof z.ZodError) {
+      return zodErrorResponse(error);
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
 const updateUserSchema = z.object({
   userId: z.string(),
   role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER", "ADMIN", "SUPER_ADMIN"]),
@@ -104,10 +199,18 @@ export async function PATCH(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    await requirePermission(Permission.ASSIGN_ROLES);
+    const session = await requirePermission(Permission.ASSIGN_ROLES);
 
     const body = await request.json();
     const { userId, role } = updateUserSchema.parse(body);
+
+    // G-SA1-2: Cannot change your own role (prevents self-demotion)
+    if (userId === session.userId) {
+      return NextResponse.json(
+        { error: "You cannot change your own role" },
+        { status: 403 }
+      );
+    }
 
     const user = await db.user.update({
       where: { id: userId },
@@ -126,10 +229,17 @@ export async function PATCH(request: NextRequest) {
       user,
     });
   } catch (error) {
-    // L6 FIX: Server-side logging intentional for debugging - errors not exposed to client
     console.error("Update user role error:", error);
 
     if (error instanceof Error && error.name === "ForbiddenError") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+
+    if (
+      error instanceof Error &&
+      (error.message === "Unauthorized" ||
+        error.message.startsWith("Forbidden:"))
+    ) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 

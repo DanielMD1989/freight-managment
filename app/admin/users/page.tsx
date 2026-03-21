@@ -150,6 +150,7 @@ export default async function AdminUsersPage({
         pagination={data.pagination}
         initialRole={role}
         initialSearch={search}
+        currentUserRole={session.role as string}
       />
     </div>
   );

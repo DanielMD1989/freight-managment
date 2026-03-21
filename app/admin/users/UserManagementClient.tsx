@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 interface User {
   id: string;
@@ -75,11 +76,13 @@ export default function UserManagementClient({
   pagination,
   initialRole,
   initialSearch,
+  currentUserRole,
 }: {
   initialUsers: User[];
   pagination: Pagination;
   initialRole?: string;
   initialSearch?: string;
+  currentUserRole?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -141,6 +144,31 @@ export default function UserManagementClient({
 
   return (
     <div className="space-y-6">
+      {/* G-SA1-1: Create Admin button — SUPER_ADMIN only */}
+      {currentUserRole === "SUPER_ADMIN" && (
+        <div className="flex justify-end">
+          <Link
+            href="/admin/users/create"
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Create Admin
+          </Link>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
