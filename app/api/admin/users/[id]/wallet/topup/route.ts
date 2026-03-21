@@ -14,6 +14,7 @@ import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
 import { DepositMethod } from "@prisma/client";
 import { notifyOrganization, NotificationType } from "@/lib/notifications";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 // H15 FIX: Import max topup constant
 import {
   MAX_WALLET_TOPUP_AMOUNT,
@@ -191,6 +192,26 @@ export async function POST(
         paymentMethod,
       },
     }).catch((err) => console.error("topup notify err", err));
+
+    // G-AD12-1: Audit log for wallet topup (financial action)
+    await writeAuditLog({
+      eventType: AuditEventType.ADMIN_ACTION,
+      severity: AuditSeverity.WARNING,
+      userId: session.userId,
+      resource: "wallet",
+      resourceId: result.updatedWallet.id,
+      action: "WALLET_TOPUP",
+      result: "SUCCESS",
+      message: `Admin ${session.userId} topped up ${amount} ETB for org ${user.organizationId}`,
+      metadata: {
+        amount,
+        organizationId: user.organizationId,
+        paymentMethod,
+        reference,
+        newBalance: Number(result.updatedWallet.balance),
+      },
+      timestamp: new Date(),
+    }).catch((err) => console.error("Audit log failed:", err));
 
     return NextResponse.json({
       success: true,

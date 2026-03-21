@@ -27,6 +27,7 @@ import {
   notifyOrganization,
   NotificationType,
 } from "@/lib/notifications";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 
 const updateTripSchema = z.object({
   status: z
@@ -601,6 +602,33 @@ export async function PATCH(
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
     if (loadSynced) {
       await CacheInvalidation.load(tripLoadId, trip.shipperId);
+    }
+
+    // G-AD12-2: Audit log for admin-only trip status overrides
+    const isAdminAction =
+      session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    if (
+      isAdminAction &&
+      (validatedData.status === "COMPLETED" ||
+        validatedData.status === "CANCELLED" ||
+        trip.status === "EXCEPTION")
+    ) {
+      await writeAuditLog({
+        eventType: AuditEventType.ADMIN_ACTION,
+        severity: AuditSeverity.WARNING,
+        userId: session.userId,
+        resource: "trip",
+        resourceId: tripId,
+        action: "TRIP_STATUS_OVERRIDE",
+        result: "SUCCESS",
+        message: `Admin changed trip ${tripId} from ${trip.status} to ${validatedData.status}`,
+        metadata: {
+          fromStatus: trip.status,
+          toStatus: validatedData.status,
+          tripId,
+        },
+        timestamp: new Date(),
+      }).catch((err) => console.error("Audit log failed:", err));
     }
 
     // G-N3-1: PICKUP_PENDING → notify all active shipper users (carrier en route to pickup)
