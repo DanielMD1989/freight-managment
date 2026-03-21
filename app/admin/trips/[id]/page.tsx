@@ -29,6 +29,7 @@ export interface TripDetail {
   completedAt: string | null;
   cancelledAt: string | null;
   exceptionAt: string | null;
+  exceptionReason: string | null;
   shipperServiceFee: number | null;
   carrierServiceFee: number | null;
   shipperFeeStatus: string;

@@ -154,6 +154,12 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
               <p className="mt-1 text-sm text-amber-800">
                 Only admins can resolve trip exceptions. Choose an action below.
               </p>
+              {trip.exceptionReason && (
+                <p className="mt-2 text-sm text-amber-700">
+                  <span className="font-medium">Reason reported:</span>{" "}
+                  {trip.exceptionReason}
+                </p>
+              )}
             </div>
           </div>
 
@@ -192,7 +198,7 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
               >
                 {resolving === "COMPLETED"
                   ? "Completing..."
-                  : "Force Complete → COMPLETED"}
+                  : "Complete Trip → COMPLETED"}
               </button>
               <span className="mt-1 text-xs text-gray-500">
                 Requires POD uploaded by carrier
