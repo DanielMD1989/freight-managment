@@ -539,8 +539,17 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
             <div className="mb-4 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center dark:border-slate-600">
               <input
                 type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => setPodFile(e.target.files?.[0] || null)}
+                accept="image/jpeg,image/png,image/jpg,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  if (file && file.size > 10 * 1024 * 1024) {
+                    setError("File size must be less than 10MB");
+                    e.target.value = "";
+                    return;
+                  }
+                  setPodFile(file);
+                  setError(null);
+                }}
                 className="hidden"
                 id="pod-upload"
               />
@@ -555,7 +564,9 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                   <div className="text-gray-500">
                     <span className="text-3xl">📄</span>
                     <p className="mt-2">Click to select POD file</p>
-                    <p className="text-sm">Image or PDF</p>
+                    <p className="text-sm">
+                      Accepted: JPG, PNG, PDF · Max 10MB
+                    </p>
                   </div>
                 )}
               </label>
