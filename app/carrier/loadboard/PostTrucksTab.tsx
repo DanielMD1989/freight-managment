@@ -236,6 +236,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               const matchResponse = await fetch(
                 `/api/truck-postings/${truck.id}/matching-loads?limit=1`
               );
+              if (matchResponse.status === 402) {
+                const errData = await matchResponse.json();
+                toast.error(
+                  errData.error ||
+                    "Insufficient wallet balance for marketplace access."
+                );
+                return { ...truck, matchCount: 0 };
+              }
               const matchData = await matchResponse.json();
               return { ...truck, matchCount: matchData.totalMatches || 0 };
             } catch (error) {
@@ -332,7 +340,18 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       // Fetch matching loads for each truck
       const allLoadsPromises = postedTrucks.map((truck) =>
         fetch(`/api/truck-postings/${truck.id}/matching-loads?limit=100`)
-          .then((res) => res.json())
+          .then((res) => {
+            if (res.status === 402) {
+              return res.json().then((errData) => {
+                toast.error(
+                  errData.error ||
+                    "Insufficient wallet balance for marketplace access."
+                );
+                return { matches: [] };
+              });
+            }
+            return res.json();
+          })
           .then((data) => {
             // Add truck info to each load for DH calculation
             return (data.matches || []).map((match: LoadMatch) => ({
@@ -393,6 +412,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       const response = await fetch(
         `/api/truck-postings/${truckId}/matching-loads`
       );
+      if (response.status === 402) {
+        const errData = await response.json();
+        toast.error(
+          errData.error || "Insufficient wallet balance for marketplace access."
+        );
+        setMatchingLoads([]);
+        return;
+      }
       const data = await response.json();
       setMatchingLoads(data.matches || []);
     } catch (error) {

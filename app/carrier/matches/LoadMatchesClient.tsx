@@ -100,7 +100,13 @@ export default function LoadMatchesClient({
         `/api/truck-postings/${postingId}/matching-loads?minScore=${minScore}&limit=50`
       );
 
-      if (response.ok) {
+      if (response.status === 402) {
+        const errData = await response.json();
+        setError(
+          errData.error ||
+            "Insufficient wallet balance for marketplace access. Please top up your wallet."
+        );
+      } else if (response.ok) {
         const data = await response.json();
         setMatches(data.matches || []);
       } else {
@@ -222,12 +228,23 @@ export default function LoadMatchesClient({
                 Unable to Load Matches
               </p>
               <p className="text-sm text-red-600">{error}</p>
-              <button
-                onClick={() => selectedPosting && fetchMatches(selectedPosting)}
-                className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
-              >
-                Try Again
-              </button>
+              {error.toLowerCase().includes("wallet") ? (
+                <a
+                  href="/carrier/wallet"
+                  className="mt-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm text-white hover:bg-teal-700"
+                >
+                  Go to Wallet →
+                </a>
+              ) : (
+                <button
+                  onClick={() =>
+                    selectedPosting && fetchMatches(selectedPosting)
+                  }
+                  className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+                >
+                  Try Again
+                </button>
+              )}
             </div>
           )}
 

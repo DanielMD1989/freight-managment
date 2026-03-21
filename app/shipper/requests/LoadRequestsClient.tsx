@@ -96,6 +96,16 @@ export default function LoadRequestsClient({
         }
       );
 
+      if (response.status === 402) {
+        const data = await response.json();
+        setError(
+          data.error ||
+            "Insufficient wallet balance for marketplace access. Please top up your wallet."
+        );
+        setLoading(null);
+        return;
+      }
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to respond to request");
@@ -182,12 +192,21 @@ export default function LoadRequestsClient({
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
           <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-          <button
-            onClick={() => setError(null)}
-            className="mt-1 text-sm text-red-600 underline"
-          >
-            Dismiss
-          </button>
+          {error.toLowerCase().includes("wallet") ? (
+            <a
+              href="/shipper/wallet"
+              className="mt-1 inline-block text-sm text-teal-600 underline hover:text-teal-700"
+            >
+              Go to Wallet →
+            </a>
+          ) : (
+            <button
+              onClick={() => setError(null)}
+              className="mt-1 text-sm text-red-600 underline"
+            >
+              Dismiss
+            </button>
+          )}
         </div>
       )}
 

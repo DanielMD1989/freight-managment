@@ -828,12 +828,21 @@ export default function SearchTrucksTab({
       {fetchError && (
         <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <span>{fetchError}</span>
-          <button
-            onClick={() => fetchTrucks(filterValuesRef.current)}
-            className="ml-3 rounded-lg bg-red-100 px-3 py-1 text-xs font-medium transition-colors hover:bg-red-200"
-          >
-            Retry
-          </button>
+          {fetchError.toLowerCase().includes("wallet") ? (
+            <a
+              href="/shipper/wallet"
+              className="ml-3 rounded-lg bg-teal-100 px-3 py-1 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-200"
+            >
+              Go to Wallet →
+            </a>
+          ) : (
+            <button
+              onClick={() => fetchTrucks(filterValuesRef.current)}
+              className="ml-3 rounded-lg bg-red-100 px-3 py-1 text-xs font-medium transition-colors hover:bg-red-200"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 

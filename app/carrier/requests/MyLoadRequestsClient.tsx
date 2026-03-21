@@ -193,14 +193,14 @@ export default function MyLoadRequestsClient({ requests }: Props) {
               <p className="mt-1 text-xs text-amber-700">
                 Please top up your wallet to continue with marketplace activity.
               </p>
+              <a
+                href="/carrier/wallet"
+                className="mt-1 inline-block text-sm text-teal-600 underline hover:text-teal-700"
+              >
+                Go to Wallet →
+              </a>
             </div>
           </div>
-          <button
-            onClick={() => setWalletError(null)}
-            className="mt-2 text-sm text-amber-600 underline"
-          >
-            Dismiss
-          </button>
         </div>
       )}
 

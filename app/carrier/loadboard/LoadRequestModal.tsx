@@ -109,6 +109,16 @@ export default function LoadRequestModal({
         }),
       });
 
+      if (response.status === 402) {
+        const data = await response.json();
+        setError(
+          data.error ||
+            "Insufficient wallet balance for marketplace access. Please top up your wallet."
+        );
+        setLoading(false);
+        return;
+      }
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to create load request");
@@ -246,6 +256,14 @@ export default function LoadRequestModal({
                 <p className="text-sm text-red-800 dark:text-red-200">
                   {error}
                 </p>
+                {error.toLowerCase().includes("wallet") && (
+                  <a
+                    href="/carrier/wallet"
+                    className="mt-1 inline-block text-sm text-teal-600 underline hover:text-teal-700"
+                  >
+                    Go to Wallet →
+                  </a>
+                )}
               </div>
             )}
 
