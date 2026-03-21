@@ -124,6 +124,7 @@ interface Props {
   matchProposals: MatchProposal[];
   pendingShipperRequests: number;
   pendingMatchProposals: number;
+  actionableLoadRequests: number;
 }
 
 type TabType = "shipper-requests" | "my-requests" | "match-proposals";
@@ -134,6 +135,7 @@ export default function RequestsTabs({
   matchProposals,
   pendingShipperRequests,
   pendingMatchProposals,
+  actionableLoadRequests,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -259,15 +261,17 @@ export default function RequestsTabs({
             />
           </svg>
           My Load Requests
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-              activeTab === "my-requests"
-                ? "bg-white/20 text-white"
-                : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {loadRequests.length}
-          </span>
+          {actionableLoadRequests > 0 && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                activeTab === "my-requests"
+                  ? "bg-white/20 text-white"
+                  : "animate-pulse bg-blue-100 text-blue-700"
+              }`}
+            >
+              {actionableLoadRequests}
+            </span>
+          )}
         </button>
       </div>
 

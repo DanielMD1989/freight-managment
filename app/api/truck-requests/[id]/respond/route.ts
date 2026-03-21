@@ -188,6 +188,24 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
+      // G-W13-4: Wallet gate — carrier must meet minimum balance (blueprint §4/§8)
+      const carrierWallet = await db.financialAccount.findFirst({
+        where: {
+          organizationId: session.organizationId,
+          isActive: true,
+        },
+        select: { balance: true, minimumBalance: true },
+      });
+      if (
+        carrierWallet &&
+        carrierWallet.balance < carrierWallet.minimumBalance
+      ) {
+        return NextResponse.json(
+          { error: "Insufficient wallet balance for marketplace access" },
+          { status: 402 }
+        );
+      }
+
       // P0-002 & P0-003 FIX: All checks and operations now inside atomic transaction
       // This prevents race conditions and ensures trip creation is atomic
       try {

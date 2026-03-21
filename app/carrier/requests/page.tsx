@@ -312,6 +312,9 @@ export default async function CarrierRequestsPage() {
   const pendingMatchProposals = transformedMatchProposals.filter(
     (p) => p.status === "PENDING"
   ).length;
+  const actionableLoadRequests = transformedLoadRequests.filter(
+    (r) => r.status === "SHIPPER_APPROVED"
+  ).length;
 
   return (
     <div className="p-6">
@@ -348,6 +351,7 @@ export default async function CarrierRequestsPage() {
           matchProposals={transformedMatchProposals}
           pendingShipperRequests={pendingShipperRequests}
           pendingMatchProposals={pendingMatchProposals}
+          actionableLoadRequests={actionableLoadRequests}
         />
       </Suspense>
     </div>
