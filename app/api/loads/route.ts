@@ -356,6 +356,8 @@ export async function GET(request: NextRequest) {
     const pickupFrom = searchParams.get("pickupFrom");
     const rateMin = searchParams.get("rateMin");
     const rateMax = searchParams.get("rateMax");
+    const minLength = searchParams.get("minLength");
+    const minWeight = searchParams.get("minWeight");
 
     // G-M16-4: Server-side DH from TruckPosting — overrides raw DH params for CARRIER
     const truckPostingId = searchParams.get("truckPostingId");
@@ -586,6 +588,20 @@ export async function GET(request: NextRequest) {
       const parsedDate = new Date(pickupFrom);
       if (!isNaN(parsedDate.getTime())) {
         where.pickupDate = { gte: parsedDate };
+      }
+    }
+
+    // G-W12-4: Carrier length/weight filters
+    if (minLength) {
+      const parsed = parseFloat(minLength);
+      if (!isNaN(parsed) && parsed > 0) {
+        where.lengthM = { lte: parsed };
+      }
+    }
+    if (minWeight) {
+      const parsed = parseFloat(minWeight);
+      if (!isNaN(parsed) && parsed > 0) {
+        where.weight = { lte: parsed };
       }
     }
 

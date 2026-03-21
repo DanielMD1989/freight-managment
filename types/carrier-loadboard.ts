@@ -154,7 +154,6 @@ export interface LoadFilterValues {
   fullPartial: string;
   length: string;
   weight: string;
-  searchBack: string;
   truckPostingId: string;
   [key: string]: string | number | boolean | undefined;
 }

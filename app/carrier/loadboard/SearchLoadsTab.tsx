@@ -24,6 +24,7 @@ import {
 } from "@/types/loadboard-ui";
 import LoadRequestModal from "./LoadRequestModal";
 import { getCSRFToken } from "@/lib/csrfFetch";
+import { TRUCK_TYPES } from "@/lib/constants/truckTypes";
 import {
   CarrierUser,
   EthiopianCity,
@@ -64,6 +65,8 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
 
   // G-M16-2: Carrier's active truck postings for DH filter
   const [carrierPostings, setCarrierPostings] = useState<TruckPosting[]>([]);
+  // G-W12-6: Wallet gate error
+  const [walletError, setWalletError] = useState<string | null>(null);
 
   // Search form state
   const [filterValues, setFilterValues] = useState<LoadFilterValues>({
@@ -75,7 +78,6 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
     fullPartial: "",
     length: "",
     weight: "",
-    searchBack: "",
     truckPostingId: "",
   });
 
@@ -321,7 +323,6 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
       fullPartial: "",
       length: "",
       weight: "",
-      searchBack: "",
       truckPostingId: "",
     });
   };
@@ -372,9 +373,19 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
       }
 
       const response = await fetch(`/api/loads?${params.toString()}`);
+      if (response.status === 402) {
+        const data = await response.json();
+        setLoads([]);
+        setWalletError(
+          data.error ||
+            "Insufficient wallet balance for marketplace access. Please top up your wallet."
+        );
+        return;
+      }
       if (!response.ok) {
         throw new Error("Failed to fetch loads");
       }
+      setWalletError(null);
       const data = await response.json();
       // Deduplicate loads by ID to prevent duplicates
       const loadMap = new Map<string, Load>();
@@ -388,42 +399,15 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   };
 
   /**
-   * Truck types list with enum values and display labels
+   * Truck types list from shared constant (matches Prisma enum)
    */
   const truckTypes = useMemo(
-    () => [
-      { value: "AUTO_CARRIER", label: "Auto Carrier", code: "AC" },
-      { value: "B_TRAIN", label: "B-Train", code: "BT" },
-      { value: "CONESTOGA", label: "Conestoga", code: "CN" },
-      { value: "CONTAINER", label: "Container", code: "C" },
-      {
-        value: "CONTAINER_INSULATED",
-        label: "Container Insulated",
-        code: "CI",
-      },
-      {
-        value: "CONTAINER_REFRIGERATED",
-        label: "Container Refrigerated",
-        code: "CR",
-      },
-      { value: "CONVEYOR", label: "Conveyor", code: "CV" },
-      { value: "DOUBLE_DROP", label: "Double Drop", code: "DD" },
-      { value: "DROP_DECK_LANDOLL", label: "Drop Deck Landoll", code: "LA" },
-      { value: "DUMP_TRAILER", label: "Dump Trailer", code: "DT" },
-      { value: "DUMP_TRUCK", label: "Dump Truck", code: "DK" },
-      { value: "FLATBED", label: "Flatbed", code: "F" },
-      { value: "FLATBED_AIR_RIDE", label: "Flatbed Air-Ride", code: "FA" },
-      { value: "FLATBED_CONESTOGA", label: "Flatbed Conestoga", code: "FN" },
-      { value: "FLATBED_DOUBLE", label: "Flatbed Double", code: "F2" },
-      { value: "FLATBED_HAZMAT", label: "Flatbed HazMat", code: "FZ" },
-      { value: "FLATBED_HOTSHOT", label: "Flatbed Hotshot", code: "FH" },
-      { value: "FLATBED_MAXI", label: "Flatbed Maxi", code: "MX" },
-      { value: "DRY_VAN", label: "Van", code: "V" },
-      { value: "BOX_TRUCK", label: "Box Truck", code: "BX" },
-      { value: "REFRIGERATED", label: "Reefer", code: "R" },
-      { value: "TANKER", label: "Tanker", code: "T" },
-      { value: "LOWBOY", label: "Lowboy", code: "LB" },
-    ],
+    () =>
+      TRUCK_TYPES.map((t) => ({
+        value: t.value,
+        label: t.label,
+        code: t.value.slice(0, 2).toUpperCase(),
+      })),
     []
   );
 
@@ -537,7 +521,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
           value ? `${value.toLocaleString()}kg` : "N/A",
       },
       {
-        key: "serviceFeeEtb",
+        key: "shipperServiceFee",
         label: "Service Fee",
         width: "110px",
         align: "right" as const,
@@ -712,8 +696,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
             <div>F/P</div>
             <div>Length</div>
             <div>Weight</div>
-            <div>Days Back</div>
-            <div className="col-span-2"></div>
+            <div className="col-span-3"></div>
           </div>
 
           {/* Editable Search Row */}
@@ -869,21 +852,8 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
               />
             </div>
 
-            {/* Search Back (days) */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.searchBack || ""}
-                onChange={(e) =>
-                  handleFilterChange("searchBack", e.target.value)
-                }
-                placeholder="days"
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              />
-            </div>
-
             {/* Action Buttons */}
-            <div className="col-span-2 flex justify-end gap-2">
+            <div className="col-span-3 flex justify-end gap-2">
               <button
                 onClick={fetchLoads}
                 className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:from-teal-700 hover:to-teal-600"
@@ -910,6 +880,30 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
                 Clear
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Gate Warning */}
+      {walletError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+          <div className="flex items-center gap-3">
+            <svg
+              className="h-5 w-5 flex-shrink-0 text-amber-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              {walletError}
+            </p>
           </div>
         </div>
       )}

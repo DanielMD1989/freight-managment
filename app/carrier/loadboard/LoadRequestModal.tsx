@@ -13,7 +13,7 @@ import { csrfFetch } from "@/lib/csrfFetch";
 
 interface Truck {
   id: string;
-  plateNumber: string;
+  licensePlate: string;
   truckType: string;
   capacity: number;
 }
@@ -273,7 +273,7 @@ export default function LoadRequestModal({
                   <option value="">Select a truck...</option>
                   {trucks.map((truck) => (
                     <option key={truck.id} value={truck.id}>
-                      {truck.plateNumber} - {truck.truckType} (
+                      {truck.licensePlate} - {truck.truckType} (
                       {truck.capacity?.toLocaleString()} kg)
                     </option>
                   ))}
@@ -291,7 +291,7 @@ export default function LoadRequestModal({
                   <div>
                     <span className="text-[#064d51]/60">Plate:</span>{" "}
                     <span className="text-[#064d51] dark:text-white">
-                      {selectedTruck.plateNumber}
+                      {selectedTruck.licensePlate}
                     </span>
                   </div>
                   <div>
