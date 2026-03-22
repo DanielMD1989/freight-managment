@@ -635,13 +635,22 @@ export async function GET(request: NextRequest) {
     const where: Record<string, any> = {};
 
     // Default: only show ACTIVE postings to public
+    // G-D7-1: Admin/Dispatcher can filter by any status (Blueprint §5: "all statuses — platform-wide")
+    const isAdminOrDispatcher =
+      browseSession &&
+      (browseSession.role === "ADMIN" ||
+        browseSession.role === "SUPER_ADMIN" ||
+        browseSession.role === "DISPATCHER");
     if (organizationId) {
       // If filtering by organization, show all statuses for that org
       where.carrierId = organizationId;
       // Use validated status to prevent invalid enum errors
       where.status = validatedStatus;
+    } else if (isAdminOrDispatcher && validatedStatus) {
+      // Admin/Dispatcher: respect requested status filter without org-scoping
+      where.status = validatedStatus;
     } else {
-      // Public view: only ACTIVE postings
+      // Public/Shipper/Carrier view: only ACTIVE postings
       where.status = "ACTIVE";
     }
 
