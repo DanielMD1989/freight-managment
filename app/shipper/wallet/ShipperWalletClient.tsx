@@ -16,7 +16,6 @@ import { getCSRFToken } from "@/lib/csrfFetch";
 type TransactionType =
   | "ALL"
   | "DEPOSIT"
-  | "SERVICE_FEE_RESERVE"
   | "SERVICE_FEE_DEDUCT"
   | "SERVICE_FEE_REFUND"
   | "REFUND";
@@ -52,15 +51,14 @@ interface ShipperWalletClientProps {
 const TYPE_FILTERS: { key: TransactionType; label: string }[] = [
   { key: "ALL", label: "All" },
   { key: "DEPOSIT", label: "Deposits" },
-  { key: "SERVICE_FEE_RESERVE", label: "Reserved" },
   { key: "SERVICE_FEE_DEDUCT", label: "Deducted" },
-  { key: "REFUND", label: "Refunds" },
+  { key: "SERVICE_FEE_REFUND", label: "Refunds" },
+  { key: "REFUND", label: "Refunds (Other)" },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
   DEPOSIT: "Deposit",
   WITHDRAWAL: "Withdrawal",
-  SERVICE_FEE_RESERVE: "Service Fee Reserved",
   SERVICE_FEE_DEDUCT: "Service Fee Deducted",
   SERVICE_FEE_REFUND: "Service Fee Refund",
   REFUND: "Refund",
@@ -72,10 +70,6 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   DEPOSIT: {
     bg: "bg-green-100 dark:bg-green-900/30",
     text: "text-green-700 dark:text-green-300",
-  },
-  SERVICE_FEE_RESERVE: {
-    bg: "bg-yellow-100 dark:bg-yellow-900/30",
-    text: "text-yellow-700 dark:text-yellow-300",
   },
   SERVICE_FEE_DEDUCT: {
     bg: "bg-red-100 dark:bg-red-900/30",

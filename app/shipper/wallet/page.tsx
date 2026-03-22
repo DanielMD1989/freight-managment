@@ -100,9 +100,7 @@ export default async function WalletPage() {
           },
           isDebit: true, // Debits from wallet = payments
           journalEntry: {
-            transactionType: {
-              in: ["SERVICE_FEE_RESERVE", "SERVICE_FEE_DEDUCT"],
-            },
+            transactionType: "SERVICE_FEE_DEDUCT",
           },
         },
         _sum: {

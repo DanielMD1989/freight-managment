@@ -89,7 +89,6 @@ enum TransactionType {
   SETTLEMENT
   REFUND
   // Service Fee Transactions (NEW - Service Fee Implementation)
-  SERVICE_FEE_RESERVE // Reserve service fee from shipper wallet
   SERVICE_FEE_DEDUCT // Deduct to platform on trip completion
   SERVICE_FEE_REFUND // Refund to shipper on cancellation
 }
@@ -139,21 +138,6 @@ enum DisputeType {
   DAMAGE
   LATE_DELIVERY
   QUALITY_ISSUE
-  OTHER
-}
-
-enum ReportStatus {
-  NEW
-  REVIEWED
-  ACTIONED
-  DISMISSED
-}
-
-enum ReportType {
-  FRAUD
-  HARASSMENT
-  SPAM
-  SAFETY_VIOLATION
   OTHER
 }
 
@@ -308,7 +292,6 @@ model User {
 
   loadsCreated        Load[]               @relation("LoadCreator")
   disputes            Dispute[]
-  reports             Report[]
   passwordResetTokens PasswordResetToken[]
   savedSearches       SavedSearch[] // SPRINT 14: DAT-Style UI
   notifications       Notification[] // SPRINT 16: Story 16.10 - Notifications
@@ -1322,38 +1305,6 @@ model Dispute {
   @@index([loadId])
   @@index([disputedOrgId])
   @@map("disputes")
-}
-
-model Report {
-  id          String       @id @default(cuid())
-  type        ReportType
-  status      ReportStatus @default(NEW)
-  description String
-  evidence    String? // File URL or additional details
-  actionTaken String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  // Relations
-  reportedById String
-  reportedBy   User   @relation(fields: [reportedById], references: [id])
-
-  @@index([status])
-  @@map("reports")
-}
-
-// ============================================================================
-// SYSTEM MODELS
-// ============================================================================
-
-model SystemConfig {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       String
-  description String?
-  updatedAt   DateTime @updatedAt
-
-  @@map("system_config")
 }
 
 model AuditLog {

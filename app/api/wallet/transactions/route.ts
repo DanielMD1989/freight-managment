@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
       "COMMISSION",
       "SETTLEMENT",
       "REFUND",
-      "SERVICE_FEE_RESERVE",
       "SERVICE_FEE_DEDUCT",
       "SERVICE_FEE_REFUND",
     ] as const;

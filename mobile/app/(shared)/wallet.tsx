@@ -39,7 +39,6 @@ interface WalletTransaction {
     | "COMMISSION"
     | "SETTLEMENT"
     | "REFUND"
-    | "SERVICE_FEE_RESERVE"
     | "SERVICE_FEE_DEDUCT"
     | "SERVICE_FEE_REFUND";
   amount: number;
@@ -95,7 +94,6 @@ export default function WalletScreen() {
     WITHDRAWAL: "arrow-up-circle-outline",
     SERVICE_FEE_DEDUCT: "remove-circle-outline",
     SERVICE_FEE_REFUND: "add-circle-outline",
-    SERVICE_FEE_RESERVE: "time-outline",
     COMMISSION: "cash-outline",
     SETTLEMENT: "checkmark-circle-outline",
     REFUND: "return-up-back-outline",
@@ -108,7 +106,6 @@ export default function WalletScreen() {
     WITHDRAWAL: colors.error,
     SERVICE_FEE_DEDUCT: colors.error,
     COMMISSION: colors.error,
-    SERVICE_FEE_RESERVE: colors.error,
     SETTLEMENT: colors.textTertiary,
   };
 
