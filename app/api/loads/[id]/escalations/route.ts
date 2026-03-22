@@ -104,6 +104,24 @@ export async function POST(
       );
     }
 
+    // G-D6-4: Guard against duplicate active escalations of same type on same load
+    const existingEscalation = await db.loadEscalation.findFirst({
+      where: {
+        loadId,
+        escalationType: validatedData.escalationType,
+        status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] },
+      },
+    });
+    if (existingEscalation) {
+      return NextResponse.json(
+        {
+          error:
+            "An active escalation of this type already exists for this load",
+        },
+        { status: 409 }
+      );
+    }
+
     // Auto-set priority based on escalation type
     let priority = validatedData.priority;
     if (

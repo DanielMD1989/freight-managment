@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface Escalation {
   id: string;
@@ -44,7 +45,14 @@ interface EscalationStats {
   byPriority: Record<string, number>;
 }
 
-type StatusFilter = "ALL" | "OPEN" | "IN_PROGRESS" | "RESOLVED";
+type StatusFilter =
+  | "ALL"
+  | "OPEN"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "ESCALATED"
+  | "RESOLVED"
+  | "CLOSED";
 type PriorityFilter = "ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export default function EscalationsClient() {
@@ -106,8 +114,11 @@ export default function EscalationsClient() {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       OPEN: "bg-red-100 text-red-700 border border-red-200",
+      ASSIGNED: "bg-blue-100 text-blue-700 border border-blue-200",
       IN_PROGRESS: "bg-amber-100 text-amber-700 border border-amber-200",
+      ESCALATED: "bg-rose-100 text-rose-700 border border-rose-200",
       RESOLVED: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+      CLOSED: "bg-slate-100 text-slate-600 border border-slate-200",
     };
     return styles[status] || "bg-slate-100 text-slate-600";
   };
@@ -124,15 +135,18 @@ export default function EscalationsClient() {
 
   const getEscalationTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      DELAY: "Delivery Delay",
-      DAMAGE: "Cargo Damage",
-      MISSING: "Missing Cargo",
+      LATE_PICKUP: "Late Pickup",
+      LATE_DELIVERY: "Late Delivery",
+      TRUCK_BREAKDOWN: "Truck Breakdown",
+      CARRIER_NO_SHOW: "Carrier No Show",
       ROUTE_DEVIATION: "Route Deviation",
       GPS_OFFLINE: "GPS Offline",
-      PAYMENT_ISSUE: "Payment Issue",
-      DRIVER_ISSUE: "Driver Issue",
-      VEHICLE_BREAKDOWN: "Vehicle Breakdown",
-      CUSTOMS_HOLD: "Customs Hold",
+      CARGO_DAMAGE: "Cargo Damage",
+      SHIPPER_ISSUE: "Shipper Issue",
+      CARRIER_ISSUE: "Carrier Issue",
+      DOCUMENTATION: "Documentation Issue",
+      PAYMENT_DISPUTE: "Payment Dispute",
+      BYPASS_DETECTED: "Bypass Detected",
       OTHER: "Other",
     };
     return labels[type] || type;
@@ -144,9 +158,13 @@ export default function EscalationsClient() {
         return;
 
       try {
+        const csrfToken = await getCSRFToken();
         const response = await fetch(`/api/escalations/${escalationId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+          },
           body: JSON.stringify({
             status: "ESCALATED",
             priority: "CRITICAL",
@@ -217,8 +235,11 @@ export default function EscalationsClient() {
             >
               <option value="ALL">All Statuses</option>
               <option value="OPEN">Open</option>
+              <option value="ASSIGNED">Assigned</option>
               <option value="IN_PROGRESS">In Progress</option>
+              <option value="ESCALATED">Escalated</option>
               <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
             </select>
           </div>
 

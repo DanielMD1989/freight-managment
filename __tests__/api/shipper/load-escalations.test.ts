@@ -257,6 +257,7 @@ describe("Load Escalations — POST /api/loads/[id]/escalations", () => {
       {
         body: escalationPayload({
           assignedTo: "dispatcher-for-notify-test",
+          escalationType: "DOCUMENTATION",
         }),
       }
     );
