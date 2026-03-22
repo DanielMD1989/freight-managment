@@ -30,6 +30,12 @@ async function getProposals(userId: string) {
           weight: true,
           truckType: true,
           status: true,
+          // G-D5-1: Include trip id so dispatcher can link to trip after acceptance
+          trip: {
+            select: {
+              id: true,
+            },
+          },
         },
       },
       truck: {
@@ -82,6 +88,8 @@ export default async function DispatcherProposalsPage() {
       weight: Number(p.load.weight),
       truckType: p.load.truckType,
       status: p.load.status,
+      // G-D5-1: Pass trip id for accepted proposals
+      tripId: p.load.trip?.id ?? null,
     },
     truck: {
       licensePlate: p.truck.licensePlate,

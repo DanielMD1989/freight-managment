@@ -26,6 +26,7 @@ interface MatchProposal {
     weight: number;
     truckType: string;
     status: string;
+    tripId: string | null;
   };
   truck: {
     licensePlate: string;
@@ -41,7 +42,13 @@ interface Props {
   proposals: MatchProposal[];
 }
 
-type StatusFilter = "all" | "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
+type StatusFilter =
+  | "all"
+  | "PENDING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED";
 
 export default function ProposalsClient({
   proposals: initialProposals,
@@ -98,9 +105,8 @@ export default function ProposalsClient({
     PENDING: proposals.filter((p) => p.status === "PENDING").length,
     ACCEPTED: proposals.filter((p) => p.status === "ACCEPTED").length,
     REJECTED: proposals.filter((p) => p.status === "REJECTED").length,
-    EXPIRED: proposals.filter(
-      (p) => p.status === "EXPIRED" || p.status === "CANCELLED"
-    ).length,
+    EXPIRED: proposals.filter((p) => p.status === "EXPIRED").length,
+    CANCELLED: proposals.filter((p) => p.status === "CANCELLED").length,
   };
 
   return (
@@ -114,6 +120,7 @@ export default function ProposalsClient({
             "ACCEPTED",
             "REJECTED",
             "EXPIRED",
+            "CANCELLED",
           ] as StatusFilter[]
         ).map((status) => (
           <button
@@ -266,6 +273,15 @@ export default function ProposalsClient({
                       >
                         {proposal.status}
                       </span>
+                      {proposal.status === "ACCEPTED" &&
+                        proposal.load.tripId && (
+                          <Link
+                            href={`/dispatcher/trips/${proposal.load.tripId}`}
+                            className="mt-1 block text-sm text-teal-600 underline hover:text-teal-700"
+                          >
+                            View Trip →
+                          </Link>
+                        )}
                       {proposal.status === "REJECTED" &&
                         proposal.responseNotes && (
                           <p
