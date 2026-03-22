@@ -162,9 +162,9 @@ export async function GET(
       };
     }
 
-    // G-M33-4: Admin-only audit trail — load events for this trip's load.
+    // G-M33-4 + G-D4-2: Load events for admin and dispatcher (blueprint §5 full visibility).
     let loadEvents: unknown[] = [];
-    if (isAdminView && trip.loadId) {
+    if ((isAdminView || isDispatcher) && trip.loadId) {
       loadEvents = await db.loadEvent.findMany({
         where: { loadId: trip.loadId },
         select: {
