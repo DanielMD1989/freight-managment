@@ -77,6 +77,9 @@ export async function GET(request: NextRequest) {
       deliveredLoads,
       lateLoads,
       pickupsToday,
+      exceptionTrips,
+      pendingProposals,
+      openEscalations,
     ] = await Promise.all([
       // Posted (unassigned) loads
       db.load.count({
@@ -167,6 +170,23 @@ export async function GET(request: NextRequest) {
         },
         take: 10,
       }),
+
+      // G-D8-1: Exception trips count
+      db.trip.count({
+        where: { status: "EXCEPTION" },
+      }),
+
+      // G-D8-2: Pending match proposals count
+      db.matchProposal.count({
+        where: { status: "PENDING" },
+      }),
+
+      // G-D8-3: Open escalations count (active = OPEN + ASSIGNED + IN_PROGRESS)
+      db.loadEscalation.count({
+        where: {
+          status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] },
+        },
+      }),
     ]);
 
     // Calculate on-time rate using Trip.deliveredAt (actual delivery) vs Load.deliveryDate (target)
@@ -195,6 +215,9 @@ export async function GET(request: NextRequest) {
         deliveriesToday,
         onTimeRate,
         alertCount: lateLoads,
+        exceptionTrips,
+        pendingProposals,
+        openEscalations,
       },
       pickupsToday,
     });

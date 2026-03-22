@@ -31,6 +31,9 @@ interface DashboardStats {
   deliveriesToday: number;
   onTimeRate: number;
   alertCount: number;
+  exceptionTrips: number;
+  pendingProposals: number;
+  openEscalations: number;
 }
 
 interface PickupToday {

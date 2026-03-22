@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   StatCard,
@@ -146,6 +147,15 @@ export default function DispatcherDashboardClient({
     }
   }, [activeTab, fetchLoads, fetchTrucks]);
 
+  // G-D8-4: Auto-refresh dashboard every 60 seconds
+  const router = useRouter();
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [router]);
+
   // Use API-provided stats (accurate, full database counts) with fallback to client calculation
   const stats = dashboardData?.stats;
   const postedLoads =
@@ -157,6 +167,9 @@ export default function DispatcherDashboardClient({
   const deliveriesToday = stats?.deliveriesToday ?? 0;
   const onTimeRate = stats?.onTimeRate ?? 100;
   const alertCount = stats?.alertCount ?? 0;
+  const exceptionTrips = stats?.exceptionTrips ?? 0;
+  const pendingProposals = stats?.pendingProposals ?? 0;
+  const openEscalations = stats?.openEscalations ?? 0;
 
   // Today's pickups - use API data when available
   const todayStr = new Date().toISOString().split("T")[0];
@@ -195,8 +208,41 @@ export default function DispatcherDashboardClient({
           </div>
         </div>
 
-        {/* Stats Grid - 6 cards */}
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6 lg:gap-5">
+        {/* Stats Grid - 9 cards */}
+        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-9 lg:gap-5">
+          <StatCard
+            title="Exceptions"
+            value={exceptionTrips}
+            icon={<AlertIcon />}
+            color={exceptionTrips > 0 ? "error" : "success"}
+            trend={
+              exceptionTrips > 0
+                ? { value: "Needs resolution", positive: false }
+                : undefined
+            }
+          />
+          <StatCard
+            title="Open Escalations"
+            value={openEscalations}
+            icon={<AlertIcon />}
+            color={openEscalations > 0 ? "warning" : "success"}
+            trend={
+              openEscalations > 0
+                ? { value: "Active issues", positive: false }
+                : undefined
+            }
+          />
+          <StatCard
+            title="Pending Proposals"
+            value={pendingProposals}
+            icon={<ClockIcon />}
+            color={pendingProposals > 0 ? "accent" : "secondary"}
+            trend={
+              pendingProposals > 0
+                ? { value: "Awaiting response", positive: false }
+                : undefined
+            }
+          />
           <StatCard
             title="Unassigned Loads"
             value={postedLoads}
