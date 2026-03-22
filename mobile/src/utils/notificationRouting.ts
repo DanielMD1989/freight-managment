@@ -237,6 +237,13 @@ export function getNotificationRoute(
     case "BYPASS_WARNING":
       return isAdmin ? "/(admin)/users" : null;
 
+    // ── Trip cancelled ──────────────────────────────────────────────────────
+    case "TRIP_CANCELLED": {
+      if (isCarrier) return "/(carrier)/trips";
+      if (isShipper) return "/(shipper)/trips";
+      return "/(shared)/notifications";
+    }
+
     // ── No navigation ────────────────────────────────────────────────────────
     case "USER_SUSPENDED":
     case "MARKETING":

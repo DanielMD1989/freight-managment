@@ -90,8 +90,12 @@ export async function POST(request: NextRequest) {
         text: `Your verification code is: ${code}. Expires in 10 minutes.`,
       });
     } else {
-      // SMS channel — no provider configured; log for development
-      console.log(`[OTP/SMS] User ${session.userId} code: ${code}`);
+      // SMS channel — delegate to SMS provider (ConsoleSmsProvider in dev, Twilio in prod)
+      const { sendSms } = await import("@/lib/sms");
+      await sendSms(
+        user.email,
+        `Your verification code is: ${code}. Expires in 10 minutes.`
+      );
     }
 
     return NextResponse.json({ message: "OTP sent", expiresIn: 600 });

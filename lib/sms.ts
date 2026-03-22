@@ -50,10 +50,22 @@ interface SmsProvider {
  */
 class ConsoleSmsProvider implements SmsProvider {
   async send(message: SmsMessage): Promise<SmsResult> {
-    console.log("\n========== SMS (Console Mode) ==========");
-    console.log("To:", message.to);
-    console.log("Message:", message.message);
-    console.log("=========================================\n");
+    if (process.env.NODE_ENV === "production") {
+      logger.warn(
+        "ConsoleSmsProvider used in production — SMS not actually sent",
+        {
+          to: message.to,
+        }
+      );
+      return {
+        success: false,
+        error: "No SMS provider configured for production",
+      };
+    }
+    logger.info("[SMS/Console] Dev mode SMS", {
+      to: message.to,
+      message: message.message,
+    });
 
     return {
       success: true,

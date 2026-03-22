@@ -551,7 +551,7 @@ export async function DELETE(
         );
       }
       if (error.message === "ALREADY_CANCELLED") {
-        return NextResponse.json({ message: "Posting already cancelled" });
+        return NextResponse.json({ error: "Posting already cancelled" });
       }
     }
     return handleApiError(error, "Error cancelling truck posting");

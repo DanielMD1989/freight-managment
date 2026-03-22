@@ -153,23 +153,11 @@ describe("Security Features", () => {
       // Note: Actual rate limiting requires integration with the rate limit middleware
     });
 
-    it("should have different rate limits per endpoint", () => {
-      // Different endpoints should have different limits:
-      // - Login: 5 requests / minute
-      // - Document upload: 10 requests / hour
-      // - Load posting: 100 requests / hour
-      expect(true).toBe(true);
-    });
+    it.todo("should have different rate limits per endpoint");
 
-    it("should track rate limits by IP address", () => {
-      // Rate limits should be enforced per IP
-      expect(true).toBe(true);
-    });
+    it.todo("should track rate limits by IP address");
 
-    it("should allow authenticated users higher limits", () => {
-      // Authenticated users might have higher rate limits
-      expect(true).toBe(true);
-    });
+    it.todo("should allow authenticated users higher limits");
   });
 
   describe("Input Validation", () => {
@@ -295,11 +283,7 @@ describe("Security Features", () => {
       }
     });
 
-    it("should scan file content, not just extension", () => {
-      // File validation should check MIME type from file content
-      // Not just trust the file extension
-      expect(true).toBe(true);
-    });
+    it.todo("should scan file content, not just extension");
 
     it("should generate unique filenames to prevent overwriting", () => {
       // Uploaded files should have unique names (UUID or timestamp-based)
@@ -311,11 +295,7 @@ describe("Security Features", () => {
       expect(filename2).toBeDefined();
     });
 
-    it("should store files outside web root", () => {
-      // Files should not be directly accessible via URL
-      // Should require authenticated API access
-      expect(true).toBe(true);
-    });
+    it.todo("should store files outside web root");
   });
 
   describe("Error Handling Security", () => {
@@ -394,24 +374,12 @@ describe("Security Features", () => {
   });
 
   describe("Session Security", () => {
-    it("should use secure session tokens", () => {
-      // JWT tokens should be sufficiently long and random
-      expect(true).toBe(true);
-    });
+    it.todo("should use secure session tokens");
 
-    it("should expire sessions after timeout", () => {
-      // Sessions should have expiration
-      expect(true).toBe(true);
-    });
+    it.todo("should expire sessions after timeout");
 
-    it("should invalidate sessions on logout", () => {
-      // Logout should clear session tokens
-      expect(true).toBe(true);
-    });
+    it.todo("should invalidate sessions on logout");
 
-    it("should prevent session fixation attacks", () => {
-      // New session ID should be generated on login
-      expect(true).toBe(true);
-    });
+    it.todo("should prevent session fixation attacks");
   });
 });

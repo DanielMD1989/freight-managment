@@ -199,11 +199,7 @@ describe("Authentication", () => {
       }
     });
 
-    it("should reject expired tokens", async () => {
-      // This test would require mocking time or generating an already-expired token
-      // For now, we document the expected behavior
-      expect(true).toBe(true);
-    });
+    it.todo("should reject expired tokens");
 
     it("should reject tokens with wrong signature", async () => {
       const token = await generateToken({

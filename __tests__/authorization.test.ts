@@ -11,11 +11,9 @@
  */
 
 import { Permission, hasPermission } from "@/lib/rbac/permissions";
-import { requirePermission } from "@/lib/rbac";
 import {
   createTestUser,
   createTestOrganization,
-  createAuthenticatedRequest,
   cleanupTestData,
 } from "./utils/testUtils";
 
@@ -160,34 +158,15 @@ describe("Authorization", () => {
       expect(user1.organizationId).not.toBe(user2.organizationId);
     });
 
-    it("should enforce organization ownership for resources", async () => {
-      // This would test that users can only access resources from their organization
-      // Implementation depends on specific API endpoints
-      expect(true).toBe(true);
-    });
+    it.todo("should enforce organization ownership for resources");
   });
 
   describe("requirePermission Middleware", () => {
-    it.skip("should allow access with correct permission", async () => {
-      // Skip: requirePermission uses cookies() which requires Next.js request context
-      // This is tested through integration tests with actual API endpoints
-      expect(true).toBe(true);
-    });
+    it.todo("should allow access with correct permission");
 
-    it.skip("should deny access without correct permission", async () => {
-      // Skip: requirePermission uses cookies() which requires Next.js request context
-      expect(true).toBe(true);
-    });
+    it.todo("should deny access without correct permission");
 
-    it.skip("should deny access to unauthenticated requests", async () => {
-      createAuthenticatedRequest({
-        userId: "",
-        email: "",
-        role: "",
-      });
-
-      await expect(requirePermission(Permission.VIEW_LOADS)).rejects.toThrow();
-    });
+    it.todo("should deny access to unauthenticated requests");
   });
 
   describe("Access Control Edge Cases", () => {

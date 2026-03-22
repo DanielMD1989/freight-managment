@@ -15,7 +15,6 @@ import {
   createTestOrganization,
   cleanupTestData,
 } from "./utils/testUtils";
-import { db } from "@/lib/db";
 
 describe("File Access Control", () => {
   beforeEach(async () => {
@@ -69,128 +68,17 @@ describe("File Access Control", () => {
       expect(user.organizationId).not.toBe(org2.id);
     });
 
-    it.skip("should require authentication for uploads", async () => {
-      // Skip: Test infrastructure needs proper request mocking
-      // Authentication is tested through integration tests
-      expect(true).toBe(true);
-    });
+    it.todo("should require authentication for uploads");
   });
 
   describe("Document Download Authorization", () => {
-    it.skip("should allow users to download their own documents", async () => {
-      // Skip: Prisma client integration issue in Jest environment
+    it.todo("should allow users to download their own documents");
 
-      const org = await createTestOrganization({
-        name: "Test Carrier",
-        type: "CARRIER_COMPANY",
-      });
+    it.todo(
+      "should prevent users from downloading other organizations documents"
+    );
 
-      const user = await createTestUser({
-        email: "carrier@example.com",
-        password: "Password123!",
-        name: "Carrier User",
-        role: "CARRIER",
-        organizationId: org.id,
-      });
-
-      const document = await db.companyDocument.create({
-        data: {
-          organizationId: org.id,
-          uploadedById: user.id,
-          type: "COMPANY_LICENSE",
-          fileName: "mc-authority.pdf",
-          fileUrl: "/uploads/test.pdf",
-          fileSize: 1024,
-          mimeType: "application/pdf",
-        },
-      });
-
-      // User should be able to access their own document
-      expect(document.uploadedById).toBe(user.id);
-      expect(document.organizationId).toBe(org.id);
-    });
-
-    it.skip("should prevent users from downloading other organizations documents", async () => {
-      const org1 = await createTestOrganization({
-        name: "Carrier 1",
-        type: "CARRIER_COMPANY",
-      });
-
-      const org2 = await createTestOrganization({
-        name: "Carrier 2",
-        type: "CARRIER_COMPANY",
-      });
-
-      const user1 = await createTestUser({
-        email: "carrier1@example.com",
-        password: "Password123!",
-        name: "Carrier 1 User",
-        role: "CARRIER",
-        organizationId: org1.id,
-      });
-
-      const user2 = await createTestUser({
-        email: "carrier2@example.com",
-        password: "Password123!",
-        name: "Carrier 2 User",
-        role: "CARRIER",
-        organizationId: org2.id,
-      });
-
-      const document = await db.companyDocument.create({
-        data: {
-          organizationId: org1.id,
-          uploadedById: user1.id,
-          type: "COMPANY_LICENSE",
-          fileName: "mc-authority.pdf",
-          fileUrl: "/uploads/test.pdf",
-          fileSize: 1024,
-          mimeType: "application/pdf",
-        },
-      });
-
-      // User 2 should NOT be able to access user 1's document
-      expect(document.organizationId).not.toBe(org2.id);
-      expect(document.uploadedById).not.toBe(user2.id);
-    });
-
-    it.skip("should allow admins to download any document", async () => {
-      const org = await createTestOrganization({
-        name: "Test Carrier",
-        type: "CARRIER_COMPANY",
-      });
-
-      const carrier = await createTestUser({
-        email: "carrier@example.com",
-        password: "Password123!",
-        name: "Carrier User",
-        role: "CARRIER",
-        organizationId: org.id,
-      });
-
-      const admin = await createTestUser({
-        email: "admin@platform.com",
-        password: "Password123!",
-        name: "Admin User",
-        role: "ADMIN",
-      });
-
-      const document = await db.companyDocument.create({
-        data: {
-          organizationId: org.id,
-          uploadedById: carrier.id,
-          type: "COMPANY_LICENSE",
-          fileName: "mc-authority.pdf",
-          fileUrl: "/uploads/test.pdf",
-          fileSize: 1024,
-          mimeType: "application/pdf",
-        },
-      });
-
-      // Admin should have access to all documents
-      expect(admin.role).toBe("ADMIN");
-      expect(document).toBeDefined();
-    });
+    it.todo("should allow admins to download any document");
   });
 
   describe("Document Verification Authorization", () => {
@@ -220,36 +108,7 @@ describe("File Access Control", () => {
       expect(carrier.role).not.toBe("ADMIN");
     });
 
-    it.skip("should prevent users from verifying their own documents", async () => {
-      const org = await createTestOrganization({
-        name: "Test Carrier",
-        type: "CARRIER_COMPANY",
-      });
-
-      const user = await createTestUser({
-        email: "carrier@example.com",
-        password: "Password123!",
-        name: "Carrier User",
-        role: "CARRIER",
-        organizationId: org.id,
-      });
-
-      const document = await db.companyDocument.create({
-        data: {
-          organizationId: org.id,
-          uploadedById: user.id,
-          type: "COMPANY_LICENSE",
-          fileName: "mc-authority.pdf",
-          fileUrl: "/uploads/test.pdf",
-          fileSize: 1024,
-          mimeType: "application/pdf",
-        },
-      });
-
-      // User should not be able to approve their own document
-      expect(user.role).not.toBe("ADMIN");
-      expect(document.uploadedById).toBe(user.id);
-    });
+    it.todo("should prevent users from verifying their own documents");
   });
 
   describe("File Path Security", () => {
@@ -319,89 +178,19 @@ describe("File Access Control", () => {
       expect(invalidSize).toBeGreaterThan(maxFileSize);
     });
 
-    it("should strip EXIF data from uploaded images", () => {
-      // Images should have EXIF data removed to prevent
-      // location/metadata leakage
-      expect(true).toBe(true);
-    });
+    it.todo("should strip EXIF data from uploaded images");
   });
 
   describe("Temporary File Handling", () => {
-    it("should clean up temporary files after upload", () => {
-      // Temporary files should be deleted after processing
-      expect(true).toBe(true);
-    });
+    it.todo("should clean up temporary files after upload");
 
-    it("should use secure temporary directories", () => {
-      // Temporary files should not be world-readable
-      expect(true).toBe(true);
-    });
+    it.todo("should use secure temporary directories");
   });
 
   describe("Document Deletion Authorization", () => {
-    it.skip("should allow users to delete their own pending documents", async () => {
-      const org = await createTestOrganization({
-        name: "Test Carrier",
-        type: "CARRIER_COMPANY",
-      });
+    it.todo("should allow users to delete their own pending documents");
 
-      const user = await createTestUser({
-        email: "carrier@example.com",
-        password: "Password123!",
-        name: "Carrier User",
-        role: "CARRIER",
-        organizationId: org.id,
-      });
-
-      const document = await db.companyDocument.create({
-        data: {
-          organizationId: org.id,
-          uploadedById: user.id,
-          type: "COMPANY_LICENSE",
-          fileName: "mc-authority.pdf",
-          fileUrl: "/uploads/test.pdf",
-          fileSize: 1024,
-          mimeType: "application/pdf",
-          verificationStatus: "PENDING",
-        },
-      });
-
-      // User should be able to delete their pending document
-      expect(document.uploadedById).toBe(user.id);
-      expect(document.verificationStatus).toBe("PENDING");
-    });
-
-    it.skip("should prevent deletion of approved documents", async () => {
-      const org = await createTestOrganization({
-        name: "Test Carrier",
-        type: "CARRIER_COMPANY",
-      });
-
-      const user = await createTestUser({
-        email: "carrier@example.com",
-        password: "Password123!",
-        name: "Carrier User",
-        role: "CARRIER",
-        organizationId: org.id,
-      });
-
-      const document = await db.companyDocument.create({
-        data: {
-          organizationId: org.id,
-          uploadedById: user.id,
-          type: "COMPANY_LICENSE",
-          fileName: "mc-authority.pdf",
-          fileUrl: "/uploads/test.pdf",
-          fileSize: 1024,
-          mimeType: "application/pdf",
-          verificationStatus: "APPROVED",
-        },
-      });
-
-      // Approved documents should not be deletable by regular users
-      expect(document.verificationStatus).toBe("APPROVED");
-      expect(user.role).not.toBe("ADMIN");
-    });
+    it.todo("should prevent deletion of approved documents");
 
     it("should allow admins to delete any document", async () => {
       const admin = await createTestUser({
