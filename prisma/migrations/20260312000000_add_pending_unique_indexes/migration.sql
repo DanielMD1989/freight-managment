@@ -2,13 +2,13 @@
 -- for the same (loadId, truckId) pair. Fixes TOCTOU race in findFirst → create pattern.
 
 CREATE UNIQUE INDEX "LoadRequest_pending_unique"
-  ON "LoadRequest" ("loadId", "truckId")
+  ON "load_requests" ("loadId", "truckId")
   WHERE status = 'PENDING';
 
 CREATE UNIQUE INDEX "TruckRequest_pending_unique"
-  ON "TruckRequest" ("loadId", "truckId")
+  ON "truck_requests" ("loadId", "truckId")
   WHERE status = 'PENDING';
 
 CREATE UNIQUE INDEX "MatchProposal_pending_unique"
-  ON "MatchProposal" ("loadId", "truckId")
+  ON "match_proposals" ("loadId", "truckId")
   WHERE status = 'PENDING';
