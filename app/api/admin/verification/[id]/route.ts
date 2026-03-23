@@ -113,6 +113,12 @@ export async function PATCH(
           { status: 404 }
         );
       }
+      if (existingDoc.uploadedById === session.userId) {
+        return NextResponse.json(
+          { error: "You cannot verify a document you uploaded" },
+          { status: 403 }
+        );
+      }
 
       // Update document
       updatedDocument = await db.companyDocument.update({
@@ -166,6 +172,12 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Document not found" },
           { status: 404 }
+        );
+      }
+      if (existingDoc.uploadedById === session.userId) {
+        return NextResponse.json(
+          { error: "You cannot verify a document you uploaded" },
+          { status: 403 }
         );
       }
 

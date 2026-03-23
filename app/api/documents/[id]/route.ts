@@ -234,7 +234,7 @@ export async function PATCH(
       // G-AD5-1: Guard against approving/rejecting soft-deleted documents
       const companyDoc = await db.companyDocument.findUnique({
         where: { id },
-        select: { id: true, deletedAt: true },
+        select: { id: true, deletedAt: true, uploadedById: true },
       });
       if (!companyDoc) {
         return NextResponse.json(
@@ -246,6 +246,12 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Document has been deleted" },
           { status: 404 }
+        );
+      }
+      if (companyDoc.uploadedById === session.userId) {
+        return NextResponse.json(
+          { error: "You cannot verify a document you uploaded" },
+          { status: 403 }
         );
       }
 
@@ -324,7 +330,7 @@ export async function PATCH(
       // G-AD5-1: Guard against approving/rejecting soft-deleted documents
       const truckDoc = await db.truckDocument.findUnique({
         where: { id },
-        select: { id: true, deletedAt: true },
+        select: { id: true, deletedAt: true, uploadedById: true },
       });
       if (!truckDoc) {
         return NextResponse.json(
@@ -336,6 +342,12 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Document has been deleted" },
           { status: 404 }
+        );
+      }
+      if (truckDoc.uploadedById === session.userId) {
+        return NextResponse.json(
+          { error: "You cannot verify a document you uploaded" },
+          { status: 403 }
         );
       }
 
