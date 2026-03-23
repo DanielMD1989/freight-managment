@@ -1,0 +1,45 @@
+{
+  "credentials": {
+    "superadmin": {
+      "email": "superadmin@test.com",
+      "password": "Test123!"
+    },
+    "admin": {
+      "email": "admin@freightflow.et",
+      "password": "Admin@2024!"
+    },
+    "dispatcher": {
+      "email": "dispatcher@test.et",
+      "password": "Dispatch@2024!"
+    },
+    "shipper": {
+      "email": "shipper@addisfreight.et",
+      "password": "Shipper@2024!"
+    },
+    "carrier": {
+      "email": "carrier@tigraytransport.et",
+      "password": "Carrier@2024!"
+    }
+  },
+  "superAdminUserId": "cmn2p0o6v00006gulonx7silg",
+  "superAdminToken": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjbW4ycDBvNnYwMDAwNmd1bG9ueDdzaWxnIiwiZW1haWwiOiJzdXBlcmFkbWluQHRlc3QuY29tIiwicm9sZSI6IlNVUEVSX0FETUlOIiwic3RhdHVzIjoiQUNUSVZFIiwic2Vzc2lvbklkIjoiY21uMnAwb2JtMDA4OHgwdWxnZjdxeDRyMyIsImlhdCI6MTc3NDI0MDU1OCwiZXhwIjoxNzc0ODQ1MzU4fQ.PeWrqTMsm9xxW05yTEkC-fBNhn0mbEHGG1jZ9sE_r4k",
+  "adminUserId": "cmn2p0oea008ax0ulqcsclr25",
+  "adminToken": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjbW4ycDBvZWEwMDhheDB1bHFjc2NscjI1IiwiZW1haWwiOiJhZG1pbkBmcmVpZ2h0Zmxvdy5ldCIsInJvbGUiOiJBRE1JTiIsInN0YXR1cyI6IkFDVElWRSIsInNlc3Npb25JZCI6ImNtbjJwMG9oNDAwOGN4MHVsMXBwNno3cjkiLCJpYXQiOjE3NzQyNDA1NTgsImV4cCI6MTc3NDg0NTM1OH0.kSuV11BHVlkVPIUOgw3SgBOOFYCVU2IfyoEkJG7buCo",
+  "dispatcherUserId": "cmn2p0olt008ex0ul84fzyjx8",
+  "dispatcherToken": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjbW4ycDBvbHQwMDhleDB1bDg0Znp5ang4IiwiZW1haWwiOiJkaXNwYXRjaGVyQHRlc3QuZXQiLCJyb2xlIjoiRElTUEFUQ0hFUiIsInN0YXR1cyI6IkFDVElWRSIsInNlc3Npb25JZCI6ImNtbjJwMG9wMTAwOGh4MHVsaXRhYnNsanQiLCJpYXQiOjE3NzQyNDA1NTgsImV4cCI6MTc3NDg0NTM1OH0.N78u0eGhtMVFjXxj3EBYpQR_rpTgnOachsp6h_y7GVw",
+  "shipperUserId": "cmn2p0osh008lx0uliyu65xkc",
+  "shipperOrgId": "cmn2p0or6008jx0ul5c635aqc",
+  "shipperToken": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjbW4ycDBvc2gwMDhseDB1bGl5dTY1eGtjIiwiZW1haWwiOiJzaGlwcGVyQGFkZGlzZnJlaWdodC5ldCIsInJvbGUiOiJTSElQUEVSIiwic3RhdHVzIjoiQUNUSVZFIiwib3JnYW5pemF0aW9uSWQiOiJjbW4ycDBvcjYwMDhqeDB1bDVjNjM1YXFjIiwic2Vzc2lvbklkIjoiY21uMnAwb3cwMDA4cXgwdWxzOG9jMWQ2cSIsImlhdCI6MTc3NDI0MDU1OCwiZXhwIjoxNzc0ODQ1MzU4fQ.Lu2jFHVyzIooXVPV7fw-eoBnenhAY2DRvjd7NGTF1Aw",
+  "carrierUserId": "cmn2p0p0u008zx0ulnsjqu8ui",
+  "carrierOrgId": "cmn2p0p0p008xx0ulblkn9549",
+  "carrierToken": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjbW4ycDBwMHUwMDh6eDB1bG5zanF1OHVpIiwiZW1haWwiOiJjYXJyaWVyQHRpZ3JheXRyYW5zcG9ydC5ldCIsInJvbGUiOiJDQVJSSUVSIiwic3RhdHVzIjoiQUNUSVZFIiwib3JnYW5pemF0aW9uSWQiOiJjbW4ycDBwMHAwMDh4eDB1bGJsa245NTQ5Iiwic2Vzc2lvbklkIjoiY21uMnAwcDN2MDA5NHgwdWx6dHk2dTBocCIsImlhdCI6MTc3NDI0MDU1OSwiZXhwIjoxNzc0ODQ1MzU5fQ.xUGwbDjAkRzkWUT9L1nIzi-g9tJzm1oxwvGyLMRA49c",
+  "truckId": "cmn2p0p6s009cx0ul59d3bji5",
+  "gpsDeviceId": "cmn2p0p6p009bx0ul4g13emgs",
+  "addisLocationId": "cmmid6unh000yjtulnbzt8gqr",
+  "truckPostingId": "cmn2p0p92009fx0ul75dezon6",
+  "loadId": "cmn2p0pb7009gx0uliz9fj26a",
+  "truckRequestId": "cmn2p0pe9009kx0ul8ccud9wy",
+  "tripId": "cmn2p0pgl009nx0ul8mnx3df3",
+  "load2Id": "cmn2p0pv600a8x0ul7fz0jbj3",
+  "trip2Id": "cmn2p0py500aex0ulbkukufc9"
+}
