@@ -319,6 +319,19 @@ export async function proxy(request: NextRequest) {
     if (isMarketplacePath) {
       const userStatus = payload.status as string | undefined;
 
+      // G-M8-6: Allow non-ACTIVE users to access document pages for upload/resubmit
+      if (
+        pathname.startsWith("/shipper/documents") ||
+        pathname.startsWith("/carrier/documents")
+      ) {
+        const response = NextResponse.next();
+        addTimingHeaders(response, startTime, requestId, method, pathname);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+        return addSecurityHeaders(response);
+      }
+
       // Only ACTIVE users can access marketplace features
       if (userStatus !== "ACTIVE") {
         // ADMIN and SUPER_ADMIN bypass status check
