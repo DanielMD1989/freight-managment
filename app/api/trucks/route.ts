@@ -157,10 +157,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Set GPS data
+      // Set GPS data + create GpsDevice record
       const now = new Date();
+      const gpsDevice = await db.gpsDevice.create({
+        data: {
+          imei: validatedData.imei,
+          status: "ACTIVE",
+          lastSeenAt: verification.lastSeen || now,
+        },
+      });
       gpsData = {
         imei: validatedData.imei,
+        gpsDeviceId: gpsDevice.id,
         gpsProvider:
           validatedData.gpsProvider || detectGpsProvider(validatedData.imei),
         gpsVerifiedAt: now,
