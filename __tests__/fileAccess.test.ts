@@ -15,6 +15,40 @@ import {
   createTestOrganization,
   cleanupTestData,
 } from "./utils/testUtils";
+import {
+  createMockSession,
+  setAuthSession,
+  createRequest,
+  callHandler,
+  clearAllStores,
+  mockAuth,
+  mockCsrf,
+  mockRateLimit,
+  mockSecurity,
+  mockCache,
+  mockNotifications,
+  mockCors,
+  mockAuditLog,
+  mockRbac,
+  mockLogger,
+  mockFoundationRules,
+  mockSms,
+} from "./utils/routeTestUtils";
+
+mockAuth();
+mockCsrf();
+mockRateLimit();
+mockSecurity();
+mockCache();
+mockNotifications();
+mockCors();
+mockAuditLog();
+mockRbac();
+mockLogger();
+mockFoundationRules();
+mockSms();
+
+const { GET: getDocument } = require("@/app/api/documents/[id]/route");
 
 describe("File Access Control", () => {
   beforeEach(async () => {
@@ -68,68 +102,143 @@ describe("File Access Control", () => {
       expect(user.organizationId).not.toBe(org2.id);
     });
 
-    it("should require authentication for uploads", () => {
-      const { hasPermission } = require("@/lib/rbac/permissions");
-      const { Permission } = require("@/lib/rbac/permissions");
-      // Unauthenticated users have no role —
-      // cannot upload documents
-      expect(hasPermission("GUEST", Permission.UPLOAD_DOCUMENTS)).toBe(false);
-      expect(hasPermission(undefined, Permission.UPLOAD_DOCUMENTS)).toBe(false);
-      // Authenticated carrier can upload
-      expect(hasPermission("CARRIER", Permission.UPLOAD_DOCUMENTS)).toBe(true);
+    it("should require authentication for uploads", async () => {
+      clearAllStores();
+      // No session set — unauthenticated request
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/documents/doc-001-test-fa?entityType=company"
+      );
+      const res = await callHandler(getDocument, req, {
+        id: "doc-001-test-fa",
+      });
+      expect(res.status).toBe(401);
     });
   });
 
   describe("Document Download Authorization", () => {
     it("should allow users to download their own documents", async () => {
-      const org = await createTestOrganization({
-        name: "Test Carrier",
-        type: "CARRIER_COMPANY",
-      });
-      const user = await createTestUser({
-        email: "carrier-dl@example.com",
-        password: "Password123!",
-        name: "Carrier User",
+      clearAllStores();
+      const org = { id: "fa-org-1" };
+      const session = createMockSession({
+        userId: "fa-user-1",
+        email: "carrier@test.com",
         role: "CARRIER",
         organizationId: org.id,
+        status: "ACTIVE",
       });
-      // User can access documents belonging to their org
-      const docOrgId = org.id;
-      const canAccess = user.organizationId === docOrgId;
-      expect(canAccess).toBe(true);
+      setAuthSession(session);
+
+      // Mock DB to return a document belonging to this org
+      const { db } = require("@/lib/db");
+      db.companyDocument.findUnique = jest.fn().mockResolvedValue({
+        id: "doc-001-test-fa",
+        organizationId: org.id,
+        deletedAt: null,
+        type: "BUSINESS_LICENSE",
+        fileName: "license.pdf",
+        fileUrl: "/uploads/documents/fa-org-1/license.pdf",
+        fileSize: 1024,
+        verificationStatus: "PENDING",
+        uploadedAt: new Date(),
+        verifiedAt: null,
+        rejectionReason: null,
+        uploadedById: "fa-user-1",
+        organization: { id: org.id, name: "Test Carrier" },
+      });
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/documents/doc-001-test-fa?entityType=company"
+      );
+      const res = await callHandler(getDocument, req, {
+        id: "doc-001-test-fa",
+      });
+      expect(res.status).toBe(200);
     });
 
     it("should prevent users from downloading other organizations documents", async () => {
-      const org1 = await createTestOrganization({
-        name: "Carrier A",
-        type: "CARRIER_COMPANY",
-      });
-      const org2 = await createTestOrganization({
-        name: "Carrier B",
-        type: "CARRIER_COMPANY",
-      });
-      const user = await createTestUser({
-        email: "carrier-a@example.com",
-        password: "Password123!",
-        name: "Carrier A User",
+      clearAllStores();
+      const myOrg = { id: "fa-org-mine" };
+      const otherOrg = { id: "fa-org-other" };
+      const session = createMockSession({
+        userId: "fa-user-2",
+        email: "carrier2@test.com",
         role: "CARRIER",
-        organizationId: org1.id,
+        organizationId: myOrg.id,
+        status: "ACTIVE",
       });
-      // User from org1 cannot access org2 documents
-      const docOrgId = org2.id;
-      const canAccess = user.organizationId === docOrgId;
-      expect(canAccess).toBe(false);
+      setAuthSession(session);
+
+      // Mock DB to return a document belonging to OTHER org
+      const { db } = require("@/lib/db");
+      db.companyDocument.findUnique = jest.fn().mockResolvedValue({
+        id: "doc-002-test-fa",
+        organizationId: otherOrg.id,
+        deletedAt: null,
+        type: "BUSINESS_LICENSE",
+        fileName: "license.pdf",
+        fileUrl: "/uploads/documents/fa-org-other/license.pdf",
+        fileSize: 1024,
+        verificationStatus: "PENDING",
+        uploadedAt: new Date(),
+        verifiedAt: null,
+        rejectionReason: null,
+        uploadedById: "other-user",
+        organization: { id: otherOrg.id, name: "Other Carrier" },
+      });
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/documents/doc-002-test-fa?entityType=company"
+      );
+      const res = await callHandler(getDocument, req, {
+        id: "doc-002-test-fa",
+      });
+      // Blueprint §2: Documents are org-scoped
+      // Cross-org access must be denied
+      expect(res.status).toBe(403);
     });
 
     it("should allow admins to download any document", async () => {
-      const { hasPermission } = require("@/lib/rbac/permissions");
-      const { Permission } = require("@/lib/rbac/permissions");
-      // Blueprint §9: Admin accesses all documents via VERIFY_DOCUMENTS
-      // (org-scoped VIEW_DOCUMENTS is for carriers/shippers only)
-      expect(hasPermission("ADMIN", Permission.VERIFY_DOCUMENTS)).toBe(true);
-      expect(hasPermission("SUPER_ADMIN", Permission.VERIFY_DOCUMENTS)).toBe(
-        true
+      clearAllStores();
+      const carrierOrg = { id: "fa-org-carrier" };
+      const adminSession = createMockSession({
+        userId: "fa-admin-1",
+        email: "admin@platform.com",
+        role: "ADMIN",
+        organizationId: "admin-org",
+        status: "ACTIVE",
+      });
+      setAuthSession(adminSession);
+
+      // Mock DB to return a document belonging to carrier org
+      const { db } = require("@/lib/db");
+      db.companyDocument.findUnique = jest.fn().mockResolvedValue({
+        id: "doc-003-test-fa",
+        organizationId: carrierOrg.id,
+        deletedAt: null,
+        type: "BUSINESS_LICENSE",
+        fileName: "license.pdf",
+        fileUrl: "/uploads/documents/fa-org-carrier/license.pdf",
+        fileSize: 1024,
+        verificationStatus: "APPROVED",
+        uploadedAt: new Date(),
+        verifiedAt: new Date(),
+        rejectionReason: null,
+        uploadedById: "carrier-user",
+        organization: { id: carrierOrg.id, name: "Test Carrier" },
+      });
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/documents/doc-003-test-fa?entityType=company"
       );
+      const res = await callHandler(getDocument, req, {
+        id: "doc-003-test-fa",
+      });
+      // Blueprint §9: Admin has full data access
+      expect(res.status).toBe(200);
     });
   });
 

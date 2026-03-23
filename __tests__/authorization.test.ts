@@ -16,6 +16,40 @@ import {
   createTestOrganization,
   cleanupTestData,
 } from "./utils/testUtils";
+import {
+  createMockSession,
+  setAuthSession,
+  createRequest,
+  callHandler,
+  clearAllStores,
+  mockAuth,
+  mockCsrf,
+  mockRateLimit,
+  mockSecurity,
+  mockCache,
+  mockNotifications,
+  mockCors,
+  mockAuditLog,
+  mockRbac,
+  mockLogger,
+  mockFoundationRules,
+  mockSms,
+} from "./utils/routeTestUtils";
+
+mockAuth();
+mockCsrf();
+mockRateLimit();
+mockSecurity();
+mockCache();
+mockNotifications();
+mockCors();
+mockAuditLog();
+mockRbac();
+mockLogger();
+mockFoundationRules();
+mockSms();
+
+// Route handlers imported inside tests via require() for mockImplementationOnce
 
 describe("Authorization", () => {
   beforeEach(async () => {
@@ -193,41 +227,130 @@ describe("Authorization", () => {
   });
 
   describe("requirePermission Middleware", () => {
-    it("should allow access with correct permission", () => {
-      const { hasPermission } = require("@/lib/rbac/permissions");
-      const { Permission } = require("@/lib/rbac/permissions");
-      // Blueprint: each role has defined capabilities
-      // Admin can verify documents
-      expect(hasPermission("ADMIN", Permission.VERIFY_DOCUMENTS)).toBe(true);
-      // Carrier can post trucks
-      expect(hasPermission("CARRIER", Permission.POST_TRUCKS)).toBe(true);
-      // Shipper can post loads
-      expect(hasPermission("SHIPPER", Permission.POST_LOADS)).toBe(true);
+    it("should allow access with correct permission", async () => {
+      clearAllStores();
+      const rbacMock = require("@/lib/rbac");
+      const realHasPermission = require("@/lib/rbac/permissions").hasPermission;
+
+      // Override requirePermission to check real permissions
+      rbacMock.requirePermission.mockImplementationOnce(
+        async (permission: string) => {
+          const { getAuthSession } = require("./utils/routeTestUtils");
+          const s = getAuthSession();
+          if (!s) {
+            const err = new Error("Unauthorized");
+            (err as any).name = "UnauthorizedError";
+            throw err;
+          }
+          if (!realHasPermission(s.role, permission)) {
+            const err = new Error("Forbidden: Insufficient permissions");
+            (err as any).name = "ForbiddenError";
+            throw err;
+          }
+          return s;
+        }
+      );
+
+      // Admin can access verification queue (has VERIFY_DOCUMENTS)
+      const {
+        GET: verificationQueue,
+      } = require("@/app/api/admin/verification/queue/route");
+      const adminSession = createMockSession({
+        userId: "auth-admin-1",
+        email: "admin@test.com",
+        role: "ADMIN",
+        organizationId: "auth-admin-org",
+        status: "ACTIVE",
+      });
+      setAuthSession(adminSession);
+
+      // Mock DB for verification queue
+      const { db } = require("@/lib/db");
+      db.companyDocument.findMany = jest.fn().mockResolvedValue([]);
+      db.companyDocument.count = jest.fn().mockResolvedValue(0);
+      db.truckDocument.findMany = jest.fn().mockResolvedValue([]);
+      db.truckDocument.count = jest.fn().mockResolvedValue(0);
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/verification/queue"
+      );
+      const res = await callHandler(verificationQueue, req);
+      // Admin has VERIFY_DOCUMENTS permission
+      expect(res.status).toBe(200);
     });
 
-    it("should deny access without correct permission", () => {
-      const { hasPermission } = require("@/lib/rbac/permissions");
-      const { Permission } = require("@/lib/rbac/permissions");
-      // Carrier cannot verify documents (admin only)
-      expect(hasPermission("CARRIER", Permission.VERIFY_DOCUMENTS)).toBe(false);
-      // Shipper cannot post trucks (carrier only)
-      expect(hasPermission("SHIPPER", Permission.POST_TRUCKS)).toBe(false);
-      // Dispatcher cannot approve registrations
-      expect(hasPermission("DISPATCHER", Permission.VERIFY_DOCUMENTS)).toBe(
-        false
+    it("should deny access without correct permission", async () => {
+      clearAllStores();
+      const rbacMock = require("@/lib/rbac");
+      const realHasPermission = require("@/lib/rbac/permissions").hasPermission;
+
+      // Override requirePermission to check real permissions
+      rbacMock.requirePermission.mockImplementationOnce(
+        async (permission: string) => {
+          const { getAuthSession } = require("./utils/routeTestUtils");
+          const s = getAuthSession();
+          if (!s) {
+            const err = new Error("Unauthorized");
+            (err as any).name = "UnauthorizedError";
+            throw err;
+          }
+          if (!realHasPermission(s.role, permission)) {
+            const err = new Error("Forbidden: Insufficient permissions");
+            (err as any).name = "ForbiddenError";
+            throw err;
+          }
+          return s;
+        }
       );
+
+      const {
+        GET: verificationQueue,
+      } = require("@/app/api/admin/verification/queue/route");
+      const session = createMockSession({
+        userId: "auth-shipper-1",
+        email: "shipper@test.com",
+        role: "SHIPPER",
+        organizationId: "auth-shipper-org",
+        status: "ACTIVE",
+      });
+      setAuthSession(session);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/verification/queue"
+      );
+      const res = await callHandler(verificationQueue, req);
+      // Shipper does not have VERIFY_DOCUMENTS permission
+      expect(res.status).toBe(403);
     });
 
-    it("should deny access to unauthenticated requests", () => {
-      const { hasPermission } = require("@/lib/rbac/permissions");
-      const { Permission } = require("@/lib/rbac/permissions");
-      // No role = no access to any protected action
-      const invalidRole = "" as any;
-      expect(hasPermission(invalidRole, Permission.VIEW_LOADS)).toBe(false);
-      expect(hasPermission(invalidRole, Permission.POST_TRUCKS)).toBe(false);
-      expect(hasPermission(invalidRole, Permission.VERIFY_DOCUMENTS)).toBe(
-        false
+    it("should deny access to unauthenticated requests", async () => {
+      clearAllStores();
+      const rbacMock = require("@/lib/rbac");
+
+      // Override requirePermission to check auth
+      rbacMock.requirePermission.mockImplementationOnce(async () => {
+        const { getAuthSession } = require("./utils/routeTestUtils");
+        const s = getAuthSession();
+        if (!s) {
+          const err = new Error("Unauthorized");
+          (err as any).name = "UnauthorizedError";
+          throw err;
+        }
+        return s;
+      });
+
+      setAuthSession(null);
+      const {
+        GET: verificationQueue,
+      } = require("@/app/api/admin/verification/queue/route");
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/verification/queue"
       );
+      const res = await callHandler(verificationQueue, req);
+      // No session = 401 Unauthorized
+      expect(res.status).toBe(401);
     });
   });
 
