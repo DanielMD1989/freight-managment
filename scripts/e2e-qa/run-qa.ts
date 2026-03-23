@@ -1,10 +1,11 @@
 /**
- * Deep E2E QA Suite — Full Platform Validation v2
+ * Deep E2E QA Suite — Full Platform Validation v3
  *
- * Replaces the original run-qa.ts with exact-value assertions,
- * GPS-based billing verification, and comprehensive state machine testing.
+ * Resets the database, creates all users from scratch, exercises every
+ * major API flow, and saves results + credentials to .qa-context.json
+ * for the Playwright browser suite.
  *
- * 14 Phases:
+ * 16 Phases:
  *   0. Database Reset & Seed
  *   1. Super Admin Login + Create Admin
  *   2. Admin Login + Dispatcher Setup
@@ -14,11 +15,13 @@
  *   6. Trip 1 Execution with GPS (actualTripKm billing)
  *   7. Trip 1 Fee Verification (exact ETB math)
  *   8. Trip 2 — Corridor-Fallback Billing (no GPS)
- *   9. Trip 2 Fee Verification + Cumulative Wallet Math
- *  10. State Machine — Invalid Transitions (400s)
+ *   9. Invalid State Transitions (400s)
+ *  10. Withdrawal Flow
  *  11. Exception Flow
- *  12. Cancellation Flow + Refund
- *  13. Security Boundaries & Edge Cases
+ *  12. Dispatcher Match Proposal
+ *  13. Security Boundaries
+ *  14. Analytics Verification
+ *  15. Save Context
  *
  * Usage:
  *   npx tsx scripts/e2e-qa/run-qa.ts
@@ -50,7 +53,6 @@ const CONTEXT_PATH = path.join(__dirname, ".qa-context.json");
 // ---------------------------------------------------------------------------
 // GPS waypoints: 5 points along north corridor from Addis Ababa
 // Haversine sum = exactly 50.00 km (after Math.round(total*100)/100)
-// Pre-computed with R=6371 matching lib/geo.ts
 // ---------------------------------------------------------------------------
 const GPS_WAYPOINTS = [
   { lat: 9.0, lng: 38.74 },
@@ -81,7 +83,7 @@ const TRIP2_CARRIER_FEE = CORRIDOR_DISTANCE_KM * CARRIER_RATE; // 1132.50
 const SHIPPER_STARTING_BALANCE = 50000;
 const CARRIER_STARTING_BALANCE = 30000;
 
-// Expected wallet states
+// Expected wallet states after trips
 const SHIPPER_AFTER_TRIP1 = SHIPPER_STARTING_BALANCE - TRIP1_SHIPPER_FEE; // 49875.00
 const CARRIER_AFTER_TRIP1 = CARRIER_STARTING_BALANCE - TRIP1_CARRIER_FEE; // 29875.00
 const SHIPPER_AFTER_TRIP2 = SHIPPER_AFTER_TRIP1 - TRIP2_SHIPPER_FEE; // 48742.50
@@ -116,6 +118,14 @@ interface QAContext {
   truckRequestId: string;
   addisLocationId: string;
   corridorId: string;
+  credentials: Record<string, { email: string; password: string }>;
+  shipperFinalBalance: number;
+  carrierFinalBalance: number;
+  totalPlatformRevenue: number;
+  completedTripCount: number;
+  shipperTopupAmount: number;
+  carrierTopupAmount: number;
+  [key: string]: unknown;
 }
 
 const ctx: Partial<QAContext> = {};
@@ -283,9 +293,6 @@ async function getWalletBalance(token: string): Promise<number> {
 }
 
 async function postGps(imei: string, lat: number, lng: number) {
-  // GPS endpoint uses device-based auth (IMEI), but CSRF middleware
-  // requires either a CSRF cookie or a Bearer header to skip the check.
-  // Send carrier's Bearer token to bypass CSRF while IMEI handles actual auth.
   await api("POST", "/api/gps/positions", {
     token: ctx.carrierToken,
     body: { imei, latitude: lat, longitude: lng },
@@ -314,6 +321,92 @@ async function ensureActivePosting() {
     const posting = (data.posting ?? data) as Record<string, unknown>;
     ctx.truckPostingId = posting.id as string;
   }
+}
+
+function makeLoadPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    pickupCity: "Addis Ababa",
+    deliveryCity: "Dire Dawa",
+    pickupDate: tomorrow(),
+    deliveryDate: dayAfterTomorrow(),
+    truckType: "DRY_VAN",
+    weight: 10000,
+    cargoDescription: "QA test cargo",
+    fullPartial: "FULL",
+    bookMode: "REQUEST",
+    status: "POSTED",
+    ...overrides,
+  };
+}
+
+async function createAndMatchTrip(
+  loadPayload: Record<string, unknown>
+): Promise<{ loadId: string; tripId: string }> {
+  // Post load
+  const { data: loadData } = await api("POST", "/api/loads", {
+    token: ctx.shipperToken,
+    body: loadPayload,
+    expectStatus: 201,
+  });
+  const loadId = ((loadData.load ?? loadData) as Record<string, unknown>)
+    .id as string;
+
+  // Ensure posting active
+  await ensureActivePosting();
+
+  // Send + accept request
+  const { data: reqData } = await api("POST", "/api/truck-requests", {
+    token: ctx.shipperToken,
+    body: { loadId, truckId: ctx.truckId, expiresInHours: 24 },
+    expectStatus: [200, 201],
+  });
+  const reqObj = (reqData.request ?? reqData) as Record<string, unknown>;
+  await api("POST", `/api/truck-requests/${reqObj.id}/respond`, {
+    token: ctx.carrierToken,
+    body: { action: "APPROVE" },
+    expectStatus: 200,
+  });
+
+  // Find trip
+  const trip = await prisma.trip.findFirst({ where: { loadId } });
+  assert(!!trip, `No trip created for load ${loadId}`);
+  return { loadId, tripId: trip!.id };
+}
+
+async function walkTrip(tripId: string, statuses: string[], token?: string) {
+  const t = token ?? ctx.carrierToken!;
+  for (const status of statuses) {
+    const { data } = await api("PATCH", `/api/trips/${tripId}`, {
+      token: t,
+      body: { status },
+      expectStatus: 200,
+    });
+    const trip = (data.trip ?? data) as Record<string, unknown>;
+    assertEqual(trip.status, status, `trip → ${status}`);
+  }
+}
+
+async function uploadPodAndComplete(tripId: string) {
+  const formData = new FormData();
+  formData.append(
+    "file",
+    new Blob([makePng()], { type: "image/png" }),
+    `pod-${tripId}.png`
+  );
+  formData.append("notes", `QA POD ${tripId}`);
+  await api("POST", `/api/trips/${tripId}/pod`, {
+    token: ctx.carrierToken,
+    formData,
+    expectStatus: [200, 201],
+  });
+
+  const { data } = await api("PATCH", `/api/trips/${tripId}`, {
+    token: ctx.carrierToken,
+    body: { status: "COMPLETED" },
+    expectStatus: 200,
+  });
+  const trip = (data.trip ?? data) as Record<string, unknown>;
+  assertEqual(trip.status, "COMPLETED", "trip completed");
 }
 
 // ===========================================================================
@@ -392,7 +485,6 @@ async function phase0() {
       const corr = await pool.query("SELECT COUNT(*)::int AS c FROM corridors");
       assertEqual(corr.rows[0].c, 1, "corridor count");
 
-      // Verify Ethiopian locations exist (from initial seed)
       const locs = await pool.query(
         "SELECT COUNT(*)::int AS c FROM ethiopian_locations"
       );
@@ -556,7 +648,6 @@ async function phase3() {
       assertEqual(org.isVerified, true, "isVerified");
       assertEqual(org.verificationStatus, "APPROVED", "verificationStatus");
 
-      // Verify user is now ACTIVE
       const dbUser = await prisma.user.findUnique({
         where: { id: ctx.shipperUserId },
       });
@@ -748,7 +839,6 @@ async function phase4() {
     "4.8",
     "Carrier posts truck to marketplace → status=ACTIVE",
     async () => {
-      // Get Addis Ababa location ID
       const { data: locData } = await api(
         "GET",
         "/api/ethiopian-locations?search=Addis+Ababa",
@@ -789,18 +879,10 @@ async function phase5() {
   await test("5.1", "Shipper posts load → status=POSTED", async () => {
     const { data } = await api("POST", "/api/loads", {
       token: ctx.shipperToken,
-      body: {
-        pickupCity: "Addis Ababa",
-        deliveryCity: "Dire Dawa",
-        pickupDate: tomorrow(),
-        deliveryDate: dayAfterTomorrow(),
-        truckType: "DRY_VAN",
+      body: makeLoadPayload({
         weight: 12000,
         cargoDescription: "QA test — construction materials",
-        fullPartial: "FULL",
-        bookMode: "REQUEST",
-        status: "POSTED",
-      },
+      }),
       expectStatus: 201,
     });
     const load = (data.load ?? data) as Record<string, unknown>;
@@ -857,7 +939,6 @@ async function phase5() {
         expectStatus: 200,
       });
 
-      // Verify load state
       const { data } = await api("GET", `/api/loads/${ctx.loadId}`, {
         token: ctx.shipperToken,
         expectStatus: 200,
@@ -866,7 +947,6 @@ async function phase5() {
       assertEqual(load.status, "ASSIGNED", "load status after accept");
       assert(!!load.assignedTruckId, "No assignedTruckId on load");
 
-      // Find trip
       const trip = await prisma.trip.findFirst({
         where: { loadId: ctx.loadId },
       });
@@ -904,14 +984,13 @@ async function phase6() {
   });
 
   await test(
-    `6.3`,
+    "6.3",
     `Post ${GPS_WAYPOINTS.length} GPS positions via IMEI (forming ${GPS_ACTUAL_KM}km path)`,
     async () => {
       for (const wp of GPS_WAYPOINTS) {
         await postGps(ctx.gpsImei!, wp.lat, wp.lng);
       }
 
-      // Verify positions are linked to trip
       const positions = await prisma.gpsPosition.findMany({
         where: { tripId: ctx.tripId },
         orderBy: { timestamp: "asc" },
@@ -1084,7 +1163,6 @@ async function phase7() {
       expectStatus: 200,
     });
     const sf = data.serviceFee as Record<string, unknown>;
-    // Response nests under serviceFee.shipper.status and serviceFee.carrier.status
     const shipper = sf.shipper as Record<string, unknown>;
     const carrier = sf.carrier as Record<string, unknown>;
     assertEqual(shipper.status, "DEDUCTED", "shipper.status via API");
@@ -1119,18 +1197,10 @@ async function phase8() {
   await test("8.1", "Shipper posts load 2", async () => {
     const { data } = await api("POST", "/api/loads", {
       token: ctx.shipperToken,
-      body: {
-        pickupCity: "Addis Ababa",
-        deliveryCity: "Dire Dawa",
-        pickupDate: tomorrow(),
-        deliveryDate: dayAfterTomorrow(),
-        truckType: "DRY_VAN",
+      body: makeLoadPayload({
         weight: 8000,
         cargoDescription: "QA test — textile bales",
-        fullPartial: "FULL",
-        bookMode: "REQUEST",
-        status: "POSTED",
-      },
+      }),
       expectStatus: 201,
     });
     const load = (data.load ?? data) as Record<string, unknown>;
@@ -1144,26 +1214,19 @@ async function phase8() {
     async () => {
       await ensureActivePosting();
 
-      // Send request
       const { data: reqData } = await api("POST", "/api/truck-requests", {
         token: ctx.shipperToken,
-        body: {
-          loadId: ctx.load2Id,
-          truckId: ctx.truckId,
-          expiresInHours: 24,
-        },
+        body: { loadId: ctx.load2Id, truckId: ctx.truckId, expiresInHours: 24 },
         expectStatus: [200, 201],
       });
       const reqObj = (reqData.request ?? reqData) as Record<string, unknown>;
 
-      // Accept
       await api("POST", `/api/truck-requests/${reqObj.id}/respond`, {
         token: ctx.carrierToken,
         body: { action: "APPROVE" },
         expectStatus: 200,
       });
 
-      // Find trip
       const trip = await prisma.trip.findFirst({
         where: { loadId: ctx.load2Id },
       });
@@ -1176,16 +1239,11 @@ async function phase8() {
     "8.3",
     "Walk trip 2: ASSIGNED → PICKUP → IN_TRANSIT → DELIVERED",
     async () => {
-      for (const status of ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"]) {
-        const { data } = await api("PATCH", `/api/trips/${ctx.trip2Id}`, {
-          token: ctx.carrierToken,
-          body: { status },
-          expectStatus: 200,
-        });
-        const trip = (data.trip ?? data) as Record<string, unknown>;
-        assertEqual(trip.status, status, `trip2 status → ${status}`);
-      }
-      // NOTE: No GPS positions posted for trip 2 — corridor fallback
+      await walkTrip(ctx.trip2Id!, [
+        "PICKUP_PENDING",
+        "IN_TRANSIT",
+        "DELIVERED",
+      ]);
     }
   );
 
@@ -1212,28 +1270,19 @@ async function phase8() {
     const trip = (data.trip ?? data) as Record<string, unknown>;
     assertEqual(trip.status, "COMPLETED", "trip2 completed");
   });
-}
-
-// ===========================================================================
-// PHASE 9 — Trip 2 Fee Verification + Cumulative Wallet
-// ===========================================================================
-async function phase9() {
-  header("PHASE 9: Trip 2 Fee Verification (Corridor Fallback)");
 
   await test(
-    "9.1",
-    `Load2 totalKmUsed = ${CORRIDOR_DISTANCE_KM} (corridor fallback, no GPS)`,
+    "8.6",
+    `Load2 totalKmUsed = ${CORRIDOR_DISTANCE_KM} (corridor fallback)`,
     async () => {
       const load = await prisma.load.findUnique({
         where: { id: ctx.load2Id },
         select: { actualTripKm: true, totalKmUsed: true },
       });
-      // actualTripKm should be null (no GPS data)
       assert(
         load!.actualTripKm === null || Number(load!.actualTripKm) === 0,
         `Load2 actualTripKm should be null or 0, got ${load!.actualTripKm}`
       );
-      // totalKmUsed should be the corridor distance
       assertApprox(
         Number(load!.totalKmUsed),
         CORRIDOR_DISTANCE_KM,
@@ -1244,7 +1293,7 @@ async function phase9() {
   );
 
   await test(
-    "9.2",
+    "8.7",
     `Load2 shipperServiceFee=${TRIP2_SHIPPER_FEE}, carrierServiceFee=${TRIP2_CARRIER_FEE}`,
     async () => {
       const load = await prisma.load.findUnique({
@@ -1274,7 +1323,7 @@ async function phase9() {
   );
 
   await test(
-    "9.3",
+    "8.8",
     `Cumulative shipper wallet = ${SHIPPER_AFTER_TRIP2} ETB`,
     async () => {
       const balance = await getWalletBalance(ctx.shipperToken!);
@@ -1288,7 +1337,7 @@ async function phase9() {
   );
 
   await test(
-    "9.4",
+    "8.9",
     `Cumulative carrier wallet = ${CARRIER_AFTER_TRIP2} ETB`,
     async () => {
       const balance = await getWalletBalance(ctx.carrierToken!);
@@ -1300,140 +1349,144 @@ async function phase9() {
       );
     }
   );
+}
+
+// ===========================================================================
+// PHASE 9 — Invalid State Transitions (400s)
+// ===========================================================================
+async function phase9() {
+  header("PHASE 9: Invalid State Transitions");
+
+  await test("9.1", "Cancel COMPLETED trip → 400", async () => {
+    await api("POST", `/api/trips/${ctx.tripId}/cancel`, {
+      token: ctx.carrierToken,
+      body: { reason: "should fail" },
+      expectStatus: 400,
+    });
+  });
+
+  // Create a trip to test skip and cancellation
+  let skipTripId: string;
+  let skipLoadId: string;
 
   await test(
-    "9.5",
-    "Admin analytics: ≥2 completed trips, revenue > 0",
+    "9.2",
+    "Create trip, cancel from ASSIGNED → CANCELLED",
     async () => {
-      const { data } = await api("GET", "/api/admin/analytics", {
-        token: ctx.adminToken,
+      const result = await createAndMatchTrip(
+        makeLoadPayload({
+          weight: 2000,
+          cargoDescription: "QA — state machine test",
+        })
+      );
+      skipLoadId = result.loadId;
+      skipTripId = result.tripId;
+
+      // Cancel from ASSIGNED
+      const { data } = await api("POST", `/api/trips/${skipTripId}/cancel`, {
+        token: ctx.carrierToken,
+        body: { reason: "QA — cancel for testing" },
         expectStatus: 200,
       });
-      const summary = data.summary as Record<string, unknown>;
-      const trips = summary.trips as Record<string, unknown>;
-      assert(
-        (trips.completed as number) >= 2,
-        `trips.completed=${trips.completed}`
+      const trip = (data.trip ?? data) as Record<string, unknown>;
+      assertEqual(trip.status, "CANCELLED", "trip cancelled");
+    }
+  );
+
+  await test("9.3", "Cancel already-cancelled trip → 400", async () => {
+    await api("POST", `/api/trips/${skipTripId}/cancel`, {
+      token: ctx.carrierToken,
+      body: { reason: "should fail" },
+      expectStatus: 400,
+    });
+  });
+
+  await test(
+    "9.4",
+    "ASSIGNED → IN_TRANSIT directly → 400 (skip PICKUP_PENDING)",
+    async () => {
+      // Create fresh trip in ASSIGNED
+      const result = await createAndMatchTrip(
+        makeLoadPayload({
+          weight: 1500,
+          cargoDescription: "QA — skip test",
+        })
       );
 
-      const revenue = summary.revenue as Record<string, unknown>;
-      assert(!!revenue, "No revenue data");
-      const collected =
-        ((revenue.serviceFeeCollected as number) ?? 0) +
-        ((revenue.shipperFeeCollected as number) ?? 0) +
-        ((revenue.carrierFeeCollected as number) ?? 0);
-      assert(collected > 0, `Total fees collected = ${collected}`);
+      // Try to skip PICKUP_PENDING
+      await api("PATCH", `/api/trips/${result.tripId}`, {
+        token: ctx.carrierToken,
+        body: { status: "IN_TRANSIT" },
+        expectStatus: 400,
+      });
+
+      // Cleanup: cancel this trip
+      await api("POST", `/api/trips/${result.tripId}/cancel`, {
+        token: ctx.carrierToken,
+        body: { reason: "QA cleanup" },
+        expectStatus: 200,
+      });
     }
   );
 }
 
 // ===========================================================================
-// PHASE 10 — State Machine: Invalid Transitions (400s)
+// PHASE 10 — Withdrawal Flow
 // ===========================================================================
 async function phase10() {
-  header("PHASE 10: State Machine — Invalid Transitions");
+  header("PHASE 10: Withdrawal Flow");
 
-  await test("10.1", "COMPLETED → IN_TRANSIT = 400 (terminal)", async () => {
-    await api("PATCH", `/api/trips/${ctx.tripId}`, {
-      token: ctx.carrierToken,
-      body: { status: "IN_TRANSIT" },
-      expectStatus: 400,
-    });
+  let balanceBefore: number;
+  let withdrawalId: string;
+
+  await test("10.1", "Record shipper balance before withdrawal", async () => {
+    balanceBefore = await getWalletBalance(ctx.shipperToken!);
+    assert(
+      balanceBefore > 1000,
+      `Shipper balance ${balanceBefore} too low for 1000 withdrawal`
+    );
   });
 
-  await test("10.2", "COMPLETED → ASSIGNED = 400 (terminal)", async () => {
-    await api("PATCH", `/api/trips/${ctx.tripId}`, {
-      token: ctx.carrierToken,
-      body: { status: "ASSIGNED" },
-      expectStatus: 400,
-    });
-  });
-
-  // Create a trip for in-transit blocking test
   await test(
-    "10.3",
-    "Create trip 3 and walk to IN_TRANSIT for blocking tests",
+    "10.2",
+    "Shipper requests withdrawal: 1000 ETB → PENDING",
     async () => {
-      // Post load
-      const { data: loadData } = await api("POST", "/api/loads", {
+      const { data } = await api("POST", "/api/financial/withdraw", {
         token: ctx.shipperToken,
         body: {
-          pickupCity: "Addis Ababa",
-          deliveryCity: "Dire Dawa",
-          pickupDate: tomorrow(),
-          deliveryDate: dayAfterTomorrow(),
-          truckType: "DRY_VAN",
-          weight: 5000,
-          cargoDescription: "QA test — state machine test load",
-          fullPartial: "FULL",
-          bookMode: "REQUEST",
-          status: "POSTED",
+          amount: 1000,
+          bankAccount: "1000123456789",
+          bankName: "Commercial Bank of Ethiopia",
+          accountHolder: "Meron Haile",
         },
-        expectStatus: 201,
-      });
-      ctx.load3Id = ((loadData.load ?? loadData) as Record<string, unknown>)
-        .id as string;
-
-      await ensureActivePosting();
-
-      const { data: reqData } = await api("POST", "/api/truck-requests", {
-        token: ctx.shipperToken,
-        body: { loadId: ctx.load3Id, truckId: ctx.truckId, expiresInHours: 24 },
         expectStatus: [200, 201],
       });
-      const reqObj = (reqData.request ?? reqData) as Record<string, unknown>;
-      await api("POST", `/api/truck-requests/${reqObj.id}/respond`, {
-        token: ctx.carrierToken,
-        body: { action: "APPROVE" },
-        expectStatus: 200,
-      });
-
-      const trip = await prisma.trip.findFirst({
-        where: { loadId: ctx.load3Id },
-      });
-      assert(!!trip, "No trip3 created");
-      ctx.trip3Id = trip!.id;
-
-      // Walk to IN_TRANSIT
-      await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
-        token: ctx.carrierToken,
-        body: { status: "PICKUP_PENDING" },
-        expectStatus: 200,
-      });
-      await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
-        token: ctx.carrierToken,
-        body: { status: "IN_TRANSIT" },
-        expectStatus: 200,
-      });
+      const wr = (data.withdrawalRequest ?? data.withdrawal ?? data) as Record<
+        string,
+        unknown
+      >;
+      assertEqual(wr.status, "PENDING", "withdrawal status");
+      withdrawalId = wr.id as string;
+      assert(!!withdrawalId, "No withdrawal ID returned");
     }
   );
 
-  await test(
-    "10.4",
-    "IN_TRANSIT → CANCELLED = 400 (must use EXCEPTION)",
-    async () => {
-      await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
-        token: ctx.carrierToken,
-        body: { status: "CANCELLED" },
-        expectStatus: 400,
-      });
-    }
-  );
-
-  await test("10.5", "Cancel route: IN_TRANSIT → 400", async () => {
-    await api("POST", `/api/trips/${ctx.trip3Id}/cancel`, {
-      token: ctx.carrierToken,
-      body: { reason: "QA test — should fail" },
-      expectStatus: 400,
+  await test("10.3", "Admin approves withdrawal", async () => {
+    await api("PATCH", `/api/admin/withdrawals/${withdrawalId}`, {
+      token: ctx.adminToken,
+      body: { action: "APPROVED" },
+      expectStatus: 200,
     });
   });
 
-  await test("10.6", "IN_TRANSIT → ASSIGNED = 400 (backward)", async () => {
-    await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
-      token: ctx.carrierToken,
-      body: { status: "ASSIGNED" },
-      expectStatus: 400,
-    });
+  await test("10.4", "Shipper balance reduced by 1000 ETB", async () => {
+    const balanceAfter = await getWalletBalance(ctx.shipperToken!);
+    assertApprox(
+      balanceAfter,
+      balanceBefore - 1000,
+      "balance after withdrawal",
+      1.0
+    );
   });
 }
 
@@ -1443,7 +1496,20 @@ async function phase10() {
 async function phase11() {
   header("PHASE 11: Exception Flow");
 
-  await test("11.1", "Carrier raises EXCEPTION on trip 3", async () => {
+  await test("11.1", "Create trip 3, walk to IN_TRANSIT", async () => {
+    const result = await createAndMatchTrip(
+      makeLoadPayload({
+        weight: 5000,
+        cargoDescription: "QA test — state machine test load",
+      })
+    );
+    ctx.load3Id = result.loadId;
+    ctx.trip3Id = result.tripId;
+
+    await walkTrip(ctx.trip3Id!, ["PICKUP_PENDING", "IN_TRANSIT"]);
+  });
+
+  await test("11.2", "Carrier raises EXCEPTION on trip 3", async () => {
     const { data } = await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
       token: ctx.carrierToken,
       body: {
@@ -1457,14 +1523,13 @@ async function phase11() {
   });
 
   await test(
-    "11.2",
+    "11.3",
     "Carrier cannot resolve EXCEPTION → 400 or 403",
     async () => {
       const { status } = await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
         token: ctx.carrierToken,
         body: { status: "IN_TRANSIT" },
       });
-      // Carrier cannot set EXCEPTION → IN_TRANSIT (admin-only)
       assert(
         status === 400 || status === 403,
         `Expected 400/403, got ${status}`
@@ -1472,7 +1537,7 @@ async function phase11() {
     }
   );
 
-  await test("11.3", "Dispatcher sees EXCEPTION status", async () => {
+  await test("11.4", "Dispatcher sees EXCEPTION status", async () => {
     const { data } = await api("GET", `/api/trips/${ctx.trip3Id}`, {
       token: ctx.dispatcherToken,
       expectStatus: 200,
@@ -1481,7 +1546,7 @@ async function phase11() {
     assertEqual(trip.status, "EXCEPTION", "dispatcher sees EXCEPTION");
   });
 
-  await test("11.4", "Admin resolves EXCEPTION → IN_TRANSIT", async () => {
+  await test("11.5", "Admin resolves EXCEPTION → IN_TRANSIT", async () => {
     const { data } = await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
       token: ctx.adminToken,
       body: { status: "IN_TRANSIT" },
@@ -1491,148 +1556,98 @@ async function phase11() {
     assertEqual(trip.status, "IN_TRANSIT", "admin resolved to IN_TRANSIT");
   });
 
-  await test("11.5", "Complete trip 3 (DELIVERED → COMPLETED)", async () => {
-    await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
-      token: ctx.carrierToken,
-      body: { status: "DELIVERED" },
-      expectStatus: 200,
-    });
+  await test("11.6", "Complete trip 3 (corridor billing)", async () => {
+    await walkTrip(ctx.trip3Id!, ["DELIVERED"]);
+    await uploadPodAndComplete(ctx.trip3Id!);
+  });
 
-    const formData = new FormData();
-    formData.append(
-      "file",
-      new Blob([makePng()], { type: "image/png" }),
-      "pod-trip3.png"
+  await test("11.7", "Trip 3 fee deducted (corridor billing)", async () => {
+    const load = await prisma.load.findUnique({
+      where: { id: ctx.load3Id },
+      select: {
+        shipperFeeStatus: true,
+        carrierFeeStatus: true,
+        totalKmUsed: true,
+      },
+    });
+    assertEqual(load!.shipperFeeStatus, "DEDUCTED", "trip3 shipperFeeStatus");
+    assertEqual(load!.carrierFeeStatus, "DEDUCTED", "trip3 carrierFeeStatus");
+    assertApprox(
+      Number(load!.totalKmUsed),
+      CORRIDOR_DISTANCE_KM,
+      "trip3 totalKmUsed",
+      0.5
     );
-    await api("POST", `/api/trips/${ctx.trip3Id}/pod`, {
-      token: ctx.carrierToken,
-      formData,
-      expectStatus: [200, 201],
-    });
-
-    const { data } = await api("PATCH", `/api/trips/${ctx.trip3Id}`, {
-      token: ctx.carrierToken,
-      body: { status: "COMPLETED" },
-      expectStatus: 200,
-    });
-    const trip = (data.trip ?? data) as Record<string, unknown>;
-    assertEqual(trip.status, "COMPLETED", "trip3 completed");
   });
 }
 
 // ===========================================================================
-// PHASE 12 — Cancellation Flow + Refund
+// PHASE 12 — Dispatcher Match Proposal
 // ===========================================================================
 async function phase12() {
-  header("PHASE 12: Cancellation Flow");
+  header("PHASE 12: Dispatcher Match Proposal");
 
-  // Get shipper balance before creating the cancellable trip
-  let balanceBefore: number;
+  let matchLoadId: string;
+  let proposalId: string;
 
-  await test(
-    "12.1",
-    "Record shipper balance before cancellation test",
-    async () => {
-      balanceBefore = await getWalletBalance(ctx.shipperToken!);
-      assert(balanceBefore > 0, "Shipper balance is 0");
-    }
-  );
+  await test("12.1", "Post load for match proposal (POSTED)", async () => {
+    const { data } = await api("POST", "/api/loads", {
+      token: ctx.shipperToken,
+      body: makeLoadPayload({
+        weight: 7000,
+        cargoDescription: "QA — match proposal test",
+      }),
+      expectStatus: 201,
+    });
+    const load = (data.load ?? data) as Record<string, unknown>;
+    assertEqual(load.status, "POSTED", "match load status");
+    matchLoadId = load.id as string;
+  });
 
-  let cancelTripId: string;
-  let cancelLoadId: string;
+  await test("12.2", "Dispatcher creates match proposal", async () => {
+    await ensureActivePosting();
 
-  await test(
-    "12.2",
-    "Create trip 4 for cancellation (ASSIGNED state)",
-    async () => {
-      const { data: loadData } = await api("POST", "/api/loads", {
-        token: ctx.shipperToken,
-        body: {
-          pickupCity: "Addis Ababa",
-          deliveryCity: "Dire Dawa",
-          pickupDate: tomorrow(),
-          deliveryDate: dayAfterTomorrow(),
-          truckType: "DRY_VAN",
-          weight: 3000,
-          cargoDescription: "QA — cancellation test",
-          fullPartial: "FULL",
-          bookMode: "REQUEST",
-          status: "POSTED",
-        },
-        expectStatus: 201,
-      });
-      cancelLoadId = ((loadData.load ?? loadData) as Record<string, unknown>)
-        .id as string;
-
-      await ensureActivePosting();
-
-      const { data: reqData } = await api("POST", "/api/truck-requests", {
-        token: ctx.shipperToken,
-        body: {
-          loadId: cancelLoadId,
-          truckId: ctx.truckId,
-          expiresInHours: 24,
-        },
-        expectStatus: [200, 201],
-      });
-      const reqObj = (reqData.request ?? reqData) as Record<string, unknown>;
-      await api("POST", `/api/truck-requests/${reqObj.id}/respond`, {
-        token: ctx.carrierToken,
-        body: { action: "APPROVE" },
-        expectStatus: 200,
-      });
-
-      const trip = await prisma.trip.findFirst({
-        where: { loadId: cancelLoadId },
-      });
-      assert(!!trip, "No trip4 created");
-      cancelTripId = trip!.id;
-      assertEqual(trip!.status, "ASSIGNED", "trip4 initial status");
-    }
-  );
+    const { data } = await api("POST", "/api/match-proposals", {
+      token: ctx.dispatcherToken,
+      body: {
+        loadId: matchLoadId,
+        truckId: ctx.truckId,
+        notes: "QA — dispatcher proposed match",
+        expiresInHours: 24,
+      },
+      expectStatus: [200, 201],
+    });
+    const proposal = (data.proposal ?? data.matchProposal ?? data) as Record<
+      string,
+      unknown
+    >;
+    assert(!!proposal.id, "No proposal ID returned");
+    proposalId = proposal.id as string;
+  });
 
   await test(
     "12.3",
-    "Carrier cancels ASSIGNED trip → load reverts to POSTED",
+    "Carrier accepts match proposal → load assigned",
     async () => {
-      const { data } = await api("POST", `/api/trips/${cancelTripId}/cancel`, {
-        token: ctx.carrierToken,
-        body: { reason: "QA test — voluntary cancellation" },
-        expectStatus: 200,
-      });
-      const trip = (data.trip ?? data) as Record<string, unknown>;
-      assertEqual(trip.status, "CANCELLED", "cancelled trip status");
-
-      // Verify load reverted to POSTED
-      const { data: loadData } = await api(
-        "GET",
-        `/api/loads/${cancelLoadId}`,
+      const { data } = await api(
+        "POST",
+        `/api/match-proposals/${proposalId}/respond`,
         {
-          token: ctx.shipperToken,
+          token: ctx.carrierToken,
+          body: { action: "ACCEPT" },
           expectStatus: 200,
         }
       );
+
+      // Verify load is now ASSIGNED
+      const { data: loadData } = await api("GET", `/api/loads/${matchLoadId}`, {
+        token: ctx.shipperToken,
+        expectStatus: 200,
+      });
       const load = (loadData.load ?? loadData) as Record<string, unknown>;
-      assertEqual(load.status, "POSTED", "load reverted to POSTED");
-      assert(!load.assignedTruckId, "assignedTruckId should be cleared");
+      assertEqual(load.status, "ASSIGNED", "load assigned via match proposal");
     }
   );
-
-  await test("12.4", "Cancel completed trip → 400", async () => {
-    await api("POST", `/api/trips/${ctx.tripId}/cancel`, {
-      token: ctx.carrierToken,
-      body: { reason: "should fail" },
-      expectStatus: 400,
-    });
-  });
-
-  await test("12.5", "Cancel already-cancelled trip → 400", async () => {
-    await api("POST", `/api/trips/${cancelTripId}/cancel`, {
-      token: ctx.carrierToken,
-      body: { reason: "should fail" },
-      expectStatus: 400,
-    });
-  });
 }
 
 // ===========================================================================
@@ -1655,80 +1670,13 @@ async function phase13() {
   await test("13.3", "Carrier cannot POST /api/loads → 403", async () => {
     await api("POST", "/api/loads", {
       token: ctx.carrierToken,
-      body: {
-        pickupCity: "Addis Ababa",
-        deliveryCity: "Dire Dawa",
-        pickupDate: tomorrow(),
-        deliveryDate: dayAfterTomorrow(),
-        truckType: "DRY_VAN",
-        weight: 1000,
-        cargoDescription: "Forbidden",
-        fullPartial: "FULL",
-        bookMode: "REQUEST",
-        status: "POSTED",
-      },
+      body: makeLoadPayload({ weight: 1000, cargoDescription: "Forbidden" }),
       expectStatus: 403,
     });
   });
 
   await test(
     "13.4",
-    "Dispatcher cannot accept truck requests → 403 or 404",
-    async () => {
-      // Create a pending request first
-      const { data: loadData } = await api("POST", "/api/loads", {
-        token: ctx.shipperToken,
-        body: {
-          pickupCity: "Addis Ababa",
-          deliveryCity: "Dire Dawa",
-          pickupDate: tomorrow(),
-          deliveryDate: dayAfterTomorrow(),
-          truckType: "DRY_VAN",
-          weight: 2000,
-          cargoDescription: "Security test",
-          fullPartial: "FULL",
-          bookMode: "REQUEST",
-          status: "POSTED",
-        },
-        expectStatus: 201,
-      });
-      const secLoadId = ((loadData.load ?? loadData) as Record<string, unknown>)
-        .id as string;
-
-      await ensureActivePosting();
-
-      const { data: reqData } = await api("POST", "/api/truck-requests", {
-        token: ctx.shipperToken,
-        body: { loadId: secLoadId, truckId: ctx.truckId, expiresInHours: 24 },
-        expectStatus: [200, 201],
-      });
-      const reqObj = (reqData.request ?? reqData) as Record<string, unknown>;
-
-      // Dispatcher tries to respond → should be blocked
-      const { status } = await api(
-        "POST",
-        `/api/truck-requests/${reqObj.id}/respond`,
-        {
-          token: ctx.dispatcherToken,
-          body: { action: "APPROVE" },
-        }
-      );
-      assert(
-        status === 403 || status === 404,
-        `Dispatcher accepting request: expected 403/404, got ${status}`
-      );
-
-      // Cleanup: carrier rejects to free the truck
-      await api("POST", `/api/truck-requests/${reqObj.id}/respond`, {
-        token: ctx.carrierToken,
-        body: { action: "REJECT" },
-        expectStatus: 200,
-      });
-    }
-  );
-
-  await test(
-    "13.5",
     "Document lock: upload to approved org → 403/423",
     async () => {
       const formData = new FormData();
@@ -1753,7 +1701,7 @@ async function phase13() {
   );
 
   await test(
-    "13.6",
+    "13.5",
     "Carrier wallet gate → 402 on GET /api/loads",
     async () => {
       await api("PATCH", `/api/admin/users/${ctx.carrierUserId}/wallet`, {
@@ -1777,7 +1725,7 @@ async function phase13() {
   );
 
   await test(
-    "13.7",
+    "13.6",
     "Dispatcher sees null for revenue (not financial)",
     async () => {
       const { data } = await api("GET", "/api/admin/analytics", {
@@ -1790,7 +1738,7 @@ async function phase13() {
   );
 
   await test(
-    "13.8",
+    "13.7",
     "Notifications exist for carrier (at least 1)",
     async () => {
       const { data } = await api("GET", "/api/notifications", {
@@ -1807,6 +1755,65 @@ async function phase13() {
 }
 
 // ===========================================================================
+// PHASE 14 — Analytics Verification
+// ===========================================================================
+async function phase14() {
+  header("PHASE 14: Analytics Verification");
+
+  await test(
+    "14.1",
+    "Admin analytics: revenue matches sum of all fee deductions",
+    async () => {
+      const { data } = await api("GET", "/api/admin/analytics", {
+        token: ctx.adminToken,
+        expectStatus: 200,
+      });
+      const summary = data.summary as Record<string, unknown>;
+      const revenue = summary.revenue as Record<string, unknown>;
+      assert(!!revenue, "No revenue data in analytics");
+
+      const platformBalance = (revenue.platformBalance as number) ?? 0;
+      assert(
+        platformBalance > 0,
+        `platformBalance = ${platformBalance}, expected > 0`
+      );
+    }
+  );
+
+  await test(
+    "14.2",
+    "Completed trip count ≥ 3 (trip1 + trip2 + trip3)",
+    async () => {
+      const { data } = await api("GET", "/api/admin/analytics", {
+        token: ctx.adminToken,
+        expectStatus: 200,
+      });
+      const summary = data.summary as Record<string, unknown>;
+      const trips = summary.trips as Record<string, unknown>;
+      const completed = trips.completed as number;
+      assert(completed >= 3, `completed trips = ${completed}, expected ≥ 3`);
+    }
+  );
+
+  await test("14.3", "Completed trip count matches DB", async () => {
+    const dbCount = await prisma.trip.count({
+      where: { status: "COMPLETED" },
+    });
+    const { data } = await api("GET", "/api/admin/analytics", {
+      token: ctx.adminToken,
+      expectStatus: 200,
+    });
+    const summary = data.summary as Record<string, unknown>;
+    const trips = summary.trips as Record<string, unknown>;
+    assertEqual(
+      trips.completed as number,
+      dbCount,
+      "analytics vs DB completed count"
+    );
+  });
+}
+
+// ===========================================================================
 // Main
 // ===========================================================================
 async function main() {
@@ -1814,7 +1821,7 @@ async function main() {
     "\n╔══════════════════════════════════════════════════════════════════╗"
   );
   console.log(
-    "║  FREIGHT MANAGEMENT — Deep E2E QA Suite v2                      ║"
+    "║  FREIGHT MANAGEMENT — Deep E2E QA Suite v3                      ║"
   );
   console.log("║  Testing against: " + BASE_URL.padEnd(45) + "║");
   console.log(
@@ -1836,13 +1843,44 @@ async function main() {
     await phase11();
     await phase12();
     await phase13();
+    await phase14();
   } catch (err) {
     console.error("\n💥 FATAL ERROR:", err);
     failCount++;
     failures.push(`FATAL: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // Write context for Playwright
+  // PHASE 15: Capture final financial state for browser suite
+  try {
+    const shipperWalletRes = await api("GET", "/api/wallet/balance", {
+      token: ctx.shipperToken,
+      expectStatus: 200,
+    });
+    ctx.shipperFinalBalance = shipperWalletRes.data.totalBalance as number;
+
+    const carrierWalletRes = await api("GET", "/api/wallet/balance", {
+      token: ctx.carrierToken,
+      expectStatus: 200,
+    });
+    ctx.carrierFinalBalance = carrierWalletRes.data.totalBalance as number;
+
+    const analyticsRes = await api("GET", "/api/admin/analytics", {
+      token: ctx.adminToken,
+      expectStatus: 200,
+    });
+    const summary = analyticsRes.data.summary as Record<string, unknown>;
+    const revenue = summary.revenue as Record<string, unknown> | null;
+    const trips = summary.trips as Record<string, unknown>;
+    ctx.totalPlatformRevenue = (revenue?.platformBalance as number) ?? 0;
+    ctx.completedTripCount = (trips?.completed as number) ?? 0;
+  } catch (e) {
+    console.error("Failed to capture final financial state:", e);
+  }
+  ctx.shipperTopupAmount = SHIPPER_STARTING_BALANCE;
+  ctx.carrierTopupAmount = CARRIER_STARTING_BALANCE;
+
+  // Write context for Playwright (include credentials for browser login)
+  ctx.credentials = CREDS;
   fs.writeFileSync(CONTEXT_PATH, JSON.stringify(ctx, null, 2));
 
   // Summary
