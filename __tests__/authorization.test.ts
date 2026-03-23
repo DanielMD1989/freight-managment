@@ -193,11 +193,42 @@ describe("Authorization", () => {
   });
 
   describe("requirePermission Middleware", () => {
-    it.todo("should allow access with correct permission");
+    it("should allow access with correct permission", () => {
+      const { hasPermission } = require("@/lib/rbac/permissions");
+      const { Permission } = require("@/lib/rbac/permissions");
+      // Blueprint: each role has defined capabilities
+      // Admin can verify documents
+      expect(hasPermission("ADMIN", Permission.VERIFY_DOCUMENTS)).toBe(true);
+      // Carrier can post trucks
+      expect(hasPermission("CARRIER", Permission.POST_TRUCKS)).toBe(true);
+      // Shipper can post loads
+      expect(hasPermission("SHIPPER", Permission.POST_LOADS)).toBe(true);
+    });
 
-    it.todo("should deny access without correct permission");
+    it("should deny access without correct permission", () => {
+      const { hasPermission } = require("@/lib/rbac/permissions");
+      const { Permission } = require("@/lib/rbac/permissions");
+      // Carrier cannot verify documents (admin only)
+      expect(hasPermission("CARRIER", Permission.VERIFY_DOCUMENTS)).toBe(false);
+      // Shipper cannot post trucks (carrier only)
+      expect(hasPermission("SHIPPER", Permission.POST_TRUCKS)).toBe(false);
+      // Dispatcher cannot approve registrations
+      expect(hasPermission("DISPATCHER", Permission.VERIFY_DOCUMENTS)).toBe(
+        false
+      );
+    });
 
-    it.todo("should deny access to unauthenticated requests");
+    it("should deny access to unauthenticated requests", () => {
+      const { hasPermission } = require("@/lib/rbac/permissions");
+      const { Permission } = require("@/lib/rbac/permissions");
+      // No role = no access to any protected action
+      const invalidRole = "" as any;
+      expect(hasPermission(invalidRole, Permission.VIEW_LOADS)).toBe(false);
+      expect(hasPermission(invalidRole, Permission.POST_TRUCKS)).toBe(false);
+      expect(hasPermission(invalidRole, Permission.VERIFY_DOCUMENTS)).toBe(
+        false
+      );
+    });
   });
 
   describe("Access Control Edge Cases", () => {
