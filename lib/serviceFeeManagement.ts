@@ -234,7 +234,7 @@ export async function deductServiceFee(
     const trip = await db.trip.findFirst({
       where: {
         loadId: load.id,
-        status: { in: ["COMPLETED", "CANCELLED"] },
+        status: { in: ["DELIVERED", "COMPLETED", "CANCELLED"] },
       },
       select: { id: true },
       orderBy: { completedAt: "desc" },
