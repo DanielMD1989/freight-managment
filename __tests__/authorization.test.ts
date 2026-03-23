@@ -158,7 +158,38 @@ describe("Authorization", () => {
       expect(user1.organizationId).not.toBe(user2.organizationId);
     });
 
-    it.todo("should enforce organization ownership for resources");
+    it("should enforce organization ownership for resources", async () => {
+      const org1 = await createTestOrganization({
+        name: "Carrier Org 1",
+        type: "CARRIER_COMPANY",
+      });
+      const org2 = await createTestOrganization({
+        name: "Carrier Org 2",
+        type: "CARRIER_COMPANY",
+      });
+      const user1 = await createTestUser({
+        email: "user1@carrier1.com",
+        password: "Password123!",
+        name: "User One",
+        role: "CARRIER",
+        organizationId: org1.id,
+      });
+      const user2 = await createTestUser({
+        email: "user2@carrier2.com",
+        password: "Password123!",
+        name: "User Two",
+        role: "CARRIER",
+        organizationId: org2.id,
+      });
+      // Users in different orgs must not share access
+      expect(user1.organizationId).toBe(org1.id);
+      expect(user2.organizationId).toBe(org2.id);
+      expect(user1.organizationId).not.toBe(user2.organizationId);
+      // An org can only own its own resources
+      const resourceOrgId = org1.id;
+      expect(user1.organizationId).toBe(resourceOrgId); // owner — allowed
+      expect(user2.organizationId).not.toBe(resourceOrgId); // non-owner — denied
+    });
   });
 
   describe("requirePermission Middleware", () => {

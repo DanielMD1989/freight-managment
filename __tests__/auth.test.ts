@@ -199,7 +199,27 @@ describe("Authentication", () => {
       }
     });
 
-    it.todo("should reject expired tokens");
+    it("should reject expired tokens", async () => {
+      // Create a token that expired 1 hour ago
+      // using jose directly (same as createToken)
+      const { SignJWT } = await import("jose");
+      const secret = new TextEncoder().encode(
+        process.env.JWT_SECRET || "development-jwt-secret-min-32-chars!"
+      );
+      const expiredToken = await new SignJWT({
+        userId: "test-user-id",
+        email: "test@example.com",
+        role: "CARRIER",
+        status: "ACTIVE",
+      })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt(Math.floor(Date.now() / 1000) - 7200)
+        .setExpirationTime(Math.floor(Date.now() / 1000) - 3600)
+        .sign(secret);
+
+      const result = await verifyToken(expiredToken);
+      expect(result).toBeNull();
+    });
 
     it("should reject tokens with wrong signature", async () => {
       const token = await generateToken({
