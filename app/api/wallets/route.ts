@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
-import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { checkRpsLimit } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 
 export async function GET(request: NextRequest) {
@@ -17,12 +17,7 @@ export async function GET(request: NextRequest) {
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
       "unknown";
-    const rpsResult = await checkRpsLimit(
-      "admin-wallets",
-      ip,
-      RPS_CONFIGS.read.rps,
-      RPS_CONFIGS.read.burst
-    );
+    const rpsResult = await checkRpsLimit("admin-wallets", ip, 50, 20);
     if (!rpsResult.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Please slow down." },
