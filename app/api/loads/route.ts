@@ -217,6 +217,25 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // P3: Populate estimatedTripKm from corridor if not already set.
+    // This ensures Trip creation picks up corridor distance via the existing
+    // `estimatedDistanceKm: freshLoad.tripKm || freshLoad.estimatedTripKm` pattern.
+    if (!load.estimatedTripKm && !computedTripKm) {
+      const pickupCity = sanitized.pickupCity;
+      const deliveryCity = sanitized.deliveryCity;
+      if (pickupCity && deliveryCity) {
+        const { findMatchingCorridor } =
+          await import("@/lib/serviceFeeCalculation");
+        const match = await findMatchingCorridor(pickupCity, deliveryCity);
+        if (match && match.corridor.distanceKm > 0) {
+          await db.load.update({
+            where: { id: load.id },
+            data: { estimatedTripKm: match.corridor.distanceKm },
+          });
+        }
+      }
+    }
+
     // Create load event
     await db.loadEvent.create({
       data: {

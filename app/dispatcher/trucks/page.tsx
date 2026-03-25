@@ -43,8 +43,7 @@ export default async function DispatcherTrucksPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-800">All Trucks</h1>
             <p className="text-sm text-slate-500">
-              Browse and search all available truck postings. Find matching
-              loads for assignment.
+              Platform-wide fleet view — all trucks, all carriers, all statuses.
             </p>
           </div>
         </div>

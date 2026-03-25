@@ -305,6 +305,15 @@ export async function deductServiceFee(
       ? "actualTripKm (GPS)"
       : "corridor.distanceKm";
 
+  // P3b: When billing uses corridor fallback, persist corridor distance to
+  // Load.estimatedTripKm so the Trip display can show the planned distance.
+  if (distanceSource === "corridor.distanceKm" && distanceKm > 0) {
+    await db.load.update({
+      where: { id: loadId },
+      data: { estimatedTripKm: distanceKm },
+    });
+  }
+
   if (distanceKm <= 0) {
     return {
       success: false,

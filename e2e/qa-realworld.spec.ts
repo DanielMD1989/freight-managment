@@ -512,16 +512,11 @@ test.describe.serial("B6 — Dispatcher UI", () => {
     ).toBeTruthy();
   });
 
-  test("B6.4: Dispatcher trucks page loads", async () => {
+  test("B6.4: Dispatcher trucks page shows fleet", async () => {
     await goTo(page, "/dispatcher/trucks");
     await assertNoErrorPage(page);
-    // Page loads — even with 0 active postings
     const text = await pageText(page);
-    expect(
-      text.includes("Trucks") ||
-        text.includes("posting") ||
-        text.includes("All")
-    ).toBeTruthy();
+    expect(text).toContain("ET-AA-12345");
   });
 
   test("B6.5: Truck detail page shows license plate", async () => {

@@ -1,8 +1,8 @@
 /**
  * Dispatcher Trucks Client Component
  *
- * Full-page view of all truck postings for dispatchers
- * Features: Search, filters, pagination, "Find Loads" action
+ * Fleet view of all trucks for dispatchers (§5: "View all trucks — All statuses, all orgs")
+ * Features: Search, filters, pagination, posting badge, "Find Loads" action
  */
 
 "use client";
@@ -11,125 +11,120 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import FindMatchesModal from "@/components/dispatcher/FindMatchesModal";
 
-interface TruckPosting {
+interface Truck {
   id: string;
-  status: string;
-  availableFrom: string;
-  availableTo: string;
-  originCity?: { id: string; name: string };
-  destinationCity?: { id: string; name: string };
-  truck: {
-    id: string;
-    licensePlate: string;
-    truckType: string;
-    capacity: number;
-    gpsStatus?: string;
-    carrier?: {
-      id: string;
-      name: string;
-    };
-  };
+  licensePlate: string;
+  truckType: string;
+  capacity: number;
+  approvalStatus: string;
+  currentCity: string | null;
+  isAvailable: boolean;
+  gpsStatus?: string;
+  createdAt: string;
   carrier?: {
     id: string;
     name: string;
+    isVerified?: boolean;
   };
+  gpsDevice?: {
+    id: string;
+    status: string;
+    lastSeenAt: string | null;
+  } | null;
+  hasActivePosting: boolean;
+  activePostingId: string | null;
+  postings?: Array<{
+    id: string;
+    status: string;
+    originCityId?: string;
+    availableFrom?: string;
+  }>;
 }
 
-type StatusFilter = "ALL" | "ACTIVE" | "EXPIRED" | "MATCHED";
+type ApprovalFilter = "ALL" | "APPROVED" | "PENDING" | "REJECTED";
+type PostingFilter = "ALL" | "POSTED" | "UNPOSTED";
 
 export default function TrucksClient() {
-  const [postings, setPostings] = useState<TruckPosting[]>([]);
+  const [trucks, setTrucks] = useState<Truck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ACTIVE");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>("ALL");
+  const [postingFilter, setPostingFilter] = useState<PostingFilter>("ALL");
   const [truckTypeFilter, setTruckTypeFilter] = useState("");
 
   // Pagination
-  const [offset, setOffset] = useState(0);
+  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
 
   // Find Loads Modal
   const [showFindLoads, setShowFindLoads] = useState(false);
-  const [selectedPosting, setSelectedPosting] = useState<TruckPosting | null>(
-    null
-  );
+  const [selectedTruck, setSelectedTruck] = useState<Truck | null>(null);
 
-  // L5 FIX: Use useCallback to prevent stale closure bugs
-  const fetchPostings = useCallback(async () => {
+  const fetchTrucks = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams({
+        page: page.toString(),
         limit: limit.toString(),
-        offset: offset.toString(),
       });
 
-      if (statusFilter !== "ALL") {
-        params.append("status", statusFilter);
-      }
-      if (searchQuery) {
-        params.append("origin", searchQuery);
+      if (approvalFilter !== "ALL") {
+        params.append("approvalStatus", approvalFilter);
       }
       if (truckTypeFilter) {
         params.append("truckType", truckTypeFilter);
       }
+      if (postingFilter === "POSTED") {
+        params.append("hasActivePosting", "true");
+      } else if (postingFilter === "UNPOSTED") {
+        params.append("hasActivePosting", "false");
+      }
 
-      const response = await fetch(`/api/truck-postings?${params.toString()}`);
+      const response = await fetch(`/api/trucks?${params.toString()}`);
 
       if (!response.ok) {
-        throw new Error("Failed to fetch truck postings");
+        throw new Error("Failed to fetch trucks");
       }
 
       const data = await response.json();
-      setPostings(data.postings || []);
-      setTotal(data.total || 0);
-      // H3 FIX: Use unknown type with type guard
+      setTrucks(data.trucks || []);
+      setTotal(data.pagination?.total || 0);
+      setTotalPages(data.pagination?.pages || 1);
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch truck postings";
+        error instanceof Error ? error.message : "Failed to fetch trucks";
       setError(message);
     } finally {
       setLoading(false);
     }
-  }, [offset, statusFilter, truckTypeFilter, searchQuery]);
+  }, [page, approvalFilter, truckTypeFilter, postingFilter]);
 
-  // L5 FIX: Include fetchPostings in dependency array
   useEffect(() => {
-    fetchPostings();
-  }, [fetchPostings]);
+    fetchTrucks();
+  }, [fetchTrucks]);
 
-  // Debounced search - reset offset when search changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (offset !== 0) setOffset(0);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleFindLoads = (posting: TruckPosting) => {
-    setSelectedPosting(posting);
+  const handleFindLoads = (truck: Truck) => {
+    setSelectedTruck(truck);
     setShowFindLoads(true);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getApprovalBadge = (status: string) => {
     const styles: Record<string, string> = {
-      ACTIVE: "bg-emerald-100 text-emerald-700",
-      EXPIRED: "bg-slate-100 text-slate-600",
-      CANCELLED: "bg-red-100 text-red-700",
-      MATCHED: "bg-blue-100 text-blue-700",
+      APPROVED: "bg-emerald-100 text-emerald-700",
+      PENDING: "bg-yellow-100 text-yellow-700",
+      REJECTED: "bg-red-100 text-red-700",
     };
     return styles[status] || "bg-slate-100 text-slate-600";
   };
 
-  const getGpsStatus = (status?: string) => {
-    if (status === "ACTIVE") {
+  const getGpsStatus = (device?: Truck["gpsDevice"]) => {
+    if (device?.status === "ACTIVE") {
       return (
         <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
@@ -141,72 +136,57 @@ export default function TrucksClient() {
   };
 
   const truckTypes = [
-    "DRY_BOX",
-    "REFRIGERATED",
     "FLATBED",
+    "REFRIGERATED",
     "TANKER",
     "CONTAINER",
-    "LIVESTOCK",
-    "CAR_CARRIER",
+    "DRY_VAN",
     "LOWBOY",
     "DUMP_TRUCK",
-    "OPEN_TRUCK",
+    "BOX_TRUCK",
   ];
-
-  const page = Math.floor(offset / limit) + 1;
-  const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="space-y-6">
       {/* Filters */}
       <div className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-end gap-4">
-          {/* Search */}
-          <div className="min-w-[200px] flex-1">
-            <label className="mb-1.5 block text-xs font-medium text-slate-500">
-              Search by City
-            </label>
-            <div className="relative">
-              <svg
-                className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search origin city..."
-                className="w-full rounded-lg border border-slate-200 py-2 pr-4 pl-10 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-          </div>
-
-          {/* Status Filter */}
+          {/* Approval Status Filter */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-500">
-              Status
+              Approval Status
             </label>
             <select
-              value={statusFilter}
+              value={approvalFilter}
               onChange={(e) => {
-                setStatusFilter(e.target.value as StatusFilter);
-                setOffset(0);
+                setApprovalFilter(e.target.value as ApprovalFilter);
+                setPage(1);
               }}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
             >
               <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="MATCHED">Matched</option>
-              <option value="EXPIRED">Expired</option>
+              <option value="APPROVED">Approved</option>
+              <option value="PENDING">Pending</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+
+          {/* Posting Filter */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+              Posting
+            </label>
+            <select
+              value={postingFilter}
+              onChange={(e) => {
+                setPostingFilter(e.target.value as PostingFilter);
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="ALL">All</option>
+              <option value="POSTED">With Active Posting</option>
+              <option value="UNPOSTED">No Active Posting</option>
             </select>
           </div>
 
@@ -219,7 +199,7 @@ export default function TrucksClient() {
               value={truckTypeFilter}
               onChange={(e) => {
                 setTruckTypeFilter(e.target.value);
-                setOffset(0);
+                setPage(1);
               }}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
             >
@@ -234,7 +214,7 @@ export default function TrucksClient() {
 
           {/* Refresh */}
           <button
-            onClick={fetchPostings}
+            onClick={fetchTrucks}
             disabled={loading}
             className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
           >
@@ -266,7 +246,7 @@ export default function TrucksClient() {
       {/* Results Summary */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-600">
-          Showing {postings.length} of {total} truck postings
+          Showing {trucks.length} of {total} trucks
         </p>
       </div>
 
@@ -277,7 +257,7 @@ export default function TrucksClient() {
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-teal-500"></div>
             <p className="mt-3 text-sm text-slate-500">Loading trucks...</p>
           </div>
-        ) : postings.length === 0 ? (
+        ) : trucks.length === 0 ? (
           <div className="py-16 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-teal-200">
               <svg
@@ -295,15 +275,15 @@ export default function TrucksClient() {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-slate-800">
-              No Available Trucks
+              No Trucks Found
             </h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-              {truckTypeFilter || searchQuery
+              {truckTypeFilter || approvalFilter !== "ALL"
                 ? "No trucks match your current filters. Try broadening your search criteria."
-                : "No carriers have posted available trucks at this time."}
+                : "No trucks have been registered on the platform yet."}
             </p>
             <button
-              onClick={fetchPostings}
+              onClick={fetchTrucks}
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
             >
               <svg
@@ -328,25 +308,25 @@ export default function TrucksClient() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                    Truck
+                    License Plate
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
                     Type / Capacity
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                    Route
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                    Available
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
                     Carrier
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Approval
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Location
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
                     GPS
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                    Status
+                    Posting
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
                     Actions
@@ -354,71 +334,66 @@ export default function TrucksClient() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {postings.map((posting) => (
+                {trucks.map((truck) => (
                   <tr
-                    key={posting.id}
+                    key={truck.id}
                     className="transition-colors hover:bg-slate-50"
                   >
                     <td className="px-4 py-3">
                       <span className="text-sm font-medium text-slate-800">
-                        {posting.truck?.licensePlate || "N/A"}
+                        {truck.licensePlate}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div>
                         <p className="text-sm text-slate-700">
-                          {posting.truck?.truckType?.replace(/_/g, " ")}
+                          {truck.truckType?.replace(/_/g, " ")}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {posting.truck?.capacity?.toLocaleString()} kg
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-slate-700">
-                        {posting.originCity?.name || "Any"} →{" "}
-                        {posting.destinationCity?.name || "Any"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-slate-700">
-                        <p>
-                          {new Date(posting.availableFrom).toLocaleDateString()}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          to{" "}
-                          {new Date(posting.availableTo).toLocaleDateString()}
+                          {Number(truck.capacity).toLocaleString()} kg
                         </p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-slate-700">
-                        {posting.carrier?.name ||
-                          posting.truck?.carrier?.name ||
-                          "Unknown"}
+                        {truck.carrier?.name || "Unknown"}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {getGpsStatus(posting.truck?.gpsStatus)}
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBadge(posting.status)}`}
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getApprovalBadge(truck.approvalStatus)}`}
                       >
-                        {posting.status}
+                        {truck.approvalStatus}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-slate-700">
+                        {truck.currentCity || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {getGpsStatus(truck.gpsDevice)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {truck.hasActivePosting ? (
+                        <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">None</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/dispatcher/trucks/${posting.truck?.id || posting.id}`}
+                          href={`/dispatcher/trucks/${truck.id}`}
                           className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
                         >
                           View
                         </Link>
-                        {posting.status === "ACTIVE" && (
+                        {truck.hasActivePosting && truck.activePostingId && (
                           <button
-                            onClick={() => handleFindLoads(posting)}
+                            onClick={() => handleFindLoads(truck)}
                             className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-teal-700"
                           >
                             Find Loads
@@ -442,14 +417,14 @@ export default function TrucksClient() {
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => setOffset(Math.max(0, offset - limit))}
-              disabled={offset === 0}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
               Previous
             </button>
             <button
-              onClick={() => setOffset(offset + limit)}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
@@ -460,23 +435,23 @@ export default function TrucksClient() {
       )}
 
       {/* Find Loads Modal */}
-      {selectedPosting && (
+      {selectedTruck && selectedTruck.activePostingId && (
         <FindMatchesModal
           isOpen={showFindLoads}
           onClose={() => {
             setShowFindLoads(false);
-            setSelectedPosting(null);
+            setSelectedTruck(null);
           }}
           type="loads"
-          truckPostingId={selectedPosting.id}
-          truckId={selectedPosting.truck?.id}
+          truckPostingId={selectedTruck.activePostingId}
+          truckId={selectedTruck.id}
           truckDetails={{
-            licensePlate: selectedPosting.truck?.licensePlate || "N/A",
-            truckType: selectedPosting.truck?.truckType || "N/A",
-            originCity: selectedPosting.originCity?.name || "Any",
-            destinationCity: selectedPosting.destinationCity?.name || "Any",
+            licensePlate: selectedTruck.licensePlate,
+            truckType: selectedTruck.truckType,
+            originCity: "Any",
+            destinationCity: "Any",
           }}
-          onProposalCreated={fetchPostings}
+          onProposalCreated={fetchTrucks}
         />
       )}
     </div>
