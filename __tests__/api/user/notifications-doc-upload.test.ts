@@ -30,9 +30,15 @@ import {
   mockLogger,
 } from "../../utils/routeTestUtils";
 
-// ─── Auth mock — must include requireRegistrationAccess ───────────────────────
+// ─── Auth mock — must include requireRegistrationAccess + requireOtpVerified ──
 jest.mock("@/lib/auth", () => ({
   requireRegistrationAccess: jest.fn(async () => {
+    const { getAuthSession } = require("../../utils/routeTestUtils");
+    const session = getAuthSession();
+    if (!session) throw new Error("Unauthorized");
+    return session;
+  }),
+  requireOtpVerified: jest.fn(async () => {
     const { getAuthSession } = require("../../utils/routeTestUtils");
     const session = getAuthSession();
     if (!session) throw new Error("Unauthorized");

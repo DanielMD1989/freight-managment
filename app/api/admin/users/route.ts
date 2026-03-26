@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Prisma, UserRole } from "@prisma/client";
 import { requirePermission, Permission } from "@/lib/rbac";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, revokeAllSessions } from "@/lib/auth";
+import { CacheInvalidation } from "@/lib/cache";
 import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
@@ -187,9 +188,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// §10 V1 FIX: SUPER_ADMIN removed — blueprint only authorizes creating ADMIN accounts
 const updateUserSchema = z.object({
   userId: z.string(),
-  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER", "ADMIN", "SUPER_ADMIN"]),
+  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER", "ADMIN"]),
 });
 
 // PATCH /api/admin/users - Update user role
@@ -212,6 +214,24 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // §10 V1 FIX: Fetch target user to validate role transition
+    const targetUser = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Cannot demote a SUPER_ADMIN via this endpoint (only system seed creates SUPER_ADMIN)
+    if (targetUser.role === "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Cannot change the role of a Super Admin account" },
+        { status: 403 }
+      );
+    }
+
     const user = await db.user.update({
       where: { id: userId },
       data: { role },
@@ -223,6 +243,29 @@ export async function PATCH(request: NextRequest) {
         role: true,
       },
     });
+
+    // §10 B2 FIX: Revoke all sessions after role change so the user's JWT
+    // (which embeds the old role) is invalidated immediately.
+    await revokeAllSessions(userId);
+    await CacheInvalidation.user(userId);
+
+    // Audit log for role change
+    await writeAuditLog({
+      eventType: AuditEventType.ADMIN_ACTION,
+      severity: AuditSeverity.WARNING,
+      userId: session.userId,
+      resource: "user",
+      resourceId: userId,
+      action: "ROLE_CHANGED",
+      result: "SUCCESS",
+      message: `SuperAdmin ${session.userId} changed user ${user.email} role from ${targetUser.role} to ${role}`,
+      metadata: {
+        targetUserId: userId,
+        previousRole: targetUser.role,
+        newRole: role,
+      },
+      timestamp: new Date(),
+    }).catch((err) => console.error("Audit log failed:", err));
 
     return NextResponse.json({
       message: "User role updated successfully",

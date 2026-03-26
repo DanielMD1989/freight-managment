@@ -35,9 +35,15 @@ import {
 } from "../../utils/routeTestUtils";
 import { NextRequest } from "next/server";
 
-// ─── Auth mock (includes requireRegistrationAccess) ──────────────────────────
+// ─── Auth mock (includes requireRegistrationAccess + requireOtpVerified) ─────
 jest.mock("@/lib/auth", () => ({
   requireRegistrationAccess: jest.fn(async () => {
+    const { getAuthSession } = require("../../utils/routeTestUtils");
+    const session = getAuthSession();
+    if (!session) throw new Error("Unauthorized");
+    return session;
+  }),
+  requireOtpVerified: jest.fn(async () => {
     const { getAuthSession } = require("../../utils/routeTestUtils");
     const session = getAuthSession();
     if (!session) throw new Error("Unauthorized");

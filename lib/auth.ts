@@ -504,6 +504,56 @@ export async function requireRegistrationAccess(): Promise<
 }
 
 /**
+ * §2 V1 FIX: Require OTP verification before document upload.
+ *
+ * Blueprint §2: Register → OTP Verification → Upload Documents.
+ * This guard enforces the OTP step by checking isEmailVerified || isPhoneVerified.
+ *
+ * Exemptions:
+ * - ADMIN / SUPER_ADMIN: upload on behalf of orgs, no OTP needed
+ * - ACTIVE users: already admin-approved, implying OTP was completed
+ * - REJECTED users with prior OTP verification: can re-upload after rejection
+ *
+ * NOT used by send-otp / verify-otp (those ARE the OTP flow).
+ * Only used by POST /api/documents/upload.
+ */
+export async function requireOtpVerified(): Promise<
+  SessionPayload & { dbStatus: string }
+> {
+  const session = await requireRegistrationAccess();
+
+  // Admin/SuperAdmin bypass — they upload on behalf of orgs
+  if (session.role === "ADMIN" || session.role === "SUPER_ADMIN") {
+    return session;
+  }
+
+  // ACTIVE users bypass — admin approval implies OTP was completed
+  if (session.dbStatus === "ACTIVE") {
+    return session;
+  }
+
+  // For REGISTERED, PENDING_VERIFICATION, REJECTED: check OTP flags
+  const { db } = await import("./db");
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { isEmailVerified: true, isPhoneVerified: true },
+  });
+
+  if (!user) {
+    throw new Error("Unauthorized: User not found");
+  }
+
+  if (!user.isEmailVerified && !user.isPhoneVerified) {
+    throw new Error(
+      "Forbidden: OTP verification required before uploading documents. " +
+        "Please verify your email or phone number first."
+    );
+  }
+
+  return session;
+}
+
+/**
  * Check if user status allows login
  * Only SUSPENDED users cannot login
  * REGISTERED, PENDING_VERIFICATION, and REJECTED get limited access

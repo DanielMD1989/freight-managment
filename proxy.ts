@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, jwtDecrypt } from "jose";
 
 // Generate unique request ID (inline since errorHandler was removed)
 function generateRequestId(): string {
@@ -103,9 +103,66 @@ function addTimingHeaders(
   return response;
 }
 
+// §2 V3 FIX: Mirror lib/auth.ts key derivation exactly (Edge-compatible)
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "development-jwt-secret"
+  process.env.JWT_SECRET || "development-jwt-secret-min-32-chars!"
 );
+
+function getEncryptionKey(): Uint8Array {
+  const keyString =
+    process.env.JWT_ENCRYPTION_KEY || "dev-encrypt-key-32bytes-padding!";
+  const encoded = new TextEncoder().encode(keyString);
+  const key = new Uint8Array(32);
+  key.set(encoded.slice(0, 32));
+  return key;
+}
+
+const JWT_ENCRYPTION_KEY = getEncryptionKey();
+const ENABLE_ENCRYPTION = process.env.JWT_ENABLE_ENCRYPTION !== "false";
+
+/**
+ * Extract and verify session from JWT token.
+ * Handles encrypted JWTs (decrypt → verify) matching lib/auth.ts createSessionToken().
+ */
+async function extractSession(
+  token: string
+): Promise<{
+  userId: string;
+  email: string;
+  role: string;
+  status?: string;
+} | null> {
+  try {
+    let signedToken = token;
+
+    if (ENABLE_ENCRYPTION) {
+      try {
+        const { payload: encryptedPayload } = await jwtDecrypt(
+          token,
+          JWT_ENCRYPTION_KEY
+        );
+        signedToken = encryptedPayload.token as string;
+      } catch {
+        // In production, reject tokens that fail decryption
+        if (process.env.NODE_ENV === "production") {
+          return null;
+        }
+        // Dev fallback: try as unencrypted
+        signedToken = token;
+      }
+    }
+
+    const { payload } = await jwtVerify(signedToken, JWT_SECRET);
+    return payload as unknown as {
+      userId: string;
+      email: string;
+      role: string;
+      status?: string;
+    };
+  } catch {
+    return null;
+  }
+}
 
 const publicPaths = [
   "/",
@@ -289,8 +346,16 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    // Verify token
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    // Verify token (supports encrypted + signed JWTs from lib/auth.ts)
+    const payload = await extractSession(token);
+
+    if (!payload) {
+      // Token invalid — clear cookie and redirect
+      const response = NextResponse.redirect(new URL("/login", request.url));
+      response.cookies.delete("session");
+      addTimingHeaders(response, startTime, requestId, method, pathname, 302);
+      return addSecurityHeaders(response);
+    }
 
     // Check admin access (ADMIN or SUPER_ADMIN)
     if (adminPaths.some((path) => pathname.startsWith(path))) {
@@ -336,31 +401,53 @@ export async function proxy(request: NextRequest) {
       if (userStatus !== "ACTIVE") {
         // ADMIN and SUPER_ADMIN bypass status check
         if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
-          if (
-            userStatus === "REGISTERED" ||
-            userStatus === "PENDING_VERIFICATION"
-          ) {
-            // Redirect to verification pending page
-            const url = new URL("/verification-pending", request.url);
-            return NextResponse.redirect(url);
-          } else if (userStatus === "SUSPENDED") {
-            return NextResponse.json(
-              {
-                error:
-                  "Your account has been suspended. Please contact support.",
-                requestId,
-              },
-              { status: 403, headers: { "x-request-id": requestId } }
-            );
-          } else if (userStatus === "REJECTED") {
-            return NextResponse.json(
-              {
-                error:
-                  "Your registration has been rejected. Please contact support.",
-                requestId,
-              },
-              { status: 403, headers: { "x-request-id": requestId } }
-            );
+          const isApiRoute = pathname.startsWith("/api/");
+
+          // §2 V3 FIX: Web pages get redirects to dedicated status pages
+          if (!isApiRoute) {
+            if (
+              userStatus === "REGISTERED" ||
+              userStatus === "PENDING_VERIFICATION"
+            ) {
+              return NextResponse.redirect(
+                new URL("/verification-pending", request.url)
+              );
+            }
+            if (userStatus === "SUSPENDED") {
+              return NextResponse.redirect(
+                new URL("/account-suspended", request.url)
+              );
+            }
+            if (userStatus === "REJECTED") {
+              return NextResponse.redirect(
+                new URL("/account-rejected", request.url)
+              );
+            }
+          }
+
+          // API routes get JSON errors
+          if (isApiRoute) {
+            if (
+              userStatus === "REGISTERED" ||
+              userStatus === "PENDING_VERIFICATION"
+            ) {
+              return NextResponse.json(
+                { error: "Account pending verification" },
+                { status: 403 }
+              );
+            }
+            if (userStatus === "SUSPENDED") {
+              return NextResponse.json(
+                { error: "Account suspended" },
+                { status: 403 }
+              );
+            }
+            if (userStatus === "REJECTED") {
+              return NextResponse.json(
+                { error: "Account rejected" },
+                { status: 403 }
+              );
+            }
           }
         }
       }

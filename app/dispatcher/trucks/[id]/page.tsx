@@ -3,6 +3,9 @@
  *
  * Read-only truck detail view for dispatchers.
  * G-D7-3: Dispatcher full visibility per Blueprint §5.
+ *
+ * §7 B1 FIX: Fetches data via /api/trucks/[id] instead of direct DB access,
+ * ensuring API-level data filtering (IMEI stripping for non-owners) is applied.
  */
 
 import Link from "next/link";
@@ -49,57 +52,51 @@ export default async function DispatcherTruckDetailPage({
 
   const { id } = await params;
 
-  const truck = await db.truck.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      licensePlate: true,
-      truckType: true,
-      capacity: true,
-      lengthM: true,
-      approvalStatus: true,
-      isAvailable: true,
-      currentCity: true,
-      currentRegion: true,
-      imei: true,
-      createdAt: true,
-      carrier: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      postings: {
-        where: { status: { in: ["ACTIVE", "MATCHED"] } },
-        select: { id: true, status: true },
-        take: 1,
-        orderBy: { createdAt: "desc" },
-      },
-      trips: {
-        where: {
-          status: {
-            in: [
-              "ASSIGNED",
-              "PICKUP_PENDING",
-              "IN_TRANSIT",
-              "DELIVERED",
-              "EXCEPTION",
-            ],
-          },
-        },
-        select: { id: true, status: true },
-        take: 1,
-        orderBy: { createdAt: "desc" },
-      },
+  // §7 B1 FIX: Fetch via API to apply data filtering (IMEI stripped for dispatchers).
+  // Server components can fetch the internal API using localhost.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const apiResponse = await fetch(`${baseUrl}/api/trucks/${id}`, {
+    headers: {
+      Cookie: `session=${sessionCookie.value}`,
     },
+    cache: "no-store",
   });
 
-  if (!truck) {
+  if (!apiResponse.ok) {
     notFound();
   }
 
-  const activePosting = truck.postings[0] ?? null;
-  const activeTrip = truck.trips[0] ?? null;
+  const truck = await apiResponse.json();
+
+  // Fetch active posting and trip separately (lightweight queries the API doesn't include)
+  const [postings, trips] = await Promise.all([
+    db.truckPosting.findMany({
+      where: { truckId: id, status: { in: ["ACTIVE", "MATCHED"] } },
+      select: { id: true, status: true },
+      take: 1,
+      orderBy: { createdAt: "desc" },
+    }),
+    db.trip.findMany({
+      where: {
+        truckId: id,
+        status: {
+          in: [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+            "DELIVERED",
+            "EXCEPTION",
+          ],
+        },
+      },
+      select: { id: true, status: true },
+      take: 1,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const activePosting = postings[0] ?? null;
+  const activeTrip = trips[0] ?? null;
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -169,9 +166,9 @@ export default async function DispatcherTruckDetailPage({
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">GPS Device (IMEI)</p>
-            <p className="font-mono text-sm">
-              {truck.imei ?? "No device registered"}
+            <p className="text-sm text-gray-500">GPS Status</p>
+            <p className="text-sm text-gray-600">
+              {truck.gpsStatus ?? "No device registered"}
             </p>
           </div>
         </div>

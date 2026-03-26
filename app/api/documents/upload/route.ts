@@ -33,7 +33,7 @@ import {
   TruckDocumentType,
   InsuranceCoverageType,
 } from "@prisma/client";
-import { requireRegistrationAccess } from "@/lib/auth";
+import { requireOtpVerified } from "@/lib/auth";
 import { validateFileName, validateIdFormat } from "@/lib/validation";
 import { checkRateLimit, RATE_LIMIT_DOCUMENT_UPLOAD } from "@/lib/rateLimit";
 import { validateCSRFWithMobile } from "@/lib/csrf";
@@ -73,8 +73,9 @@ const documentUploadSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // Allow document upload for users in registration flow
-    const session = await requireRegistrationAccess();
+    // §2 V1 FIX: Require OTP verification before document upload (Blueprint §2 flow)
+    // Admin/SuperAdmin and ACTIVE users bypass; REGISTERED/PENDING users must verify OTP first
+    const session = await requireOtpVerified();
     const userId = session.userId;
     const userOrgId = session.organizationId;
 

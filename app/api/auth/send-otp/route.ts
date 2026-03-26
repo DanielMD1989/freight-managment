@@ -61,11 +61,22 @@ export async function POST(request: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, email: true, firstName: true },
+      select: { id: true, email: true, phone: true, firstName: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // §2 B4 FIX: SMS channel requires a phone number on the user record
+    if (channel === "sms" && !user.phone) {
+      return NextResponse.json(
+        {
+          error:
+            "No phone number on file. Please use email verification or update your phone number.",
+        },
+        { status: 400 }
+      );
     }
 
     // G-M4-1: Use CSPRNG generateOTP() instead of Math.random()
@@ -90,10 +101,10 @@ export async function POST(request: NextRequest) {
         text: `Your verification code is: ${code}. Expires in 10 minutes.`,
       });
     } else {
-      // SMS channel — delegate to SMS provider (ConsoleSmsProvider in dev, Twilio in prod)
+      // §2 B4 FIX: SMS channel sends to user.phone (was incorrectly using user.email)
       const { sendSms } = await import("@/lib/sms");
       await sendSms(
-        user.email,
+        user.phone!,
         `Your verification code is: ${code}. Expires in 10 minutes.`
       );
     }
