@@ -8,7 +8,7 @@
  */
 
 import { db } from "./db";
-import { createNotification } from "./notifications";
+import { createNotification, createNotificationForRole } from "./notifications";
 import { sendEmailToUser, EmailTemplate } from "./emailService";
 
 export interface GpsAlertEvent {
@@ -59,16 +59,10 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
         select: {
           id: true,
           name: true,
+          // §11 V2 FIX: Only query carrier org users (DISPATCHER/ADMIN are in separate orgs)
           users: {
-            where: {
-              role: {
-                in: ["CARRIER", "DISPATCHER", "ADMIN"],
-              },
-            },
-            select: {
-              id: true,
-              email: true,
-            },
+            where: { role: "CARRIER", status: "ACTIVE" },
+            select: { id: true, email: true },
           },
         },
       },
@@ -81,15 +75,8 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
               id: true,
               name: true,
               users: {
-                where: {
-                  role: {
-                    in: ["SHIPPER", "ADMIN"],
-                  },
-                },
-                select: {
-                  id: true,
-                  email: true,
-                },
+                where: { role: "SHIPPER", status: "ACTIVE" },
+                select: { id: true, email: true },
               },
             },
           },
@@ -142,6 +129,31 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
         },
       })
     ),
+    // §11 V2 FIX: Notify Admin + Dispatcher (they're not in carrier/shipper orgs)
+    createNotificationForRole({
+      role: "ADMIN",
+      type: "GPS_OFFLINE",
+      title: `GPS Signal Lost: ${truck.licensePlate}`,
+      message: `Truck ${truck.licensePlate} (${truck.carrier.name}) lost GPS signal on Load #${truck.assignedLoad!.id.slice(-8)} — offline ${minutesOffline}+ minutes.`,
+      metadata: {
+        truckId: truck.id,
+        loadId: truck.assignedLoad!.id,
+        carrierId: truck.carrier.id,
+        minutesOffline,
+      },
+    }),
+    createNotificationForRole({
+      role: "DISPATCHER",
+      type: "GPS_OFFLINE",
+      title: `GPS Signal Lost: ${truck.licensePlate}`,
+      message: `Truck ${truck.licensePlate} (${truck.carrier.name}) lost GPS signal on Load #${truck.assignedLoad!.id.slice(-8)} — offline ${minutesOffline}+ minutes.`,
+      metadata: {
+        truckId: truck.id,
+        loadId: truck.assignedLoad!.id,
+        carrierId: truck.carrier.id,
+        minutesOffline,
+      },
+    }),
   ]);
 }
 

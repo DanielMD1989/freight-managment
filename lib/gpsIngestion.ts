@@ -198,7 +198,11 @@ export async function updateAllTruckGpsStatuses(): Promise<void> {
 
     let newStatus: GpsDeviceStatus = GpsDeviceStatus.ACTIVE;
 
-    if (minutesAgo >= 30) {
+    // §11 V3 FIX: SIGNAL_LOST at 10 min (was 30 min). INACTIVE at 5 min.
+    // GPS rate limit = 12/hour (5 min intervals), so:
+    //   - 1 missed update (5 min) → INACTIVE (expected jitter)
+    //   - 2 missed updates (10 min) → SIGNAL_LOST (real problem)
+    if (minutesAgo >= 10) {
       newStatus = GpsDeviceStatus.SIGNAL_LOST;
     } else if (minutesAgo >= 5) {
       newStatus = GpsDeviceStatus.INACTIVE;

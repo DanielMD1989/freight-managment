@@ -33,12 +33,10 @@ interface Truck {
   } | null;
   hasActivePosting: boolean;
   activePostingId: string | null;
-  postings?: Array<{
-    id: string;
-    status: string;
-    originCityId?: string;
-    availableFrom?: string;
-  }>;
+  // §7 V1-V3: status badges
+  postingStatus: string | null;
+  activeTripId: string | null;
+  activeTripStatus: string | null;
 }
 
 type ApprovalFilter = "ALL" | "APPROVED" | "PENDING" | "REJECTED";
@@ -329,6 +327,9 @@ export default function TrucksClient() {
                     Posting
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Trip
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
                     Actions
                   </th>
                 </tr>
@@ -375,12 +376,42 @@ export default function TrucksClient() {
                       {getGpsStatus(truck.gpsDevice)}
                     </td>
                     <td className="px-4 py-3">
-                      {truck.hasActivePosting ? (
-                        <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                      {truck.postingStatus === "ACTIVE" && (
+                        <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
                           Active
                         </span>
-                      ) : (
+                      )}
+                      {truck.postingStatus === "MATCHED" && (
+                        <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                          Matched
+                        </span>
+                      )}
+                      {truck.postingStatus === "EXPIRED" && (
+                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                          Expired
+                        </span>
+                      )}
+                      {!truck.postingStatus && (
                         <span className="text-xs text-slate-400">None</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {truck.activeTripStatus ? (
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                            truck.activeTripStatus === "IN_TRANSIT"
+                              ? "bg-orange-100 text-orange-700"
+                              : truck.activeTripStatus === "DELIVERED"
+                                ? "bg-teal-100 text-teal-700"
+                                : truck.activeTripStatus === "EXCEPTION"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-purple-100 text-purple-700"
+                          }`}
+                        >
+                          {truck.activeTripStatus.replace(/_/g, " ")}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">

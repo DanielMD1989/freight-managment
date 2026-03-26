@@ -404,15 +404,32 @@ export async function GET(request: NextRequest) {
               lastSeenAt: true,
             },
           },
-          // Include active posting info
+          // §7 V1-V3: Include postings (all recent statuses) + active trips for dispatcher badges
           postings: {
-            where: { status: "ACTIVE" },
+            where: { status: { in: ["ACTIVE", "MATCHED", "EXPIRED"] } },
             select: {
               id: true,
               status: true,
               originCityId: true,
               availableFrom: true,
             },
+            orderBy: { createdAt: "desc" as const },
+            take: 1,
+          },
+          trips: {
+            where: {
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
+            },
+            select: { id: true, status: true },
+            orderBy: { createdAt: "desc" as const },
             take: 1,
           },
         },
@@ -444,11 +461,19 @@ export async function GET(request: NextRequest) {
               }
             : null;
 
+      const latestPosting = truck.postings[0] ?? null;
+      const activeTrip = truck.trips[0] ?? null;
+
       return {
         ...truck,
         gpsDevice: safeGpsDevice,
-        hasActivePosting: truck.postings.length > 0,
-        activePostingId: truck.postings[0]?.id || null,
+        hasActivePosting: latestPosting?.status === "ACTIVE",
+        activePostingId:
+          latestPosting?.status === "ACTIVE" ? latestPosting.id : null,
+        // §7 V1-V3: posting + trip status for dispatcher badges
+        postingStatus: latestPosting?.status || null,
+        activeTripId: activeTrip?.id || null,
+        activeTripStatus: activeTrip?.status || null,
       };
     });
 
