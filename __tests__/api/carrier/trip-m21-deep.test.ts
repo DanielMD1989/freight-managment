@@ -118,7 +118,7 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${tripId}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
       const res = await callHandler(updateTrip, req, { tripId });
       expect(res.status).toBe(200);
@@ -821,7 +821,7 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${tripId}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
       const res = await callHandler(updateTrip, req, { tripId });
       expect(res.status).toBe(200);
@@ -888,7 +888,7 @@ describe("M21 — Trip In-Transit / Delivery Deep Audit", () => {
       const req = createRequest(
         "PATCH",
         "http://localhost:3000/api/trips/trip-m23-6a-cancel",
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
       const res = await callHandler(updateTrip, req, {
         tripId: "trip-m23-6a-cancel",

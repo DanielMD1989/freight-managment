@@ -365,7 +365,7 @@ describe("Trip Dispatch Matrix — Round U2-FULL", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${tripId}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
 
     const res = await callHandler(updateTrip, req, { tripId });

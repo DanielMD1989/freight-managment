@@ -651,7 +651,7 @@ describe("PATCH trip CANCELLED + DEDUCTED fees", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${t.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     const res = await callHandler(updateTrip, req, { tripId: t.id });
 
@@ -685,7 +685,7 @@ describe("PATCH trip CANCELLED + DEDUCTED fees", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${t.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     const res = await callHandler(updateTrip, req, { tripId: t.id });
 

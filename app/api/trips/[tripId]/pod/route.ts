@@ -12,10 +12,17 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { CacheInvalidation } from "@/lib/cache";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import {
+  createNotification,
+  notifyOrganization,
+  createNotificationForRole,
+  NotificationType,
+} from "@/lib/notifications";
 import { uploadPOD } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
+import { deductServiceFee } from "@/lib/serviceFeeManagement";
+import { incrementCompletedLoads } from "@/lib/trustMetrics";
 
 /**
  * POST /api/trips/[tripId]/pod
@@ -174,8 +181,57 @@ export async function POST(
 
     const podUrl = uploadResult.url!;
 
-    // B1 FIX: Wrap all three DB writes in a transaction for atomicity
+    // §6 V3 FIX: POD upload auto-completes the trip (Blueprint §7: "Carrier uploads POD → COMPLETED")
+    // Deduct service fee BEFORE transaction (blocking pattern — matches confirm + PATCH routes)
+    let serviceFeeResult: Awaited<ReturnType<typeof deductServiceFee>> | null =
+      null;
+    try {
+      serviceFeeResult = await deductServiceFee(tripLoadId);
+      if (
+        !serviceFeeResult.success &&
+        serviceFeeResult.error !== "Service fees already deducted"
+      ) {
+        createNotificationForRole({
+          role: "ADMIN",
+          type: NotificationType.SERVICE_FEE_FAILED,
+          title: "Service fee deduction failed",
+          message: `Fee deduction failed on POD upload for trip ${tripId}: ${serviceFeeResult.error}`,
+          metadata: { tripId, loadId: tripLoadId },
+        }).catch(() => {});
+        return NextResponse.json(
+          {
+            error: "Cannot complete trip: fee deduction failed",
+            details: serviceFeeResult.error,
+          },
+          { status: 400 }
+        );
+      }
+    } catch (feeErr: unknown) {
+      console.error("Fee deduction failed on POD upload:", feeErr);
+      createNotificationForRole({
+        role: "ADMIN",
+        type: NotificationType.SERVICE_FEE_FAILED,
+        title: "Service fee deduction failed",
+        message: `Fee exception on POD upload for trip ${tripId}: ${feeErr instanceof Error ? feeErr.message : "Unknown"}`,
+        metadata: { tripId, loadId: tripLoadId },
+      }).catch(() => {});
+      return NextResponse.json(
+        { error: "Cannot complete trip: fee deduction failed" },
+        { status: 400 }
+      );
+    }
+
+    // Atomic transaction: create POD + update load + complete trip + restore truck
     const tripPod = await db.$transaction(async (tx) => {
+      // Re-check trip status inside transaction (optimistic lock)
+      const freshTrip = await tx.trip.findUnique({
+        where: { id: tripId },
+        select: { status: true },
+      });
+      if (!freshTrip || freshTrip.status !== "DELIVERED") {
+        throw new Error("TRIP_STATUS_CHANGED");
+      }
+
       const tripPod = await tx.tripPod.create({
         data: {
           tripId,
@@ -189,18 +245,78 @@ export async function POST(
         },
       });
 
-      // Update Load model for backward compatibility
-      // Always update to the most recent POD URL
+      // Update Load: POD submitted + auto-complete
       await tx.load.update({
         where: { id: tripLoadId },
         data: {
-          podUrl, // Always use latest POD
+          podUrl,
           podSubmitted: true,
           podSubmittedAt: new Date(),
+          status: "COMPLETED",
         },
       });
 
-      // Create load event
+      // Auto-complete trip (§6 V3: POD upload = completion)
+      await tx.trip.update({
+        where: { id: tripId },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          trackingEnabled: false,
+        },
+      });
+
+      // §5 B4: Increment trust metrics (once, at COMPLETED only)
+      if (trip.load?.shipperId) {
+        await incrementCompletedLoads(trip.load.shipperId);
+      }
+      if (trip.carrierId) {
+        await incrementCompletedLoads(trip.carrierId);
+      }
+
+      // Restore truck availability
+      if (trip.truckId) {
+        const otherActiveTrips = await tx.trip.count({
+          where: {
+            truckId: trip.truckId,
+            id: { not: tripId },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
+          },
+        });
+        if (otherActiveTrips === 0) {
+          await tx.truck.update({
+            where: { id: trip.truckId },
+            data: { isAvailable: true },
+          });
+        }
+        await tx.truckPosting.updateMany({
+          where: { truckId: trip.truckId, status: "MATCHED" },
+          data: { status: "ACTIVE", updatedAt: new Date() },
+        });
+      }
+
+      // Settlement status
+      const feeActuallySettled =
+        serviceFeeResult?.success &&
+        serviceFeeResult.error !== "Service fees already deducted" &&
+        (serviceFeeResult.platformRevenue?.greaterThan(0) ||
+          serviceFeeResult.totalPlatformFee === 0);
+      if (feeActuallySettled) {
+        await tx.load.update({
+          where: { id: tripLoadId },
+          data: { settlementStatus: "PAID", settledAt: new Date() },
+        });
+      }
+
+      // Load events
       await tx.loadEvent.create({
         data: {
           loadId: tripLoadId,
@@ -215,30 +331,39 @@ export async function POST(
           },
         },
       });
+      await tx.loadEvent.create({
+        data: {
+          loadId: tripLoadId,
+          eventType: "TRIP_STATUS_UPDATED",
+          description: "Trip auto-completed on POD upload (Blueprint §7)",
+          userId: session.userId,
+          metadata: { tripId, trigger: "pod_upload" },
+        },
+      });
 
       return tripPod;
     });
 
-    // TD-008 FIX: Invalidate cache after POD upload
+    // Cache invalidation
     await CacheInvalidation.load(tripLoadId, trip.load?.shipperId);
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
 
-    // G-A14-5: Notify ALL active shipper org users (not just first — take:1 removed).
+    // Notify shipper: POD submitted + trip completed
     const shipperUsers = trip.shipper?.users ?? [];
     for (const u of shipperUsers) {
       createNotification({
         userId: u.id,
-        type: NotificationType.POD_SUBMITTED,
-        title: "Proof of Delivery Submitted",
-        message: `Carrier has submitted POD for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Please verify and confirm delivery.`,
+        type: NotificationType.DELIVERY_CONFIRMED,
+        title: "Trip Completed — POD Uploaded",
+        message: `Carrier has uploaded POD for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Trip is now COMPLETED.`,
         metadata: { tripId, loadId: tripLoadId },
       }).catch((err) =>
-        console.error("Failed to notify shipper of POD submission:", err)
+        console.error("Failed to notify shipper of POD completion:", err)
       );
     }
 
     return NextResponse.json({
-      message: "POD uploaded successfully",
+      message: "POD uploaded successfully. Trip completed.",
       pod: {
         id: tripPod.id,
         fileUrl: tripPod.fileUrl,
@@ -246,8 +371,15 @@ export async function POST(
         fileType: tripPod.fileType,
         uploadedAt: tripPod.uploadedAt,
       },
+      tripStatus: "COMPLETED",
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "TRIP_STATUS_CHANGED") {
+      return NextResponse.json(
+        { error: "Trip is no longer in DELIVERED status" },
+        { status: 409 }
+      );
+    }
     return handleApiError(error, "Upload trip POD error");
   }
 }

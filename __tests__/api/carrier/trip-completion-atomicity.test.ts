@@ -335,7 +335,7 @@ describe("US-8.1 — Truck availability reset inside trip $transaction", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     const res = await callHandler(updateTrip, req, { tripId: trip.id });
     expect(res.status).toBe(200);
@@ -387,7 +387,7 @@ describe("US-8.1 — Truck availability reset inside trip $transaction", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     await callHandler(updateTrip, req, { tripId: trip.id });
 
@@ -427,7 +427,7 @@ describe("US-8.1 — Truck availability reset inside trip $transaction", () => {
     const req2 = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${d2.trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     setAuthSession(carrierSession);
     const res2 = await callHandler(updateTrip, req2, { tripId: d2.trip.id });
@@ -483,7 +483,7 @@ describe("US-8.2 — Posting reactivation inside trip $transaction", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     const res = await callHandler(updateTrip, req, { tripId: trip.id });
     expect(res.status).toBe(200);
@@ -512,7 +512,7 @@ describe("US-8.2 — Posting reactivation inside trip $transaction", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     await callHandler(updateTrip, req, { tripId: trip.id });
 
@@ -567,7 +567,7 @@ describe("US-8.2 — Posting reactivation inside trip $transaction", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     await callHandler(updateTrip, req, { tripId: trip.id });
 
@@ -611,7 +611,7 @@ describe("Cross-domain atomicity — trip update concurrent guard", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     const res = await callHandler(updateTrip, req, { tripId: trip.id });
     expect(res.status).toBe(409);
@@ -640,7 +640,7 @@ describe("Cross-domain atomicity — trip update concurrent guard", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/trips/${trip.id}`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
     );
     const res = await callHandler(updateTrip, req, { tripId: trip.id });
 

@@ -161,15 +161,38 @@ export async function updateTripStatus(
         break;
     }
 
-    const updatedTrip = await db.trip.update({
-      where: { id: tripId },
-      data: updateData,
-    });
+    // §5 B2 FIX: Wrap trip update + load sync in single transaction
+    // Previously syncLoadStatus ran outside transaction — if it failed,
+    // trip was updated but load was not synced.
+    const updatedTrip = await db.$transaction(async (tx) => {
+      const updated = await tx.trip.update({
+        where: { id: tripId },
+        data: updateData,
+      });
 
-    // Sync status with load (loadId is null for cancelled trips — skip sync)
-    if (trip.loadId) {
-      await syncLoadStatus(trip.loadId, newStatus);
-    }
+      // Sync status with load (loadId is null for cancelled trips — skip sync)
+      if (trip.loadId) {
+        const loadStatusMap: Record<string, string> = {
+          ASSIGNED: "ASSIGNED",
+          PICKUP_PENDING: "PICKUP_PENDING",
+          IN_TRANSIT: "IN_TRANSIT",
+          DELIVERED: "DELIVERED",
+          COMPLETED: "COMPLETED",
+          EXCEPTION: "EXCEPTION",
+          CANCELLED: "CANCELLED",
+        };
+        const loadStatus = loadStatusMap[newStatus];
+        if (loadStatus) {
+          await tx.load.update({
+            where: { id: trip.loadId },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            data: { status: loadStatus as any },
+          });
+        }
+      }
+
+      return updated;
+    });
 
     return updatedTrip;
   } catch (error) {

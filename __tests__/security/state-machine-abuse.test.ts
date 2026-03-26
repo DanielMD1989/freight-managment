@@ -288,7 +288,7 @@ describe("State Machine Abuse Tests", () => {
         "PATCH",
         "http://localhost:3000/api/trips/term-3",
         {
-          body: { status: "CANCELLED" },
+          body: { status: "CANCELLED", cancelReason: "Test cancellation" },
         }
       );
 

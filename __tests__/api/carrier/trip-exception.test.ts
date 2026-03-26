@@ -444,7 +444,7 @@ describe("Trip Exception Path — Round A12", () => {
         "PATCH",
         `http://localhost:3000/api/trips/${tripId}`,
         {
-          body: { status: "CANCELLED" },
+          body: { status: "CANCELLED", cancelReason: "Test cancellation" },
         }
       );
       const res = await callHandler(updateTrip, req, { tripId });
@@ -501,7 +501,7 @@ describe("Trip Exception Path — Round A12", () => {
         "PATCH",
         `http://localhost:3000/api/trips/${tripId}`,
         {
-          body: { status: "CANCELLED" },
+          body: { status: "CANCELLED", cancelReason: "Test cancellation" },
         }
       );
       const res = await callHandler(updateTrip, req, { tripId });
@@ -528,7 +528,7 @@ describe("Trip Exception Path — Round A12", () => {
         "PATCH",
         `http://localhost:3000/api/trips/${tripId}`,
         {
-          body: { status: "CANCELLED" },
+          body: { status: "CANCELLED", cancelReason: "Test cancellation" },
         }
       );
       const res = await callHandler(updateTrip, req, { tripId });

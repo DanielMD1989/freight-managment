@@ -106,10 +106,11 @@ describe("lib/loadStateMachine", () => {
         );
       });
 
-      it("COMPLETED can only transition to EXCEPTION", () => {
+      // §5 V1 FIX: COMPLETED is terminal — no transitions allowed
+      it("COMPLETED is terminal — no transitions allowed", () => {
         expect(
           isValidTransition(LoadStatus.COMPLETED, LoadStatus.EXCEPTION)
-        ).toBe(true);
+        ).toBe(false);
         expect(
           isValidTransition(LoadStatus.COMPLETED, LoadStatus.CANCELLED)
         ).toBe(false);

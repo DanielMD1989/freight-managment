@@ -76,9 +76,8 @@ export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
 
   [LoadStatus.DELIVERED]: [LoadStatus.COMPLETED, LoadStatus.EXCEPTION],
 
-  [LoadStatus.COMPLETED]: [
-    LoadStatus.EXCEPTION, // Can still report issues after completion
-  ],
+  // §5 V1 FIX: COMPLETED is terminal — no transitions allowed (Blueprint §6: "Terminal state — no changes allowed")
+  [LoadStatus.COMPLETED]: [],
 
   [LoadStatus.EXCEPTION]: [
     LoadStatus.SEARCHING, // Resolved, reassign

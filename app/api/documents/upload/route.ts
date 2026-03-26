@@ -321,6 +321,20 @@ export async function POST(request: NextRequest) {
         }
       : {};
 
+    // §2 V4 FIX: Auto-transition REGISTERED → PENDING_VERIFICATION on first doc upload.
+    // This implements Blueprint §2: "Upload Documents → Awaiting Admin Approval".
+    // Only for non-admin uploaders whose status is still REGISTERED.
+    if (
+      session.dbStatus === "REGISTERED" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
+    ) {
+      await db.user.update({
+        where: { id: userId },
+        data: { status: "PENDING_VERIFICATION" },
+      });
+    }
+
     // Create database record
     if (entityType === "company") {
       const document = await db.companyDocument.create({

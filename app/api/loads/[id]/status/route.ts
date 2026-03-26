@@ -565,8 +565,8 @@ export async function PATCH(
       });
     }
 
-    // CRITICAL FIX: Update trust metrics for analytics tracking
-    if (newStatus === "DELIVERED" || newStatus === "COMPLETED") {
+    // §5 B4 FIX: Only increment at COMPLETED (was DELIVERED + COMPLETED → double-count)
+    if (newStatus === "COMPLETED") {
       // Increment completed loads for shipper
       if (load.shipperId) {
         await incrementCompletedLoads(load.shipperId).catch(console.error);

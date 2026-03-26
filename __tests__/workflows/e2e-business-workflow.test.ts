@@ -1723,7 +1723,7 @@ describe("E2E Business Workflow (User Stories)", () => {
       const req = createRequest(
         "PATCH",
         "http://localhost:3000/api/trips/trip-refund-7",
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
 
       const res = await callHandler(updateTrip, req, {
@@ -1907,7 +1907,7 @@ describe("E2E Business Workflow (User Stories)", () => {
       const req = createRequest(
         "PATCH",
         "http://localhost:3000/api/trips/trip-cancel-8",
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
 
       const res = await callHandler(updateTrip, req, {
@@ -2106,7 +2106,7 @@ describe("E2E Business Workflow (User Stories)", () => {
         const req = createRequest(
           "PATCH",
           `http://localhost:3000/api/trips/${existingTrip.id}`,
-          { body: { status: "CANCELLED" } }
+          { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
         );
 
         const res = await callHandler(updateTrip, req, {

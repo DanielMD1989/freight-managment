@@ -240,7 +240,10 @@ describe("CANCELLED via PATCH Notifications (G-N3-6)", () => {
       })
     );
 
-    const res = await callPatch(trip.id, { status: "CANCELLED" });
+    const res = await callPatch(trip.id, {
+      status: "CANCELLED",
+      cancelReason: "Test cancellation",
+    });
     expect(res.status).toBe(200);
 
     const shipperCall = notifyOrganization.mock.calls.find(
@@ -262,7 +265,10 @@ describe("CANCELLED via PATCH Notifications (G-N3-6)", () => {
       })
     );
 
-    await callPatch(trip.id, { status: "CANCELLED" });
+    await callPatch(trip.id, {
+      status: "CANCELLED",
+      cancelReason: "Test cancellation",
+    });
 
     const carrierCall = notifyOrganization.mock.calls.find(
       (c: any[]) =>
@@ -283,7 +289,10 @@ describe("CANCELLED via PATCH Notifications (G-N3-6)", () => {
       })
     );
 
-    const res = await callPatch(trip.id, { status: "CANCELLED" });
+    const res = await callPatch(trip.id, {
+      status: "CANCELLED",
+      cancelReason: "Test cancellation",
+    });
     expect(res.status).toBe(200);
 
     const shipperCall = notifyOrganization.mock.calls.find(
@@ -311,7 +320,10 @@ describe("CANCELLED via PATCH Notifications (G-N3-6)", () => {
       })
     );
 
-    const res = await callPatch(trip.id, { status: "CANCELLED" });
+    const res = await callPatch(trip.id, {
+      status: "CANCELLED",
+      cancelReason: "Test cancellation",
+    });
     expect(res.status).toBe(200);
 
     const shipperCall = notifyOrganization.mock.calls.find(
@@ -338,7 +350,10 @@ describe("CANCELLED via PATCH Notifications (G-N3-6)", () => {
       })
     );
 
-    await callPatch(trip.id, { status: "CANCELLED" });
+    await callPatch(trip.id, {
+      status: "CANCELLED",
+      cancelReason: "Test cancellation",
+    });
 
     const calls = notifyOrganization.mock.calls.filter(
       (c: any[]) => c[0].type === "TRIP_CANCELLED"

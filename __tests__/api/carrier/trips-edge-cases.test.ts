@@ -496,7 +496,7 @@ describe("Carrier Trip Edge Cases", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${tripId}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
       const res = await callHandler(updateTrip, req, { tripId });
       expect(res.status).toBe(200);
@@ -538,8 +538,9 @@ describe("Carrier Trip Edge Cases", () => {
 
   // ─── Self-Transitions ─────────────────────────────────────────────────
 
+  // Self-transitions are idempotent (200) — supports POD auto-complete + retry safety
   describe("Self-transitions", () => {
-    it("ASSIGNED→ASSIGNED returns 400", async () => {
+    it("ASSIGNED→ASSIGNED returns 200 (idempotent)", async () => {
       const { tripId } = await createTripAtStatus("ASSIGNED");
 
       const req = createRequest(
@@ -548,10 +549,12 @@ describe("Carrier Trip Edge Cases", () => {
         { body: { status: "ASSIGNED" } }
       );
       const res = await callHandler(updateTrip, req, { tripId });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.idempotent).toBe(true);
     });
 
-    it("IN_TRANSIT→IN_TRANSIT returns 400", async () => {
+    it("IN_TRANSIT→IN_TRANSIT returns 200 (idempotent)", async () => {
       const { tripId } = await createTripAtStatus("IN_TRANSIT");
 
       const req = createRequest(
@@ -560,7 +563,9 @@ describe("Carrier Trip Edge Cases", () => {
         { body: { status: "IN_TRANSIT" } }
       );
       const res = await callHandler(updateTrip, req, { tripId });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.idempotent).toBe(true);
     });
   });
 });

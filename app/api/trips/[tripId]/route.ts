@@ -47,6 +47,10 @@ const updateTripSchema = z.object({
   deliveryNotes: z.string().max(500).optional(),
   // Exception reason (for EXCEPTION status)
   exceptionReason: z.string().max(500).optional(),
+  // §6 M3 FIX: Cancel reason (required when status = CANCELLED)
+  cancelReason: z.string().min(1).max(500).optional(),
+  // Alias: accept "reason" for compat with cancel route pattern
+  reason: z.string().min(1).max(500).optional(),
 });
 
 // Use canonical trip state machine (lib/tripStateMachine.ts)
@@ -262,6 +266,15 @@ export async function PATCH(
     // Handle status update
     if (validatedData.status) {
       // Validate status transition
+      // Idempotent: if trip is already in the requested status, return success
+      if (trip.status === validatedData.status) {
+        return NextResponse.json({
+          message: `Trip is already ${trip.status}`,
+          trip,
+          idempotent: true,
+        });
+      }
+
       const allowedTransitions = validTransitions[trip.status];
       if (!allowedTransitions.includes(validatedData.status)) {
         return NextResponse.json(
@@ -300,6 +313,19 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Only admins can resolve a trip exception" },
           { status: 403 }
+        );
+      }
+
+      // §6 M3 FIX: CANCELLED requires cancelReason (Blueprint §7 audit fields)
+      // Accept either cancelReason (preferred) or reason (compat with cancel route pattern)
+      if (
+        validatedData.status === "CANCELLED" &&
+        !validatedData.cancelReason &&
+        !validatedData.reason
+      ) {
+        return NextResponse.json(
+          { error: "cancelReason is required when cancelling a trip" },
+          { status: 400 }
         );
       }
 
@@ -354,7 +380,9 @@ export async function PATCH(
         case "CANCELLED":
           updateData.cancelledAt = new Date();
           updateData.trackingEnabled = false;
-          updateData.cancelledBy = session.userId; // mirrors cancel route for auditability
+          updateData.cancelledBy = session.userId;
+          updateData.cancelReason =
+            validatedData.cancelReason || validatedData.reason || ""; // §6 M3: required, validated above
           // G-M21-9: release @unique so load can be re-assigned
           (updateData as Record<string, unknown>).loadId = null;
           break;

@@ -813,7 +813,7 @@ describe("Carrier Trip Management", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${cancelTrip.id}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
 
       const res = await callHandler(updateTrip, req, {
@@ -847,7 +847,7 @@ describe("Carrier Trip Management", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${t.id}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
       const res = await callHandler(updateTrip, req, { tripId: t.id });
       expect(res.status).toBe(200);
@@ -873,7 +873,7 @@ describe("Carrier Trip Management", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${t.id}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
       const res = await callHandler(updateTrip, req, { tripId: t.id });
       expect(res.status).toBe(200);
@@ -898,7 +898,7 @@ describe("Carrier Trip Management", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${inTransitTrip.id}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
 
       const res = await callHandler(updateTrip, req, {
@@ -980,7 +980,7 @@ describe("Carrier Trip Management", () => {
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${completedTrip.id}`,
-        { body: { status: "CANCELLED" } }
+        { body: { status: "CANCELLED", cancelReason: "Test cancellation" } }
       );
 
       const res = await callHandler(updateTrip, req, {
