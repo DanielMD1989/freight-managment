@@ -16,6 +16,7 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText, zodErrorResponse } from "@/lib/validation";
+import { checkWalletGate } from "@/lib/walletGate";
 
 const createTruckSchema = z.object({
   truckType: z.enum([
@@ -80,6 +81,10 @@ export async function POST(request: NextRequest) {
     // Fix 3a: Require ACTIVE user for truck creation
     const session = await requireActiveUser();
     await requirePermission(Permission.CREATE_TRUCK);
+
+    // §8: Wallet gate — block truck registration if below minimum balance
+    const walletBlock = await checkWalletGate(session);
+    if (walletBlock) return walletBlock;
 
     const user = await db.user.findUnique({
       where: { id: session.userId },

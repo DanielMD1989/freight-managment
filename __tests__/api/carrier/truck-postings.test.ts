@@ -456,10 +456,10 @@ describe("Carrier Truck Postings", () => {
   // ─── GET /api/truck-postings ──────────────────────────────────────────────
 
   describe("GET /api/truck-postings - List Postings", () => {
-    it("should return postings with pagination", async () => {
-      // GET is public (no auth required for ACTIVE postings)
-      setAuthSession(null);
+    // §3 V6 FIX: GET now requires authentication (was public)
+    // (outer beforeEach already sets carrierSession — this is a safety net)
 
+    it("should return postings with pagination", async () => {
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/truck-postings"
@@ -477,8 +477,8 @@ describe("Carrier Truck Postings", () => {
       expect(data.offset).toBeDefined();
     });
 
-    it("should default to ACTIVE postings only in public view", async () => {
-      setAuthSession(null);
+    it("should default to ACTIVE postings only in authenticated view", async () => {
+      // §3 V6: Auth required (beforeEach sets carrier session)
 
       const req = createRequest(
         "GET",
@@ -495,7 +495,7 @@ describe("Carrier Truck Postings", () => {
     });
 
     it("should reject invalid status parameter → 400", async () => {
-      setAuthSession(null);
+      // §3 V6: Auth required (beforeEach sets carrier session)
 
       const req = createRequest(
         "GET",
@@ -535,7 +535,7 @@ describe("Carrier Truck Postings", () => {
     });
 
     it("should support pagination parameters", async () => {
-      setAuthSession(null);
+      // §3 V6: Auth required (outer beforeEach sets carrier session)
 
       const req = createRequest(
         "GET",

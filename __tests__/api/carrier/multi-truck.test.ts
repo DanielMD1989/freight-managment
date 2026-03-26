@@ -406,8 +406,10 @@ describe("Multi-Truck Management — M12", () => {
   // ─── T4: GET /api/truck-postings includes approvalStatus filter ───────────
 
   it("T4: GET /api/truck-postings query includes approvalStatus: APPROVED filter", async () => {
-    // GET /api/truck-postings as public (no auth)
-    setAuthSession(null);
+    // §3 V6 FIX: GET now requires authentication (was public)
+    setAuthSession(
+      createMockSession({ role: "CARRIER", organizationId: "carrier-org-1" })
+    );
     const req = createRequest(
       "GET",
       "http://localhost:3000/api/truck-postings"

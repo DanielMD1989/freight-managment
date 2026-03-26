@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireActiveUser, getSessionAny } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import {
   weightSchema,
   lengthSchema,
@@ -46,6 +46,7 @@ import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { calculateDistanceKm } from "@/lib/geo";
 import { createNotification, NotificationType } from "@/lib/notifications";
+import { checkWalletGate } from "@/lib/walletGate";
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -99,6 +100,10 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // §8: Wallet gate — block truck posting if below minimum balance
+    const walletBlock = await checkWalletGate(session);
+    if (walletBlock) return walletBlock;
 
     // Require organization
     if (!session.organizationId) {
@@ -461,54 +466,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // A4: Block marketplace search if authenticated Shipper/Carrier is below minimum balance
-    const browseSession = await getSessionAny();
-    if (
-      browseSession?.organizationId &&
-      (browseSession.role === "SHIPPER" || browseSession.role === "CARRIER")
-    ) {
-      const walletAccount = await db.financialAccount.findFirst({
-        where: { organizationId: browseSession.organizationId, isActive: true },
-        select: { balance: true, minimumBalance: true },
-      });
-      if (
-        walletAccount &&
-        walletAccount.balance < walletAccount.minimumBalance
-      ) {
-        // G-W-N4-6: Fire LOW_BALANCE_WARNING at most once per 24h per user
-        const userId = browseSession?.userId;
-        if (userId) {
-          const oneDayAgo = new Date(Date.now() - 86_400_000);
-          db.notification
-            .findFirst({
-              where: {
-                userId,
-                type: NotificationType.LOW_BALANCE_WARNING,
-                createdAt: { gte: oneDayAgo },
-              },
-            })
-            .then((existing) => {
-              if (!existing) {
-                createNotification({
-                  userId,
-                  type: NotificationType.LOW_BALANCE_WARNING,
-                  title: "Insufficient Wallet Balance",
-                  message: `Your wallet balance is below the required minimum (${Number(walletAccount.minimumBalance).toLocaleString()} ETB). Top up to restore marketplace access.`,
-                  metadata: {
-                    currentBalance: Number(walletAccount.balance),
-                    minimumBalance: Number(walletAccount.minimumBalance),
-                  },
-                }).catch((err) => console.error("low-balance notify err", err));
-              }
-            })
-            .catch(() => {});
-        }
-        return NextResponse.json(
-          { error: "Insufficient wallet balance for marketplace access" },
-          { status: 402 }
-        );
-      }
-    }
+    // §3 V6 FIX: Require authentication for truck-postings search (was getSessionAny → unauthenticated bypass)
+    const browseSession = await requireActiveUser();
+
+    // §8: Wallet gate — block marketplace browsing if below minimum balance
+    const walletBlock = await checkWalletGate(browseSession);
+    if (walletBlock) return walletBlock;
 
     const organizationId = searchParams.get("organizationId");
     const originCityId = searchParams.get("originCityId");
@@ -555,17 +518,18 @@ export async function GET(request: NextRequest) {
 
     // If filtering by specific organization (for "my postings"), verify user has access
     if (organizationId) {
-      const session = await requireActiveUser();
-
       // Sprint 16: Allow dispatcher, platform ops, and admin to view all trucks
       const hasElevatedPerms = hasElevatedPermissions({
-        role: session.role as UserRole,
-        organizationId: session.organizationId,
-        userId: session.userId,
+        role: browseSession.role as UserRole,
+        organizationId: browseSession.organizationId,
+        userId: browseSession.userId,
       });
 
       // User can only filter by their own organization unless they have elevated permissions
-      if (organizationId !== session.organizationId && !hasElevatedPerms) {
+      if (
+        organizationId !== browseSession.organizationId &&
+        !hasElevatedPerms
+      ) {
         return NextResponse.json(
           { error: "You can only view postings for your own organization" },
           { status: 403 }

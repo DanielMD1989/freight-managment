@@ -899,14 +899,14 @@ describe("Carrier Workflow", () => {
   // ─── Truck Posting Listing ───────────────────────────────────────────────
 
   describe("Truck Posting Listing", () => {
-    it("should list active truck postings (public)", async () => {
-      setAuthSession(null); // Public endpoint
+    it("should list active truck postings (authenticated)", async () => {
+      // §3 V6 FIX: GET now requires authentication (was public)
+      setAuthSession(
+        createMockSession({ role: "CARRIER", organizationId: "carrier-org-1" })
+      );
       const req = createRequest(
         "GET",
-        "http://localhost:3000/api/truck-postings",
-        {
-          headers: { Authorization: "" }, // No auth for public
-        }
+        "http://localhost:3000/api/truck-postings"
       );
 
       const res = await listPostings(req);

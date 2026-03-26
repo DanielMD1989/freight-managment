@@ -11,6 +11,7 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
 import { calculateDistanceKm } from "@/lib/geo";
+import { checkWalletGate } from "@/lib/walletGate";
 
 const createLoadSchema = z
   .object({
@@ -140,6 +141,10 @@ export async function POST(request: NextRequest) {
     // Require ACTIVE user status for creating loads
     const session = await requireActiveUser();
     await requirePermission(Permission.CREATE_LOAD);
+
+    // §8: Wallet gate — block load creation if below minimum balance
+    const walletBlock = await checkWalletGate(session);
+    if (walletBlock) return walletBlock;
 
     // Get user's organization
     const user = await db.user.findUnique({
