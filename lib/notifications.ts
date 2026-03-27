@@ -93,6 +93,9 @@ export const NotificationType = {
 
   // Truck reassignment (M24)
   TRIP_REASSIGNED: "TRIP_REASSIGNED",
+
+  // §8 M1: Self-service wallet deposit
+  DEPOSIT_REQUESTED: "DEPOSIT_REQUESTED",
 } as const;
 
 /**

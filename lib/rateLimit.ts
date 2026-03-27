@@ -698,11 +698,13 @@ export const RATE_LIMIT_FILE_DOWNLOAD: RateLimitConfig = {
 };
 
 /**
- * GPS update: 12 per hour per truck (1 every 5 minutes)
+ * §11 B4 FIX: GPS update: 120 per hour per truck (1 every 30 seconds)
+ * Real ELD/telematics devices send updates every 30-60 seconds.
+ * Previous 12/hour (5 min intervals) blocked most hardware devices.
  */
 export const RATE_LIMIT_GPS_UPDATE: RateLimitConfig = {
   name: "gps_update",
-  limit: 12,
+  limit: 120,
   windowMs: 60 * 60 * 1000,
   keyGenerator: (req) => {
     const truckId = req.headers.get("x-truck-id") || "unknown";
