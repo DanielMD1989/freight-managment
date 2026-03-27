@@ -172,22 +172,35 @@ export async function updateTripStatus(
 
       // Sync status with load (loadId is null for cancelled trips — skip sync)
       if (trip.loadId) {
-        const loadStatusMap: Record<string, string> = {
-          ASSIGNED: "ASSIGNED",
-          PICKUP_PENDING: "PICKUP_PENDING",
-          IN_TRANSIT: "IN_TRANSIT",
-          DELIVERED: "DELIVERED",
-          COMPLETED: "COMPLETED",
-          EXCEPTION: "EXCEPTION",
-          CANCELLED: "CANCELLED",
-        };
-        const loadStatus = loadStatusMap[newStatus];
-        if (loadStatus) {
+        if (newStatus === "CANCELLED") {
+          // Blueprint §7: cancel reverts load to POSTED (re-bookable), not CANCELLED
           await tx.load.update({
             where: { id: trip.loadId },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data: { status: loadStatus as any },
+            data: {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              status: "POSTED" as any,
+              assignedTruckId: null,
+              assignedAt: null,
+              postedAt: new Date(),
+            },
           });
+        } else {
+          const loadStatusMap: Record<string, string> = {
+            ASSIGNED: "ASSIGNED",
+            PICKUP_PENDING: "PICKUP_PENDING",
+            IN_TRANSIT: "IN_TRANSIT",
+            DELIVERED: "DELIVERED",
+            COMPLETED: "COMPLETED",
+            EXCEPTION: "EXCEPTION",
+          };
+          const loadStatus = loadStatusMap[newStatus];
+          if (loadStatus) {
+            await tx.load.update({
+              where: { id: trip.loadId },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              data: { status: loadStatus as any },
+            });
+          }
         }
       }
 

@@ -145,6 +145,18 @@ export async function POST(request: NextRequest) {
     let invitationId: string | null = null; // FIX F1: Track invitation for ACCEPTED update
     let inviterUserId: string | null = null; // GAP S1-1: Admin who sent this invitation
 
+    // §1 V1 FIX: DISPATCHER cannot self-register — must have organizationId (invitation)
+    // Blueprint §1: "Dispatcher — Created By: Admin"
+    if (validatedData.role === "DISPATCHER" && !organizationId) {
+      return NextResponse.json(
+        {
+          error:
+            "Dispatchers cannot self-register. An admin must invite you to an organization.",
+        },
+        { status: 403 }
+      );
+    }
+
     // FIX C1: Validate organizationId — only dispatchers can join an existing org, and only with an invitation
     if (organizationId) {
       if (validatedData.role !== "DISPATCHER") {
@@ -175,7 +187,7 @@ export async function POST(request: NextRequest) {
           status: "PENDING",
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, invitedById: true },
+        select: { id: true, invitedById: true, role: true },
       });
       if (!invitation) {
         return NextResponse.json(
@@ -183,6 +195,17 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
+
+      // §1 B2 FIX: Validate that registration role matches invitation role
+      if (invitation.role !== validatedData.role) {
+        return NextResponse.json(
+          {
+            error: `Role mismatch: you were invited as ${invitation.role}, not ${validatedData.role}`,
+          },
+          { status: 400 }
+        );
+      }
+
       invitationId = invitation.id;
       inviterUserId = invitation.invitedById ?? null;
     }

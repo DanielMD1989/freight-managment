@@ -28,6 +28,7 @@ import {
   NotificationType,
 } from "@/lib/notifications";
 import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
+import { incrementCompletedLoads } from "@/lib/trustMetrics";
 
 const updateTripSchema = z.object({
   status: z
@@ -719,6 +720,16 @@ export async function PATCH(
       Promise.all(cancelPromises).catch((err) =>
         console.error("CANCELLED notification failed:", err)
       );
+    }
+
+    // §5 B4: Trust metrics — increment once at COMPLETED (not DELIVERED)
+    if (validatedData.status === "COMPLETED") {
+      if (trip.shipperId) {
+        incrementCompletedLoads(trip.shipperId).catch(console.error);
+      }
+      if (trip.carrierId) {
+        incrementCompletedLoads(trip.carrierId).catch(console.error);
+      }
     }
 
     // G-A14-4: Notify all active shipper org users on carrier-initiated COMPLETED.

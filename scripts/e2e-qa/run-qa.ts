@@ -564,28 +564,56 @@ async function phase2() {
     });
   });
 
-  await test("2.3", "Register dispatcher → status=REGISTERED", async () => {
-    const { data } = await api("POST", "/api/auth/register", {
-      body: {
-        email: CREDS.dispatcher.email,
-        password: CREDS.dispatcher.password,
-        firstName: "Dawit",
-        lastName: "Teshome",
-        role: "DISPATCHER",
-      },
-      expectStatus: 201,
-    });
-    const user = data.user as Record<string, unknown>;
-    assertEqual(user.status, "REGISTERED", "dispatcher status");
-    ctx.dispatcherUserId = user.id as string;
-  });
+  await test(
+    "2.3",
+    "Create dispatcher via DB (blueprint §1: Admin creates Dispatcher)",
+    async () => {
+      // §1 V1: Dispatchers cannot self-register. In production, Admin uses
+      // invitation flow. For E2E, create directly (matches seed-test-data.ts pattern).
+      const bcrypt = await import("bcryptjs");
+      const passwordHash = await bcrypt.hash(CREDS.dispatcher.password, 10);
 
-  await test("2.4", "Admin activates dispatcher → login succeeds", async () => {
-    await api("POST", `/api/admin/users/${ctx.dispatcherUserId}/verify`, {
-      token: ctx.adminToken,
-      body: { status: "ACTIVE" },
-      expectStatus: 200,
-    });
+      // Create or find a logistics-agent org for the dispatcher
+      let dispatcherOrg = await prisma.organization.findFirst({
+        where: { type: "LOGISTICS_AGENT" },
+        select: { id: true },
+      });
+      if (!dispatcherOrg) {
+        dispatcherOrg = await prisma.organization.create({
+          data: {
+            name: "Platform Operations",
+            type: "LOGISTICS_AGENT",
+            contactEmail: CREDS.dispatcher.email,
+            contactPhone: "0911000000",
+            isVerified: true,
+            verificationStatus: "APPROVED",
+          },
+          select: { id: true },
+        });
+      }
+
+      const user = await prisma.user.upsert({
+        where: { email: CREDS.dispatcher.email },
+        update: { status: "ACTIVE", role: "DISPATCHER" },
+        create: {
+          email: CREDS.dispatcher.email,
+          passwordHash,
+          firstName: "Dawit",
+          lastName: "Teshome",
+          role: "DISPATCHER",
+          status: "ACTIVE",
+          isActive: true,
+          isEmailVerified: true,
+          organizationId: dispatcherOrg.id,
+        },
+        select: { id: true, role: true, status: true },
+      });
+      assertEqual(user.role, "DISPATCHER", "dispatcher role");
+      ctx.dispatcherUserId = user.id;
+    }
+  );
+
+  await test("2.4", "Dispatcher login succeeds", async () => {
     const { token, user } = await login(
       CREDS.dispatcher.email,
       CREDS.dispatcher.password

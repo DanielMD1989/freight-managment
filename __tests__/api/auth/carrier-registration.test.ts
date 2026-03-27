@@ -439,7 +439,8 @@ describe("US-1 · Carrier Registration & Onboarding", () => {
       expect(res.status).toBe(429);
     });
 
-    it("DISPATCHER role can self-register → 201", async () => {
+    // §1 V1 FIX: DISPATCHER cannot self-register without invitation
+    it("DISPATCHER role without organizationId → 403", async () => {
       const req = createRequest(
         "POST",
         "http://localhost:3000/api/auth/register",
@@ -454,7 +455,9 @@ describe("US-1 · Carrier Registration & Onboarding", () => {
         }
       );
       const res = await register(req);
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toMatch(/cannot self-register/i);
     });
   });
 

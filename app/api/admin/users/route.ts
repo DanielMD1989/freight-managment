@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
         status: "ACTIVE",
         isActive: true,
         isEmailVerified: true,
+        createdById: session.userId, // §10 V2 FIX: traceability — which SuperAdmin created this Admin
       },
       select: {
         id: true,

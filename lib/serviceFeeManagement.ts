@@ -798,8 +798,13 @@ export async function deductServiceFee(
     });
   }
 
+  // §8 V2 FIX: success:true means the function ran and trip can complete.
+  // partialCollection flag tells callers that not all fees were collected (admin resolves).
+  // Trip completion is NEVER blocked by insufficient balance — wallet gate prevents
+  // marketplace access upstream (§8 threshold enforcement).
   return {
     success: true,
+    partialCollection: partialDeductionOccurred,
     serviceFee: totalPlatformFee, // Legacy
     shipperFee: shipperFeeCalc.finalFee,
     carrierFee: carrierFeeCalc.finalFee,
