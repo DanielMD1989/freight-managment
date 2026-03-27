@@ -51,6 +51,7 @@ import { calculateTripDistance, type GpsPosition } from "./gpsQuery";
 // Result interfaces
 export interface ServiceFeeDeductResult {
   success: boolean;
+  partialCollection?: boolean; // §8 V2: true when some fees are PENDING (insufficient balance)
   serviceFee: number; // Legacy: total platform fee
   shipperFee: number;
   carrierFee: number;
