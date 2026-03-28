@@ -378,9 +378,35 @@ export async function PATCH(
 
       // P0 Insurance: Sync truck insurance status when INSURANCE doc is approved/rejected
       if (updated.type === "INSURANCE") {
+        // Capture pre-sync status for renewal detection
+        const truckBefore = await db.truck.findUnique({
+          where: { id: updated.truck.id },
+          select: { insuranceStatus: true, carrierId: true },
+        });
+
         const { syncTruckInsuranceStatus } =
           await import("@/lib/insuranceValidation");
         await syncTruckInsuranceStatus(updated.truck.id);
+
+        // P1: Send INSURANCE_RENEWED if truck was EXPIRED/MISSING and is now VALID/EXPIRING
+        if (
+          verificationStatus === "APPROVED" &&
+          truckBefore &&
+          ["EXPIRED", "MISSING"].includes(truckBefore.insuranceStatus)
+        ) {
+          const { notifyOrganization, NotificationType } =
+            await import("@/lib/notifications");
+          notifyOrganization({
+            organizationId: truckBefore.carrierId,
+            type: NotificationType.INSURANCE_RENEWED,
+            title: "Insurance Renewed",
+            message: `Insurance for truck ${updated.truck.licensePlate} has been approved. You can now post this truck.`,
+            metadata: {
+              truckId: updated.truck.id,
+              licensePlate: updated.truck.licensePlate,
+            },
+          }).catch(() => {});
+        }
       }
 
       // Get uploader information for email notification
