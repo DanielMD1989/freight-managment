@@ -31,10 +31,24 @@ const positionSchema = z.object({
   timestamp: z.string().datetime(),
 });
 
-const batchUpdateSchema = z.object({
+// §11 GPS FIX: Accept BOTH payload formats:
+// Format A (standard):  { truckId: "xxx", positions: [{ lat, lng, ... }] }
+// Format B (mobile):    { positions: [{ truckId: "xxx", lat, lng, ... }] }
+const positionWithTruckSchema = positionSchema.extend({
   truckId: z.string().min(1),
-  positions: z.array(positionSchema).min(1).max(100), // Max 100 positions per batch
 });
+
+const batchUpdateSchema = z.union([
+  // Format A: top-level truckId
+  z.object({
+    truckId: z.string().min(1),
+    positions: z.array(positionSchema).min(1).max(100),
+  }),
+  // Format B: truckId per position (mobile GPS queue)
+  z.object({
+    positions: z.array(positionWithTruckSchema).min(1).max(100),
+  }),
+]);
 
 async function postHandler(request: NextRequest) {
   try {
@@ -67,12 +81,33 @@ async function postHandler(request: NextRequest) {
     }
 
     const body = await request.json();
-    const data = batchUpdateSchema.parse(body);
+    const rawData = batchUpdateSchema.parse(body);
+
+    // §11 GPS FIX: Normalize both formats into { truckId, positions }
+    // Format A: { truckId, positions } → use as-is
+    // Format B: { positions: [{ truckId, ... }] } → extract truckId from first position
+    let truckId: string;
+    let positions: Array<z.infer<typeof positionSchema>>;
+
+    if ("truckId" in rawData && rawData.truckId) {
+      truckId = rawData.truckId;
+      positions = rawData.positions;
+    } else {
+      // Format B: all positions must have same truckId (mobile queues per-truck)
+      const firstTruckId = (
+        rawData.positions[0] as z.infer<typeof positionWithTruckSchema>
+      ).truckId;
+      truckId = firstTruckId;
+      // Strip truckId from each position to match positionSchema
+      positions = rawData.positions.map(
+        ({ truckId: _tid, ...rest }) => rest
+      ) as Array<z.infer<typeof positionSchema>>;
+    }
 
     // Verify truck belongs to carrier's organization
     const truck = await db.truck.findFirst({
       where: {
-        id: data.truckId,
+        id: truckId,
         carrierId: user.organizationId,
       },
       select: {
@@ -99,7 +134,7 @@ async function postHandler(request: NextRequest) {
     // Find active load (trip) for this truck (include DELIVERED for final-mile GPS linkage)
     const activeLoad = await db.load.findFirst({
       where: {
-        assignedTruckId: data.truckId,
+        assignedTruckId: truckId,
         status: { in: ["IN_TRANSIT", "DELIVERED"] },
       },
       select: { id: true },
@@ -108,21 +143,21 @@ async function postHandler(request: NextRequest) {
     // G-M21-2: Find active trip for tripId linkage (batch GPS was missing tripId)
     const activeTrip = await db.trip.findFirst({
       where: {
-        truckId: data.truckId,
+        truckId: truckId,
         status: { in: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"] },
       },
       select: { id: true },
     });
 
     // Sort positions by timestamp (oldest first)
-    const sortedPositions = [...data.positions].sort(
+    const sortedPositions = [...positions].sort(
       (a, b) =>
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     // Create GPS position records
     const createData = sortedPositions.map((pos) => ({
-      truckId: data.truckId,
+      truckId: truckId,
       deviceId: truck.gpsDeviceId!,
       latitude: pos.latitude,
       longitude: pos.longitude,
@@ -144,7 +179,7 @@ async function postHandler(request: NextRequest) {
 
       // Update truck's current location with the most recent position
       await tx.truck.update({
-        where: { id: data.truckId },
+        where: { id: truckId },
         data: {
           currentLocationLat: latestPosition.latitude,
           currentLocationLon: latestPosition.longitude,
@@ -157,11 +192,11 @@ async function postHandler(request: NextRequest) {
 
     // Broadcast the latest position via WebSocket
     await broadcastGpsPosition(
-      data.truckId,
+      truckId,
       activeLoad?.id || null,
       user.organizationId,
       {
-        truckId: data.truckId,
+        truckId: truckId,
         loadId: activeLoad?.id,
         lat: latestPosition.latitude,
         lng: latestPosition.longitude,
@@ -173,10 +208,10 @@ async function postHandler(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${data.positions.length} GPS positions recorded`,
-      truckId: data.truckId,
+      message: `${positions.length} GPS positions recorded`,
+      truckId: truckId,
       loadId: activeLoad?.id || null,
-      positionsRecorded: data.positions.length,
+      positionsRecorded: positions.length,
       latestPosition: {
         lat: latestPosition.latitude,
         lng: latestPosition.longitude,

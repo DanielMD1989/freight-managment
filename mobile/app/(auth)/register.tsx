@@ -67,7 +67,8 @@ const registerSchema = z
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
-type RoleTab = "CARRIER" | "SHIPPER" | "DISPATCHER";
+// §1 V1: DISPATCHER removed — Blueprint §1: "Dispatcher — Created By: Admin"
+type RoleTab = "CARRIER" | "SHIPPER";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -161,6 +162,7 @@ export default function RegisterScreen() {
     }
   };
 
+  // §1 V1: Only CARRIER and SHIPPER can self-register. DISPATCHER created by Admin.
   const roles: {
     key: RoleTab;
     label: string;
@@ -168,11 +170,6 @@ export default function RegisterScreen() {
   }[] = [
     { key: "CARRIER", label: t("auth.roleCarrier"), icon: "bus-outline" },
     { key: "SHIPPER", label: t("auth.roleShipper"), icon: "cube-outline" },
-    {
-      key: "DISPATCHER",
-      label: t("auth.roleDispatcher"),
-      icon: "git-network-outline",
-    },
   ];
 
   return (

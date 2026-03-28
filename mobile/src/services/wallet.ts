@@ -62,6 +62,52 @@ class WalletService {
       throw new Error(getErrorMessage(error));
     }
   }
+
+  /** §8 M1: Request a wallet deposit (Bank Transfer, Telebirr, M-Pesa) */
+  async requestDeposit(data: {
+    amount: number;
+    paymentMethod: "BANK_TRANSFER_SLIP" | "TELEBIRR" | "MPESA";
+    externalReference?: string;
+    slipFileUrl?: string;
+    notes?: string;
+  }): Promise<{ deposit: WalletDeposit; message: string }> {
+    try {
+      const response = await apiClient.post("/api/wallet/deposit", data);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Get deposit requests */
+  async getDeposits(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    deposits: WalletDeposit[];
+    pagination: { page: number; limit: number; total: number; pages: number };
+  }> {
+    try {
+      const response = await apiClient.get("/api/wallet/deposit", { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+}
+
+export interface WalletDeposit {
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  status: "PENDING" | "CONFIRMED" | "REJECTED";
+  externalReference: string | null;
+  notes: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
 }
 
 export const walletService = new WalletService();
