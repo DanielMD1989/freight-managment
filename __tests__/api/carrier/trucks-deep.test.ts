@@ -38,6 +38,7 @@ import {
   mockRbac,
   mockLogger,
   SeedData,
+  createInsuranceDocForTruck,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks BEFORE requiring route handlers
@@ -1008,6 +1009,8 @@ describe("Truck Management — Deep Tests", () => {
         },
       });
 
+      await createInsuranceDocForTruck(truck.id, seed.carrierUser.id);
+
       const req = createRequest(
         "POST",
         `http://localhost:3000/api/trucks/${truck.id}/approve`,
@@ -1079,6 +1082,8 @@ describe("Truck Management — Deep Tests", () => {
           approvalStatus: "PENDING",
         },
       });
+
+      await createInsuranceDocForTruck(truck.id, seed.carrierUser.id);
 
       const req = createRequest(
         "POST",
@@ -1197,6 +1202,7 @@ describe("Truck Management — Deep Tests", () => {
       expect(resubmitted.truck.approvalStatus).toBe("PENDING");
 
       // Step 4: Admin re-approves
+      await createInsuranceDocForTruck(truckId, seed.carrierUser.id);
       setAuthSession(adminSession);
 
       const approveReq = createRequest(

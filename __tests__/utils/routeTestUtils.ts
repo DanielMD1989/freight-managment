@@ -1044,7 +1044,29 @@ export async function seedTestData(): Promise<SeedData> {
       carrierId: carrierOrg.id,
       createdById: carrierUser.id,
       approvalStatus: "APPROVED",
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       gpsDeviceId: gpsDevice.id,
+    },
+  });
+
+  // P0 Insurance: Create approved insurance document for the test truck
+  await db.truckDocument.create({
+    data: {
+      id: "test-insurance-doc-001",
+      truckId: truck.id,
+      type: "INSURANCE",
+      fileName: "insurance-cert.pdf",
+      fileUrl: "/uploads/insurance-cert.pdf",
+      fileSize: 1024,
+      mimeType: "application/pdf",
+      verificationStatus: "APPROVED",
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      uploadedById: carrierUser.id,
+      policyNumber: "INS-TEST-001",
+      insuranceProvider: "Ethiopian Insurance Corporation",
+      coverageAmount: 500000,
+      coverageType: "THIRD_PARTY",
     },
   });
 
@@ -1096,6 +1118,45 @@ export async function createGpsDeviceForTruck(truckId: string) {
     data: { gpsDeviceId: device.id },
   });
   return device;
+}
+
+let insuranceDocCounter = 1;
+
+/**
+ * P0 Insurance: Create an approved insurance document for a truck.
+ * Required by insurance gates at truck approval and posting.
+ */
+export async function createInsuranceDocForTruck(
+  truckId: string,
+  uploadedById: string = "carrier-user-1"
+) {
+  const docId = `insurance-doc-${insuranceDocCounter++}`;
+  const doc = await db.truckDocument.create({
+    data: {
+      id: docId,
+      truckId,
+      type: "INSURANCE",
+      fileName: "insurance.pdf",
+      fileUrl: `/uploads/${docId}.pdf`,
+      fileSize: 1024,
+      mimeType: "application/pdf",
+      verificationStatus: "APPROVED",
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      uploadedById,
+      policyNumber: `POL-${docId}`,
+      insuranceProvider: "Ethiopian Insurance Corp",
+      coverageAmount: 500000,
+      coverageType: "THIRD_PARTY",
+    },
+  });
+  await db.truck.update({
+    where: { id: truckId },
+    data: {
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: doc.expiresAt,
+    },
+  });
+  return doc;
 }
 
 /**

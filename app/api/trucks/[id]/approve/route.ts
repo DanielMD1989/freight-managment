@@ -119,6 +119,21 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
+      // P0 Insurance Gate: Require approved insurance document before truck approval
+      const { validateTruckInsurance } =
+        await import("@/lib/insuranceValidation");
+      const insuranceCheck = await validateTruckInsurance(truckId);
+      if (!insuranceCheck.valid) {
+        return NextResponse.json(
+          {
+            error: "Truck cannot be approved without valid insurance",
+            insuranceStatus: insuranceCheck.status,
+            hint: "Upload an INSURANCE document and have it approved with a future expiry date",
+          },
+          { status: 400 }
+        );
+      }
+
       // Approve the truck
       const updatedTruck = await db.truck.update({
         where: { id: truckId },
@@ -129,6 +144,8 @@ export async function POST(
           rejectionReason: null,
           rejectedAt: null,
           documentsLockedAt: new Date(), // Round S3
+          insuranceStatus: insuranceCheck.status,
+          insuranceExpiresAt: insuranceCheck.expiresAt,
         },
         include: {
           carrier: {

@@ -376,6 +376,13 @@ export async function PATCH(
         },
       });
 
+      // P0 Insurance: Sync truck insurance status when INSURANCE doc is approved/rejected
+      if (updated.type === "INSURANCE") {
+        const { syncTruckInsuranceStatus } =
+          await import("@/lib/insuranceValidation");
+        await syncTruckInsuranceStatus(updated.truck.id);
+      }
+
       // Get uploader information for email notification
       const uploader = await db.user.findUnique({
         where: { id: updated.uploadedById },

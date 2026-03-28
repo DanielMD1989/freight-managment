@@ -31,6 +31,7 @@ import {
   mockDispatcherPermissions,
   mockApiErrors,
   mockLogger,
+  createInsuranceDocForTruck,
 } from "../../utils/routeTestUtils";
 
 mockAuth();
@@ -151,6 +152,7 @@ describe("Admin Truck Approval → TRUCK_APPROVED / TRUCK_REJECTED Notification 
   // NA-7: Approval sends TRUCK_APPROVED
   it("NA-7: truck approval → createNotification called with type=TRUCK_APPROVED", async () => {
     const { truck } = await seedTruckWithCarrier("1");
+    await createInsuranceDocForTruck(truck.id, `nta-user-1`);
 
     const res = await callApprove(truck.id, { action: "APPROVE" });
     const body = await parseResponse(res);

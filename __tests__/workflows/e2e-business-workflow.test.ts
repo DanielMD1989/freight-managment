@@ -40,6 +40,7 @@ import {
   mockLoadUtils,
   SeedData,
   createGpsDeviceForTruck,
+  createInsuranceDocForTruck,
 } from "../utils/routeTestUtils";
 
 // ─── Mock Setup (module-level, hoisted by Jest) ─────────────────────────────
@@ -590,6 +591,7 @@ describe("E2E Business Workflow (User Stories)", () => {
     });
 
     it("US-2.2: admin approves truck → APPROVED", async () => {
+      await createInsuranceDocForTruck(postingTruckId, seed.carrierUser.id);
       asAdmin();
 
       const req = createRequest(

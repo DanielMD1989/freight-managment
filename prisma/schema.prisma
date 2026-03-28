@@ -922,6 +922,10 @@ model Truck {
   rejectedAt        DateTime?          // Round S4: set on rejection; symmetry with Organization.rejectedAt
   documentsLockedAt DateTime? // Round S3: set on approval; enforcement deferred to Round A3
 
+  // P0 Insurance: Denormalized from latest APPROVED TruckDocument(INSURANCE)
+  insuranceStatus    String    @default("MISSING") // MISSING | VALID | EXPIRING | EXPIRED
+  insuranceExpiresAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -962,6 +966,7 @@ model Truck {
   @@index([truckType, isAvailable]) // Available trucks by type
   @@index([carrierId, approvalStatus]) // Carrier's trucks by approval status
   @@index([approvalStatus, createdAt]) // Admin approval queue
+  @@index([insuranceStatus]) // P0 Insurance: expiry cron + posting gate queries
   @@map("trucks")
 }
 
@@ -1285,8 +1290,9 @@ model Dispute {
   type         DisputeType
   status       DisputeStatus @default(OPEN)
   description  String
-  evidenceUrls String[] // Array of file URLs
-  resolution   String?
+  evidenceUrls          String[] // Array of file URLs
+  insurancePolicyNumber String?  // P0 Insurance: links dispute to external insurance claim
+  resolution            String?
   resolvedAt   DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

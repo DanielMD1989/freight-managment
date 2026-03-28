@@ -836,6 +836,31 @@ async function phase4() {
   );
 
   await test(
+    "4.5b",
+    "Seed approved insurance doc for truck (P0 insurance gate)",
+    async () => {
+      // P0 Insurance: Truck approval requires an APPROVED insurance doc
+      await prisma.truckDocument.create({
+        data: {
+          truckId: ctx.truckId,
+          type: "INSURANCE",
+          fileName: "insurance-cert.pdf",
+          fileUrl: "/uploads/insurance-cert.pdf",
+          fileSize: 1024,
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          uploadedById: ctx.carrierUserId,
+          policyNumber: "INS-E2E-001",
+          insuranceProvider: "Ethiopian Insurance Corporation",
+          coverageAmount: 500000,
+          coverageType: "THIRD_PARTY",
+        },
+      });
+    }
+  );
+
+  await test(
     "4.6",
     "Admin approves truck → approvalStatus=APPROVED",
     async () => {

@@ -126,7 +126,14 @@ jest.mock("@/lib/db", () => {
       priority: "MEDIUM",
     },
     document: {},
-    truck: { postings: [], gpsDevice: null, documentsLockedAt: null, rejectedAt: null },
+    truck: {
+      postings: [],
+      gpsDevice: null,
+      documentsLockedAt: null,
+      rejectedAt: null,
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    },
     notification: {
       read: false,
     },

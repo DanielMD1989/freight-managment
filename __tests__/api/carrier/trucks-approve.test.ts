@@ -37,6 +37,7 @@ import {
   mockApiErrors,
   mockLogger,
   SeedData,
+  createInsuranceDocForTruck,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks BEFORE requiring route handlers
@@ -166,6 +167,8 @@ describe("Carrier Truck Approval", () => {
         },
       });
 
+      await createInsuranceDocForTruck(pendingTruck.id, seed.carrierUser.id);
+
       const req = createRequest(
         "POST",
         `http://localhost:3000/api/trucks/${pendingTruck.id}/approve`,
@@ -193,6 +196,8 @@ describe("Carrier Truck Approval", () => {
           approvalStatus: "PENDING",
         },
       });
+
+      await createInsuranceDocForTruck(truckForNotif.id, seed.carrierUser.id);
 
       const req = createRequest(
         "POST",
@@ -443,6 +448,11 @@ describe("Carrier Truck Approval", () => {
         },
       });
 
+      await createInsuranceDocForTruck(
+        truckEmailApprove.id,
+        seed.carrierUser.id
+      );
+
       const req = createRequest(
         "POST",
         `http://localhost:3000/api/trucks/${truckEmailApprove.id}/approve`,
@@ -504,6 +514,11 @@ describe("Carrier Truck Approval", () => {
           approvalStatus: "PENDING",
         },
       });
+
+      await createInsuranceDocForTruck(
+        truckAuditApprove.id,
+        seed.carrierUser.id
+      );
 
       const req = createRequest(
         "POST",

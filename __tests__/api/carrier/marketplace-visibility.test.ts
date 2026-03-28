@@ -262,6 +262,7 @@ describe("Marketplace Visibility (U5)", () => {
         capacity: 10000,
         carrierId: "carrier-org-u5",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: false,
       },
     });
@@ -304,6 +305,7 @@ describe("Marketplace Visibility (U5)", () => {
         capacity: 10000,
         carrierId: "carrier-org-u5",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: false,
       },
     });
@@ -378,6 +380,7 @@ describe("Marketplace Visibility (U5)", () => {
         capacity: 10000,
         carrierId: "carrier-org-u5",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: true,
       },
     });
@@ -406,6 +409,7 @@ describe("Marketplace Visibility (U5)", () => {
         capacity: 10000,
         carrierId: "carrier-org-u5",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: false,
       },
     });
@@ -657,6 +661,7 @@ describe("Marketplace Visibility (U5)", () => {
         carrierId: "carrier-org-u5",
         isAvailable: false,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         gpsDeviceId: "gps-mv12",
       } as any);
       jest.spyOn(db.gpsDevice, "findUnique").mockResolvedValueOnce({
@@ -704,6 +709,7 @@ describe("Marketplace Visibility (U5)", () => {
         carrierId: "carrier-org-u5",
         isAvailable: false,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         gpsDeviceId: "gps-mv13",
       } as any);
       jest.spyOn(db.gpsDevice, "findUnique").mockResolvedValueOnce({
@@ -749,6 +755,7 @@ describe("Marketplace Visibility (U5)", () => {
         carrierId: "carrier-org-u5",
         isAvailable: true,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
       } as any);
       jest.spyOn(db.ethiopianLocation, "findUnique").mockResolvedValue({
         id: "city-addis",

@@ -228,6 +228,7 @@ export async function POST(request: NextRequest) {
             isAvailable: true,
             approvalStatus: true,
             gpsDeviceId: true,
+            insuranceStatus: true,
           },
         }),
         // PHASE 2: Check for existing active posting (ONE_ACTIVE_POST_PER_TRUCK rule)
@@ -303,6 +304,19 @@ export async function POST(request: NextRequest) {
         {
           error:
             "An active GPS device is required before posting your truck to the marketplace. Please register a GPS device for this truck.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // P0 Insurance Gate: Require valid or expiring insurance for posting
+    if (!["VALID", "EXPIRING"].includes(truck.insuranceStatus ?? "MISSING")) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid insurance is required before posting your truck to the marketplace",
+          insuranceStatus: truck.insuranceStatus,
+          hint: "Upload an INSURANCE document and have it approved with a future expiry date",
         },
         { status: 400 }
       );

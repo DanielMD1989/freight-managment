@@ -38,6 +38,7 @@ import {
   mockLogger,
   SeedData,
   createGpsDeviceForTruck,
+  createInsuranceDocForTruck,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -220,6 +221,7 @@ describe("Multi-Truck Management — M12", () => {
         carrierId: seed.carrierOrg.id,
         createdById: seed.carrierUser.id,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
       },
     });
 
@@ -292,6 +294,7 @@ describe("Multi-Truck Management — M12", () => {
         carrierId: seed.carrierOrg.id,
         createdById: seed.carrierUser.id,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
       },
     });
 
@@ -305,6 +308,7 @@ describe("Multi-Truck Management — M12", () => {
         carrierId: seed.carrierOrg.id,
         createdById: seed.carrierUser.id,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
       },
     });
 
@@ -554,6 +558,9 @@ describe("Multi-Truck Management — M12", () => {
     });
 
     setAuthSession(adminSession);
+
+    // Insurance doc required before approval
+    await createInsuranceDocForTruck(truckI.id, seed.carrierUser.id);
 
     // Approve truck I
     const reqI = createRequest(

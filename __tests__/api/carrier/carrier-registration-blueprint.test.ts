@@ -54,6 +54,7 @@ import {
   mockAssignmentConflicts,
   mockServiceFeeCalculation,
   mockAuditLog,
+  createInsuranceDocForTruck,
 } from "../../utils/routeTestUtils";
 
 // ─── All mocks BEFORE require() ───────────────────────────────────────────────
@@ -580,6 +581,8 @@ describe("Carrier Registration Blueprint — full lifecycle (Round S3)", () => {
         approvalStatus: "PENDING",
       },
     });
+
+    await createInsuranceDocForTruck(truck.id, user.id);
 
     useAdminSession();
     const req = createRequest(
