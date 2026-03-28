@@ -114,11 +114,7 @@ export default function RegisterScreen() {
         lastName: data.lastName,
         phone: data.phone,
         role: selectedRole,
-        // G-REG-7: Only send companyName for SHIPPER/CARRIER
-        companyName:
-          selectedRole !== "DISPATCHER"
-            ? data.companyName?.trim() || undefined
-            : undefined,
+        companyName: data.companyName?.trim() || undefined,
         carrierType:
           selectedRole === "CARRIER"
             ? data.carrierType || undefined
@@ -127,16 +123,7 @@ export default function RegisterScreen() {
           selectedRole === "CARRIER"
             ? data.associationId || undefined
             : undefined,
-        // G-REG-4: Only send organizationId for DISPATCHER
-        organizationId:
-          selectedRole === "DISPATCHER"
-            ? data.organizationId || undefined
-            : undefined,
-        // G-REG-5: taxId for SHIPPER/CARRIER
-        taxId:
-          selectedRole !== "DISPATCHER"
-            ? data.taxId?.trim() || undefined
-            : undefined,
+        taxId: data.taxId?.trim() || undefined,
       });
     } catch {
       // Error is set in store
@@ -152,14 +139,8 @@ export default function RegisterScreen() {
       setValue("associationId", "");
       clearErrors(["carrierType", "associationId"]);
     }
-    if (role === "DISPATCHER") {
-      setValue("companyName", "");
-      setValue("taxId", "");
-      clearErrors(["companyName", "taxId"]);
-    } else {
-      setValue("organizationId", "");
-      clearErrors(["organizationId"]);
-    }
+    setValue("organizationId", "");
+    clearErrors(["organizationId"]);
   };
 
   // §1 V1: Only CARRIER and SHIPPER can self-register. DISPATCHER created by Admin.
@@ -288,8 +269,8 @@ export default function RegisterScreen() {
             )}
           />
 
-          {/* G-REG-1: companyName — required for SHIPPER, optional for CARRIER, hidden for DISPATCHER */}
-          {selectedRole !== "DISPATCHER" && (
+          {/* G-REG-1: companyName — required for SHIPPER, optional for CARRIER */}
+          {
             <Controller
               control={control}
               name="companyName"
@@ -309,10 +290,10 @@ export default function RegisterScreen() {
                 />
               )}
             />
-          )}
+          }
 
           {/* G-REG-5: taxId — optional for SHIPPER/CARRIER */}
-          {selectedRole !== "DISPATCHER" && (
+          {
             <Controller
               control={control}
               name="taxId"
@@ -327,7 +308,7 @@ export default function RegisterScreen() {
                 />
               )}
             />
-          )}
+          }
 
           {/* Carrier-specific fields */}
           {selectedRole === "CARRIER" && (
@@ -378,24 +359,6 @@ export default function RegisterScreen() {
                 )}
               />
             </>
-          )}
-
-          {/* G-REG-4: organizationId for DISPATCHER */}
-          {selectedRole === "DISPATCHER" && (
-            <Controller
-              control={control}
-              name="organizationId"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  label="Organization ID"
-                  value={value ?? ""}
-                  onChangeText={onChange}
-                  error={errors.organizationId?.message}
-                  hint="From your invitation link"
-                  testID="register-organizationId"
-                />
-              )}
-            />
           )}
 
           <Controller

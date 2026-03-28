@@ -99,9 +99,12 @@ async function postHandler(request: NextRequest) {
       ).truckId;
       truckId = firstTruckId;
       // Strip truckId from each position to match positionSchema
-      positions = rawData.positions.map(
-        ({ truckId: _tid, ...rest }) => rest
-      ) as Array<z.infer<typeof positionSchema>>;
+      positions = rawData.positions.map((pos) => {
+        const { truckId: _tid, ...rest } = pos as z.infer<
+          typeof positionWithTruckSchema
+        >;
+        return rest;
+      });
     }
 
     // Verify truck belongs to carrier's organization
