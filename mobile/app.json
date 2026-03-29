@@ -13,9 +13,16 @@
       "resizeMode": "contain",
       "backgroundColor": "#0EA5E9"
     },
+    "extra": {
+      "apiBaseUrl": "https://api.freightethiopia.com",
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    },
+    "owner": "freightethiopia",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.freight.management",
+      "bundleIdentifier": "com.freightethiopia.app",
       "config": {
         "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_KEY"
       },
@@ -32,7 +39,7 @@
         "backgroundColor": "#0EA5E9"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.freight.management",
+      "package": "com.freightethiopia.app",
       "config": {
         "googleMaps": {
           "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_KEY"
