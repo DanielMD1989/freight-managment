@@ -687,12 +687,6 @@ const navigationSections: Record<string, NavSection[]> = {
       title: "Shipments",
       items: [
         {
-          label: "My Loads",
-          href: "/shipper/loads",
-          icon: "📦",
-          roles: ["SHIPPER", "ADMIN", "SUPER_ADMIN"],
-        },
-        {
           label: "Trips",
           href: "/shipper/trips",
           icon: "🚚",

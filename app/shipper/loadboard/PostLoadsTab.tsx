@@ -56,7 +56,16 @@ interface PostLoadsTabProps {
   onSwitchToSearchTrucks?: (filters: TruckSearchFilters) => void;
 }
 
-type LoadStatus = "POSTED" | "UNPOSTED" | "EXPIRED";
+type LoadStatus =
+  | "DRAFT"
+  | "POSTED"
+  | "UNPOSTED"
+  | "ACTIVE"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "EXCEPTION"
+  | "EXPIRED";
 type MainTab = "postings" | "matching";
 
 const truckTypes = [
@@ -201,7 +210,11 @@ export default function PostLoadsTab({
     try {
       const params = new URLSearchParams();
       params.append("myLoads", "true");
-      params.append("status", activeStatus);
+      // Map UI status to API statuses (ACTIVE = multiple trip statuses)
+      const statusMap: Record<string, string> = {
+        ACTIVE: "ASSIGNED,PICKUP_PENDING,IN_TRANSIT",
+      };
+      params.append("status", statusMap[activeStatus] || activeStatus);
       params.append("sortBy", "postedAt");
       params.append("sortOrder", "desc");
 
@@ -233,27 +246,42 @@ export default function PostLoadsTab({
 
       setLoads(loadsWithMatchCounts);
 
-      // Fetch counts for each status tab
-      // H30 FIX: Check response.ok for status counts
+      // Fetch counts for each status tab (all statuses from My Loads)
       const counts: Record<string, number> = {
+        DRAFT: 0,
         POSTED: 0,
         UNPOSTED: 0,
+        ACTIVE: 0,
+        DELIVERED: 0,
+        COMPLETED: 0,
+        CANCELLED: 0,
+        EXCEPTION: 0,
         EXPIRED: 0,
       };
-      const statusPromises = ["POSTED", "UNPOSTED", "EXPIRED"].map(
-        async (status) => {
-          try {
-            const res = await fetch(
-              `/api/loads?myLoads=true&status=${status}&limit=1`
-            );
-            if (!res.ok) return;
-            const json = await res.json();
-            counts[status] = json.pagination?.total || 0;
-          } catch {
-            // Silently ignore count fetch errors
-          }
+      // ACTIVE = ASSIGNED + PICKUP_PENDING + IN_TRANSIT combined
+      const statusQueries = [
+        { key: "DRAFT", query: "DRAFT" },
+        { key: "POSTED", query: "POSTED" },
+        { key: "UNPOSTED", query: "UNPOSTED" },
+        { key: "ACTIVE", query: "ASSIGNED,PICKUP_PENDING,IN_TRANSIT" },
+        { key: "DELIVERED", query: "DELIVERED" },
+        { key: "COMPLETED", query: "COMPLETED" },
+        { key: "CANCELLED", query: "CANCELLED" },
+        { key: "EXCEPTION", query: "EXCEPTION" },
+        { key: "EXPIRED", query: "EXPIRED" },
+      ];
+      const statusPromises = statusQueries.map(async ({ key, query }) => {
+        try {
+          const res = await fetch(
+            `/api/loads?myLoads=true&status=${query}&limit=1`
+          );
+          if (!res.ok) return;
+          const json = await res.json();
+          counts[key] = json.pagination?.total || 0;
+        } catch {
+          // Silently ignore count fetch errors
         }
-      );
+      });
       await Promise.all(statusPromises);
       setStatusCounts(counts);
     } catch (error) {
@@ -707,8 +735,14 @@ export default function PostLoadsTab({
    * Status tabs configuration
    */
   const statusTabs: StatusTab[] = [
+    { key: "DRAFT", label: "Drafts", count: statusCounts.DRAFT },
     { key: "POSTED", label: "Posted", count: statusCounts.POSTED },
     { key: "UNPOSTED", label: "Unposted", count: statusCounts.UNPOSTED },
+    { key: "ACTIVE", label: "Active Trips", count: statusCounts.ACTIVE },
+    { key: "DELIVERED", label: "Delivered", count: statusCounts.DELIVERED },
+    { key: "COMPLETED", label: "Completed", count: statusCounts.COMPLETED },
+    { key: "CANCELLED", label: "Cancelled", count: statusCounts.CANCELLED },
+    { key: "EXCEPTION", label: "Exception", count: statusCounts.EXCEPTION },
     { key: "EXPIRED", label: "Expired", count: statusCounts.EXPIRED },
   ];
 

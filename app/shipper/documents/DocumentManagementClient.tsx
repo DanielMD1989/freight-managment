@@ -75,7 +75,7 @@ export default function DocumentManagementClient({
 }) {
   const router = useRouter();
 
-  const [documents] = useState<Document[]>(initialDocuments);
+  const [documents, setDocuments] = useState<Document[]>(initialDocuments);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -168,7 +168,12 @@ export default function DocumentManagementClient({
       });
 
       if (response.ok) {
-        // Success - refresh the page to show new document
+        const data = await response.json();
+        // Immediately add new document to local state for instant feedback
+        if (data.document) {
+          setDocuments((prev) => [data.document, ...prev]);
+        }
+        // Also refresh server data for consistency
         router.refresh();
         setShowUploadForm(false);
         setSelectedFile(null);
