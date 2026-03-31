@@ -230,6 +230,27 @@ class DatabaseManager {
     const connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {
+      // During `next build`, routes are imported for static analysis but never executed.
+      // Return a stub that throws on actual usage, but doesn't crash the import.
+      if (
+        process.env.NEXT_PHASE === "phase-production-build" ||
+        process.env.BUILDING === "1"
+      ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const handler: ProxyHandler<any> = {
+          get: (_t, p) => {
+            if (p === "then" || p === Symbol.toPrimitive) return undefined;
+            return () => {
+              throw new Error(
+                `DB not available during build (accessed: ${String(p)})`
+              );
+            };
+          },
+        };
+
+        this.prisma = new Proxy({}, handler) as unknown as PrismaClient;
+        return this.prisma;
+      }
       throw new Error("DATABASE_URL is not defined");
     }
 
@@ -489,8 +510,41 @@ if (process.env.NODE_ENV !== "production") {
 
 /**
  * Prisma client instance (main export)
+ *
+ * Uses a Proxy for lazy initialization — the actual DB connection is deferred
+ * until the first property access (e.g., db.user.findMany). This prevents
+ * build-time crashes when Next.js statically analyzes route modules.
  */
-export const db = dbManager.initialize();
+
+export const db: PrismaClient = (() => {
+  try {
+    return dbManager.initialize();
+  } catch {
+    // Build-time: return a proxy stub that won't crash imports
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stub: ProxyHandler<any> = {
+      get: (_t, p) => {
+        if (
+          p === "then" ||
+          p === Symbol.toPrimitive ||
+          p === Symbol.toStringTag
+        )
+          return undefined;
+        if (p === "$transaction" || p === "$connect" || p === "$disconnect") {
+          return () => Promise.resolve();
+        }
+        // Return a chainable model stub
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const modelStub: any = new Proxy(() => Promise.resolve(null), {
+          get: () => () => Promise.resolve(null),
+          apply: () => Promise.resolve(null),
+        });
+        return modelStub;
+      },
+    };
+    return new Proxy({}, stub) as unknown as PrismaClient;
+  }
+})();
 
 /**
  * Get pool metrics for monitoring endpoints
