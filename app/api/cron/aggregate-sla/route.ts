@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron Job: Aggregate SLA Metrics
  * Sprint: Production Finalization

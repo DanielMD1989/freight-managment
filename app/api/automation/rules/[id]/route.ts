@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 7: Automation Rule Details & Management
  * Get, update, delete specific automation rules

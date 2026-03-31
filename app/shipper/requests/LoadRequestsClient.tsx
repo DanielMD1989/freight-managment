@@ -293,7 +293,7 @@ export default function LoadRequestsClient({
           </p>
           {statusFilter === "all" && (
             <Link
-              href="/shipper/loads"
+              href="/shipper/loadboard"
               className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 font-medium text-white transition-colors hover:bg-teal-700"
             >
               <svg

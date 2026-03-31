@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron Job: Expire Truck Postings and Requests
  *

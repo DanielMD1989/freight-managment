@@ -35,6 +35,8 @@ import { getAuditLogStats } from "@/lib/auditLog";
  *   documentVerifications: number
  * }
  */
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     // Require admin permission

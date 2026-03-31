@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 5: Exception Analytics
  * Insights and reporting on exception patterns

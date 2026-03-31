@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 7: Automation Rules Management
  * API endpoints for creating and managing automation rules

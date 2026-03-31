@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * User Notification Preferences API
  *

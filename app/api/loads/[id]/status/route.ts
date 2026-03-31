@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 3: Load Lifecycle State Machine
  * API endpoint for updating load status with state machine validation

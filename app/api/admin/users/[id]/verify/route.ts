@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 2: User Verification Workflow
  * API endpoint for admin to verify/approve/reject/suspend user accounts

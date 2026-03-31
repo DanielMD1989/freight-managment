@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron Job: Auto-Settle Loads
  * Sprint 5 - Story 5.4: Settlement Automation

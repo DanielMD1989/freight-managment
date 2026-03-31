@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Cron Job: Expire Old Loads
  * Sprint 2 - Story 2.5: Load Expiration Automation

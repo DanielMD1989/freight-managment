@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Mark All Notifications as Read - Sprint 16 Story 16.10
  * PUT /api/notifications/mark-all-read

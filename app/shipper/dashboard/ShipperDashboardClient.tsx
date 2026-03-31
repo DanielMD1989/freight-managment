@@ -330,7 +330,7 @@ export default function ShipperDashboardClient({
             <DashboardSection
               title="Recent Activity"
               subtitle="Latest updates"
-              action={{ label: "View All", href: "/shipper/loads" }}
+              action={{ label: "View All", href: "/shipper/loadboard" }}
               noPadding
             >
               <div
@@ -392,7 +392,7 @@ export default function ShipperDashboardClient({
             <DashboardSection
               title="My Posted Loads"
               subtitle="Your active load postings"
-              action={{ label: "View All", href: "/shipper/loads" }}
+              action={{ label: "View All", href: "/shipper/loadboard" }}
               noPadding
             >
               {postedLoads.length > 0 ? (

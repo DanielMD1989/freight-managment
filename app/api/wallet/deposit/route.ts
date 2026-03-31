@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Self-Service Wallet Deposit API (§8 M1)
  *

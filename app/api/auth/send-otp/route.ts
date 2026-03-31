@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Send OTP API (G-A1-1)
  *

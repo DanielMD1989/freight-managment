@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Proof of Delivery (POD) Upload API
  *

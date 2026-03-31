@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { clearSession, getSession, revokeAllSessions } from "@/lib/auth";
 import { clearCSRFToken } from "@/lib/csrf";

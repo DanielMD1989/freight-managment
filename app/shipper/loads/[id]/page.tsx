@@ -98,8 +98,11 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
           <p className="mb-4 text-red-700">
             The load you are looking for does not exist or has been deleted.
           </p>
-          <Link href="/shipper/loads" className="text-blue-600 hover:underline">
-            ← Back to My Loads
+          <Link
+            href="/shipper/loadboard"
+            className="text-blue-600 hover:underline"
+          >
+            ← Back to Loadboard
           </Link>
         </div>
       </div>
@@ -172,10 +175,10 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
       {/* Header */}
       <div className="mb-6">
         <Link
-          href="/shipper/loads"
+          href="/shipper/loadboard"
           className="text-sm text-blue-600 hover:underline"
         >
-          ← Back to My Loads
+          ← Back to Loadboard
         </Link>
       </div>
 

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Truck Posting Matching Loads API
  *

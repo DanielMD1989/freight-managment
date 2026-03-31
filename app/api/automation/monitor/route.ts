@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 7: Automation Rules Monitoring & Scheduled Execution
  * System endpoint for running scheduled automation rules

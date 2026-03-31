@@ -1272,18 +1272,29 @@ export default function PostLoadsTab({
                               </button>
                             </>
                           )}
-                          <button
-                            onClick={() => handleDuplicateLoad(load)}
-                            className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
-                          >
-                            Copy
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLoad(load)}
-                            className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-                          >
-                            Delete
-                          </button>
+                          {/* Copy/Delete only for non-active loads (DRAFT/POSTED/UNPOSTED/EXPIRED/CANCELLED/COMPLETED) */}
+                          {![
+                            "ASSIGNED",
+                            "PICKUP_PENDING",
+                            "IN_TRANSIT",
+                            "DELIVERED",
+                            "EXCEPTION",
+                          ].includes(load.status) && (
+                            <>
+                              <button
+                                onClick={() => handleDuplicateLoad(load)}
+                                className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                              >
+                                Copy
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLoad(load)}
+                                className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
                         </div>
 
                         {/* Expand Arrow */}

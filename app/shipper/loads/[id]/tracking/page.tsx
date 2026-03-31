@@ -64,8 +64,11 @@ export default async function ShipperTrackingPage({
           <h1 className="mb-2 text-2xl font-bold text-red-900">
             Load Not Found
           </h1>
-          <Link href="/shipper/loads" className="text-blue-600 hover:underline">
-            ← Back to My Loads
+          <Link
+            href="/shipper/loadboard"
+            className="text-blue-600 hover:underline"
+          >
+            ← Back to Loadboard
           </Link>
         </div>
       </div>

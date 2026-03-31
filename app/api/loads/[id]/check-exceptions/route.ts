@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 5: Exception Detection API
  * Manually trigger exception detection for a specific load

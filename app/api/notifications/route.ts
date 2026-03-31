@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Notifications API - Sprint 16 Story 16.10
  * GET /api/notifications - Get user notifications with unread count

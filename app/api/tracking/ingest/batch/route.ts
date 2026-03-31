@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Mobile GPS Batch Ingest API (§11 M1)
  *

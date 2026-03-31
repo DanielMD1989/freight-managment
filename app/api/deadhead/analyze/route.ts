@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 6: Deadhead Analysis
  * Analyze deadhead metrics for loads and provide optimization insights

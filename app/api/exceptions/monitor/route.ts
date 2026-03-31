@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 5: Exception Monitoring System
  * Run exception detection across all active loads

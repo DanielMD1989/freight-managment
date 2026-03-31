@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Admin Expiring Insurance Documents (P1)
  *

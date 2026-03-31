@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 6: DH-D Optimized Load Chaining
  * Find next loads from current load's delivery location with minimal deadhead

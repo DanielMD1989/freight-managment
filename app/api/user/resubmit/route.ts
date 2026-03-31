@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * User Registration Resubmit API (G-A1-3)
  *

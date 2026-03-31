@@ -218,7 +218,7 @@ export default function ShipperTripsClient({
             No completed trips yet. Trips will appear here after delivery.
           </p>
           <Link
-            href="/shipper/loads"
+            href="/shipper/loadboard"
             className="mt-4 inline-block rounded-lg px-4 py-2 text-white transition-colors"
             style={{ background: "var(--secondary-600)" }}
           >

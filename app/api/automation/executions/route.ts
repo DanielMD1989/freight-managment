@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 7: Automation Rule Execution History
  * View and analyze automation rule executions

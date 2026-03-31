@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Admin Organization Reject API (G-A1-2)
  *

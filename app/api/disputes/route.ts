@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Disputes API
  * Sprint 6 - Story 6.4: Dispute Management

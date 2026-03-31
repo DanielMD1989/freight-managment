@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 4: Dispatcher Audit Logging
  * API endpoint for dispatcher-specific audit logs

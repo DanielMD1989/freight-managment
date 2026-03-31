@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Map Vehicles API
  *

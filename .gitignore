@@ -64,3 +64,6 @@ prisma/dev.db
 e2e-screenshots/
 *.test.png
 e2e/.auth/
+freight-project.zip
+part1-auth.zip
+*.zip

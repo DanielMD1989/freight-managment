@@ -41,6 +41,8 @@ import {
  * Returns: { logs: [], total: number, limit: number, offset: number }
  * Or CSV file if format=csv
  */
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     // Require admin permission

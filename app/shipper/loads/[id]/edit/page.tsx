@@ -69,8 +69,11 @@ export default async function EditLoadPage({ params }: PageProps) {
           <p className="mb-4 text-red-700">
             The load you are looking for does not exist or has been deleted.
           </p>
-          <Link href="/shipper/loads" className="text-blue-600 hover:underline">
-            ← Back to My Loads
+          <Link
+            href="/shipper/loadboard"
+            className="text-blue-600 hover:underline"
+          >
+            ← Back to Loadboard
           </Link>
         </div>
       </div>

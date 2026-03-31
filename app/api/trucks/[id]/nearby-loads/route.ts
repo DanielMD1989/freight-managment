@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 6: DH-O Optimized Load Search
  * Find loads near truck's current location with minimal deadhead

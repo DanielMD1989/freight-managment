@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { getAdminDashboardMetrics } from "@/lib/admin/metrics";

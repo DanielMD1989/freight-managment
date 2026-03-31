@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 4: Dispatcher Escalation System
  * API endpoints for managing escalations across all loads

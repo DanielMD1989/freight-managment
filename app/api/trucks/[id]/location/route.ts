@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 6: Truck Location Management
  * Update and retrieve truck current location for DH-O calculations

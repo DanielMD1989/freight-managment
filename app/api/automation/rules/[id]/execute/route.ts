@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Sprint 7: Manual Rule Execution
  * Manually trigger an automation rule for testing or immediate action

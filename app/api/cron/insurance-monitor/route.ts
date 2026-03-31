@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Insurance Monitoring Cron Job (P1)
  *

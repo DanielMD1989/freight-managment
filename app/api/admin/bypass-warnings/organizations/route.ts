@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * Flagged Organizations API
  *
