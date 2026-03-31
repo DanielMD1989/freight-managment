@@ -1215,20 +1215,22 @@ export default function RoleAwareSidebar({
 
   return (
     <>
-      {/* Mobile hamburger button */}
-      <button
-        type="button"
-        className="fixed top-4 left-4 z-50 rounded-lg p-2 lg:hidden"
-        style={{
-          background: "var(--sidebar-bg)",
-          color: "var(--sidebar-text)",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-        }}
-        onClick={() => setIsMobileMenuOpen(true)}
-        aria-label="Open menu"
-      >
-        <MenuIcon />
-      </button>
+      {/* Mobile hamburger button — hidden when menu is open to prevent overlap with close button */}
+      {!isMobileMenuOpen && (
+        <button
+          type="button"
+          className="fixed top-4 left-4 z-50 rounded-lg p-2 lg:hidden"
+          style={{
+            background: "var(--sidebar-bg)",
+            color: "var(--sidebar-text)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+          }}
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="Open menu"
+        >
+          <MenuIcon />
+        </button>
+      )}
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
@@ -1252,18 +1254,20 @@ export default function RoleAwareSidebar({
         }}
       >
         <div className="relative">
-          <button
-            type="button"
-            className="absolute top-4 right-[-44px] z-50 rounded-lg p-2"
-            style={{
-              background: "var(--sidebar-bg)",
-              color: "var(--sidebar-text)",
-            }}
-            onClick={() => setIsMobileMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <CloseIcon />
-          </button>
+          {isMobileMenuOpen && (
+            <button
+              type="button"
+              className="absolute top-4 right-[-44px] z-50 rounded-lg p-2"
+              style={{
+                background: "var(--sidebar-bg)",
+                color: "var(--sidebar-text)",
+              }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <CloseIcon />
+            </button>
+          )}
           {sidebarContent}
         </div>
       </div>

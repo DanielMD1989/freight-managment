@@ -150,18 +150,18 @@ export function addSecurityHeaders(
   const cspNonce = nonce || generateCSPNonce();
 
   // Build Content Security Policy
-  // Note: 'strict-dynamic' allows scripts loaded by trusted scripts
-  // In production, use nonces for inline scripts
-  const scriptSrc =
-    process.env.NODE_ENV === "production"
-      ? `'self' 'nonce-${cspNonce}' 'strict-dynamic' https://maps.googleapis.com`
-      : `'self' 'nonce-${cspNonce}' https://maps.googleapis.com`; // Dev: no strict-dynamic for easier debugging
+  // Standalone production server (server.js) does not run proxy.ts middleware,
+  // so nonce-based CSP won't work — nonces in headers never match HTML script tags.
+  // Use 'unsafe-inline' for compatibility. When behind a reverse proxy that injects
+  // nonces, switch to strict-dynamic.
+  const useStrictCSP = process.env.CSP_MODE === "strict";
+  const scriptSrc = useStrictCSP
+    ? `'self' 'nonce-${cspNonce}' 'strict-dynamic' https://maps.googleapis.com`
+    : `'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com`;
 
-  // Style-src: Use nonce for inline styles in production
-  const styleSrc =
-    process.env.NODE_ENV === "production"
-      ? `'self' 'nonce-${cspNonce}' https://fonts.googleapis.com`
-      : `'self' 'unsafe-inline' https://fonts.googleapis.com`; // Dev: allow inline for hot reload
+  const styleSrc = useStrictCSP
+    ? `'self' 'nonce-${cspNonce}' https://fonts.googleapis.com`
+    : `'self' 'unsafe-inline' https://fonts.googleapis.com`;
 
   response.headers.set(
     "Content-Security-Policy",
@@ -175,7 +175,10 @@ export function addSecurityHeaders(
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "upgrade-insecure-requests",
+      // Only enforce HTTPS upgrade when HTTPS is actually configured
+      ...(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://")
+        ? ["upgrade-insecure-requests"]
+        : []),
     ].join("; ")
   );
 
@@ -200,8 +203,11 @@ export function addSecurityHeaders(
     "camera=(), microphone=(), geolocation=(self), payment=(), usb=()"
   );
 
-  // Strict Transport Security (HSTS) - Force HTTPS
-  if (process.env.NODE_ENV === "production") {
+  // Strict Transport Security (HSTS) - Force HTTPS only when HTTPS is configured
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://")
+  ) {
     response.headers.set(
       "Strict-Transport-Security",
       "max-age=31536000; includeSubDomains; preload"

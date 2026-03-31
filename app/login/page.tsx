@@ -58,7 +58,18 @@ function LoginForm() {
       }
 
       toast.success("Login successful! Redirecting...");
-      router.push(redirect);
+      // Role-based redirect: send user to their dashboard
+      const role = data.user?.role;
+      const roleRedirects: Record<string, string> = {
+        SHIPPER: "/shipper",
+        CARRIER: "/carrier",
+        DISPATCHER: "/dispatcher",
+        ADMIN: "/admin",
+        SUPER_ADMIN: "/admin",
+      };
+      const destination =
+        redirect !== "/" ? redirect : roleRedirects[role] || "/";
+      router.push(destination);
       router.refresh();
     } catch (err) {
       const errorMessage =
@@ -106,7 +117,17 @@ function LoginForm() {
         toast.success("Login successful! Redirecting...");
       }
 
-      router.push(redirect);
+      const role = data.user?.role;
+      const roleRedirects: Record<string, string> = {
+        SHIPPER: "/shipper",
+        CARRIER: "/carrier",
+        DISPATCHER: "/dispatcher",
+        ADMIN: "/admin",
+        SUPER_ADMIN: "/admin",
+      };
+      const destination =
+        redirect !== "/" ? redirect : roleRedirects[role] || "/";
+      router.push(destination);
       router.refresh();
     } catch (err) {
       const errorMessage =
