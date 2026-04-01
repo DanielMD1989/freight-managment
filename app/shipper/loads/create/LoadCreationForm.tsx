@@ -131,7 +131,25 @@ export default function LoadCreationForm() {
         return false;
       }
     } else if (step === 3) {
-      // No rate validation needed - price negotiation happens outside platform
+      // Contact validation (required unless anonymous)
+      if (!formData.isAnonymous) {
+        if (
+          !formData.shipperContactName ||
+          formData.shipperContactName.length < 2
+        ) {
+          setError("Contact name is required (min 2 characters)");
+          return false;
+        }
+        if (!formData.shipperContactPhone) {
+          setError("Contact phone is required");
+          return false;
+        }
+        const phoneRegex = /^(\+251|0)\d{9,}$/;
+        if (!phoneRegex.test(formData.shipperContactPhone)) {
+          setError("Enter valid Ethiopian phone: +251... or 09...");
+          return false;
+        }
+      }
     }
     return true;
   };
@@ -794,7 +812,7 @@ export default function LoadCreationForm() {
                     className="mb-1 block text-[10px] font-semibold tracking-wide uppercase"
                     style={{ color: "var(--foreground-muted)" }}
                   >
-                    Contact Name
+                    Contact Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -812,7 +830,7 @@ export default function LoadCreationForm() {
                     className="mb-1 block text-[10px] font-semibold tracking-wide uppercase"
                     style={{ color: "var(--foreground-muted)" }}
                   >
-                    Contact Phone
+                    Contact Phone <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -820,7 +838,7 @@ export default function LoadCreationForm() {
                     onChange={(e) =>
                       updateField("shipperContactPhone", e.target.value)
                     }
-                    placeholder="+251..."
+                    placeholder="+251... or 09..."
                     className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     style={inputStyle}
                   />

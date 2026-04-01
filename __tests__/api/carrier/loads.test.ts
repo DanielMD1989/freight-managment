@@ -1025,6 +1025,8 @@ describe("Carrier Load Marketplace", () => {
       truckType: "DRY_VAN",
       weight: 5000,
       cargoDescription: "Test cargo for creation",
+      shipperContactName: "Test Shipper",
+      shipperContactPhone: "+251911000000",
       status: "POSTED",
       tripKm: 275,
     };

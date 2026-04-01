@@ -57,6 +57,7 @@ interface Props {
   onClose: () => void;
   truckPosting: TruckPosting | null;
   onRequestSent?: (truckId: string) => void;
+  preSelectedLoadId?: string; // Pre-select when booking from specific load context
 }
 
 export default function TruckBookingModal({
@@ -64,6 +65,7 @@ export default function TruckBookingModal({
   onClose,
   truckPosting,
   onRequestSent,
+  preSelectedLoadId,
 }: Props) {
   const [loads, setLoads] = useState<Load[]>([]);
   const [selectedLoadId, setSelectedLoadId] = useState<string>("");
@@ -75,24 +77,32 @@ export default function TruckBookingModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Fetch shipper's posted loads
+  // Fetch shipper's posted loads (filtered by truck origin city when available)
   useEffect(() => {
     if (isOpen) {
       fetchLoads();
       setError(null);
       setSuccess(false);
-      setSelectedLoadId("");
+      setSelectedLoadId(preSelectedLoadId || "");
       setNotes("");
     }
-  }, [isOpen]);
+  }, [isOpen, preSelectedLoadId]);
 
   const fetchLoads = async () => {
     setLoadingLoads(true);
     try {
-      // Include myLoads=true to only fetch loads belonging to the current user's organization
-      const response = await fetch(
-        "/api/loads?status=POSTED,SEARCHING,OFFERED&myLoads=true&limit=100"
-      );
+      // Filter loads by truck's origin city to reduce mismatches
+      const params = new URLSearchParams({
+        status: "POSTED,SEARCHING,OFFERED",
+        myLoads: "true",
+        limit: "100",
+      });
+      // Add city filter from truck posting's origin to reduce mismatches
+      const originCity = truckPosting?.originCity?.name;
+      if (originCity) {
+        params.append("pickupCity", originCity);
+      }
+      const response = await fetch(`/api/loads?${params.toString()}`);
       // H34 FIX: Handle non-ok response with error state
       if (!response.ok) {
         console.error("Failed to fetch loads:", response.status);

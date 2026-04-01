@@ -75,8 +75,20 @@ const createLoadSchema = z
 
     // Privacy & Safety
     isAnonymous: z.boolean().default(false),
-    shipperContactName: z.string().max(100).optional(), // [NEW]
-    shipperContactPhone: z.string().max(20).optional(), // [NEW]
+    shipperContactName: z
+      .string()
+      .min(2, "Contact name required (min 2 chars)")
+      .max(100)
+      .optional(),
+    shipperContactPhone: z
+      .string()
+      .min(10, "Phone must be at least 10 digits")
+      .max(20)
+      .regex(
+        /^(\+251|0)\d{9,}$/,
+        "Enter valid Ethiopian phone: +251... or 09..."
+      )
+      .optional(),
     safetyNotes: z.string().max(1000).optional(),
     specialInstructions: z.string().max(2000).optional(),
 
@@ -104,6 +116,21 @@ const createLoadSchema = z
     {
       message: "Pickup date cannot be in the past",
       path: ["pickupDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Contact info required when POSTING to marketplace (not DRAFT) and not anonymous
+      // DRAFT loads are incomplete by design — contact added before posting
+      if (data.status === "POSTED" && !data.isAnonymous) {
+        return !!data.shipperContactName && !!data.shipperContactPhone;
+      }
+      return true;
+    },
+    {
+      message:
+        "Contact name and phone are required when posting to marketplace (unless anonymous)",
+      path: ["shipperContactName"],
     }
   );
 

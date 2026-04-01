@@ -765,6 +765,8 @@ describe("E2E Business Workflow (User Stories)", () => {
           truckType: "DRY_VAN",
           weight: 6000,
           cargoDescription: "Agricultural products for Jimma distribution",
+          shipperContactName: "Test Shipper",
+          shipperContactPhone: "+251911000000",
           status: "POSTED",
         },
       });

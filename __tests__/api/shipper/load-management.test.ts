@@ -171,6 +171,8 @@ const baseLoadPayload = {
   truckType: "DRY_VAN",
   weight: 5000,
   cargoDescription: "Test cargo shipment",
+  shipperContactName: "Test Shipper",
+  shipperContactPhone: "+251911000000",
   status: "DRAFT",
 };
 
