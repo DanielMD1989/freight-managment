@@ -144,22 +144,26 @@ export async function GET(
     }));
 
     // FIX: Remove any - type inferred from findMatchingTrucks return type
-    const matchedTrucks = findMatchingTrucks(
+    const allMatches = findMatchingTrucks(
       loadCriteria,
       trucksCriteria,
       minScore
-    )
-      .slice(0, limit)
-      .map((truck) => ({
-        ...truck,
-        // Include full truck object
-        ...trucks.find((t) => t.id === truck.id),
-      }));
+    );
+
+    const totalMatches = allMatches.length;
+    const totalExact = allMatches.filter((t) => t.isExactMatch).length;
+
+    // Paginate AFTER counting totals
+    const matchedTrucks = allMatches.slice(0, limit).map((truck) => ({
+      ...truck,
+      // Include full truck object
+      ...trucks.find((t) => t.id === truck.id),
+    }));
 
     return NextResponse.json({
       trucks: matchedTrucks,
-      total: matchedTrucks.length,
-      exactMatches: matchedTrucks.filter((t) => t.isExactMatch).length,
+      total: totalMatches,
+      exactMatches: totalExact,
     });
   } catch (error: unknown) {
     return handleApiError(error, "Matching trucks error");
