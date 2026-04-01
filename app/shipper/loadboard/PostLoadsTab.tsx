@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { StatusTabs } from "@/components/loadboard-ui";
 import { StatusTab } from "@/types/loadboard-ui";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
@@ -88,6 +89,7 @@ const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
 export default function PostLoadsTab({
   onSwitchToSearchTrucks,
 }: PostLoadsTabProps) {
+  const router = useRouter();
   // L4-L8: Using interface types where safe, Record for flexible objects
   const [loads, setLoads] = useState<Array<Load & { matchCount?: number }>>([]);
   const [loading, setLoading] = useState(true);
@@ -832,7 +834,7 @@ export default function PostLoadsTab({
           {/* Header Row */}
           <div className="flex items-center justify-between">
             <button
-              onClick={() => setShowNewLoadForm(!showNewLoadForm)}
+              onClick={() => router.push("/shipper/loads/create")}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
             >
               <svg
@@ -858,8 +860,8 @@ export default function PostLoadsTab({
             />
           </div>
 
-          {/* New Load Posting Form */}
-          {showNewLoadForm && (
+          {/* Inline form removed — single creation flow via /shipper/loads/create */}
+          {false && (
             <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4">
                 <div className="flex items-center gap-3">
