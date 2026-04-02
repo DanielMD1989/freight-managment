@@ -16,46 +16,11 @@ import { getCSRFToken } from "@/lib/csrfFetch";
 import PlacesAutocomplete, {
   PlaceResult,
 } from "@/components/PlacesAutocomplete";
-import { TruckDocumentType } from "@prisma/client";
-
 import { TRUCK_TYPES } from "@/lib/constants/truckTypes";
-
-const TRUCK_DOCUMENT_TYPES: {
-  value: TruckDocumentType;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "TITLE_DEED",
-    label: "Title Deed",
-    description: "Proof of truck ownership",
-  },
-  {
-    value: "REGISTRATION",
-    label: "Vehicle Registration",
-    description: "Official vehicle registration document",
-  },
-  {
-    value: "INSURANCE",
-    label: "Insurance Certificate",
-    description: "Valid insurance coverage document",
-  },
-  {
-    value: "ROAD_WORTHINESS",
-    label: "Road Worthiness",
-    description: "Road worthiness certification",
-  },
-  {
-    value: "DRIVER_LICENSE",
-    label: "Driver License",
-    description: "Driver's license for this truck",
-  },
-  {
-    value: "OTHER",
-    label: "Other Document",
-    description: "Any other relevant document",
-  },
-];
+import {
+  TRUCK_DOCUMENT_REQUIREMENTS,
+  REQUIRED_TRUCK_DOCUMENTS,
+} from "@/lib/constants/truckDocuments";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -90,15 +55,15 @@ interface InsuranceFields {
   coverageType: string;
 }
 
-interface QueuedDocument {
-  file: File;
-  type: TruckDocumentType;
+interface DocumentSlot {
+  file: File | null;
+  expiresAt: string;
   insuranceFields?: InsuranceFields;
 }
 
 export default function AddTruckForm() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const [formData, setFormData] = useState({
     truckType: "FLATBED",
@@ -110,7 +75,7 @@ export default function AddTruckForm() {
     currentLat: undefined as number | undefined,
     currentLng: undefined as number | undefined,
     isAvailable: true,
-    gpsDeviceId: "",
+    imei: "",
     // G-M9-1: Sprint 8 fields
     lengthM: "",
     ownerName: "",
@@ -121,19 +86,11 @@ export default function AddTruckForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Document upload state
-  const [queuedDocuments, setQueuedDocuments] = useState<QueuedDocument[]>([]);
-  const [selectedDocType, setSelectedDocType] =
-    useState<TruckDocumentType>("REGISTRATION");
+  // Document upload state — one slot per document type
+  const [documentSlots, setDocumentSlots] = useState<
+    Record<string, DocumentSlot>
+  >({});
   const [uploadingDocs, setUploadingDocs] = useState(false);
-
-  // Insurance fields (shown when document type is INSURANCE)
-  const [insuranceFields, setInsuranceFields] = useState<InsuranceFields>({
-    policyNumber: "",
-    insuranceProvider: "",
-    coverageAmount: "",
-    coverageType: "",
-  });
 
   /**
    * Handle input change
@@ -176,113 +133,128 @@ export default function AddTruckForm() {
   /**
    * Handle document file selection
    */
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /**
+   * Handle file selection for a specific document type slot
+   */
+  const handleFileSelectForSlot = (
+    docType: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error("Invalid file type. Please upload PDF, JPG, or PNG files.");
       return;
     }
-
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       toast.error("File too large. Maximum size is 10MB.");
       return;
     }
 
-    // Add to queue (include insurance fields if INSURANCE type)
-    const doc: QueuedDocument = { file, type: selectedDocType };
-    if (selectedDocType === "INSURANCE") {
-      doc.insuranceFields = { ...insuranceFields };
-    }
-    setQueuedDocuments((prev) => [...prev, doc]);
-    toast.success(`${file.name} added to upload queue`);
+    setDocumentSlots((prev) => ({
+      ...prev,
+      [docType]: {
+        ...prev[docType],
+        file,
+        expiresAt: prev[docType]?.expiresAt || "",
+      },
+    }));
+    toast.success(`${file.name} selected`);
+  };
 
-    // Reset insurance fields after queueing
-    if (selectedDocType === "INSURANCE") {
-      setInsuranceFields({
+  /**
+   * Update a document slot field (expiresAt or insurance fields)
+   */
+  const updateSlotField = (docType: string, field: string, value: string) => {
+    setDocumentSlots((prev) => {
+      const slot = prev[docType] || { file: null, expiresAt: "" };
+      if (field === "expiresAt") {
+        return { ...prev, [docType]: { ...slot, expiresAt: value } };
+      }
+      // Insurance fields
+      const ins = slot.insuranceFields || {
         policyNumber: "",
         insuranceProvider: "",
         coverageAmount: "",
         coverageType: "",
-      });
-    }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+      };
+      return {
+        ...prev,
+        [docType]: {
+          ...slot,
+          insuranceFields: { ...ins, [field]: value },
+        },
+      };
+    });
   };
 
   /**
-   * Remove document from queue
+   * Remove file from a document slot
    */
-  const removeQueuedDocument = (index: number) => {
-    setQueuedDocuments((prev) => prev.filter((_, i) => i !== index));
+  const removeSlotFile = (docType: string) => {
+    setDocumentSlots((prev) => {
+      const updated = { ...prev };
+      if (updated[docType]) {
+        updated[docType] = { ...updated[docType], file: null };
+      }
+      return updated;
+    });
+    const ref = fileInputRefs.current[docType];
+    if (ref) ref.value = "";
   };
 
   /**
-   * Upload queued documents after truck creation
+   * Upload all queued documents after truck creation
    */
-  const uploadQueuedDocuments = async (truckId: string): Promise<boolean> => {
-    if (queuedDocuments.length === 0) return true;
+  const uploadDocumentSlots = async (truckId: string): Promise<boolean> => {
+    const slotsWithFiles = Object.entries(documentSlots).filter(
+      ([, slot]) => slot.file
+    );
+    if (slotsWithFiles.length === 0) return true;
 
     setUploadingDocs(true);
     let allSuccessful = true;
 
-    // Get CSRF token for uploads
     const csrfToken = await getCSRFToken();
     if (!csrfToken) {
-      console.error("Failed to get CSRF token for document upload");
-      toast.error(
-        "Security token expired. Please refresh the page and try again."
-      );
+      toast.error("Security token expired. Please refresh and try again.");
       setUploadingDocs(false);
       return false;
     }
 
-    for (const doc of queuedDocuments) {
+    for (const [docType, slot] of slotsWithFiles) {
+      if (!slot.file) continue;
       try {
-        const formData = new FormData();
-        formData.append("file", doc.file);
-        formData.append("type", doc.type);
-        formData.append("entityType", "truck");
-        formData.append("entityId", truckId);
+        const fd = new FormData();
+        fd.append("file", slot.file);
+        fd.append("type", docType);
+        fd.append("entityType", "truck");
+        fd.append("entityId", truckId);
+        if (slot.expiresAt) fd.append("expiresAt", slot.expiresAt);
 
-        // Append insurance fields if present
-        if (doc.insuranceFields) {
-          if (doc.insuranceFields.policyNumber)
-            formData.append("policyNumber", doc.insuranceFields.policyNumber);
-          if (doc.insuranceFields.insuranceProvider)
-            formData.append(
-              "insuranceProvider",
-              doc.insuranceFields.insuranceProvider
-            );
-          if (doc.insuranceFields.coverageAmount)
-            formData.append(
-              "coverageAmount",
-              doc.insuranceFields.coverageAmount
-            );
-          if (doc.insuranceFields.coverageType)
-            formData.append("coverageType", doc.insuranceFields.coverageType);
+        if (slot.insuranceFields) {
+          const ins = slot.insuranceFields;
+          if (ins.policyNumber) fd.append("policyNumber", ins.policyNumber);
+          if (ins.insuranceProvider)
+            fd.append("insuranceProvider", ins.insuranceProvider);
+          if (ins.coverageAmount)
+            fd.append("coverageAmount", ins.coverageAmount);
+          if (ins.coverageType) fd.append("coverageType", ins.coverageType);
         }
 
         const response = await fetch("/api/documents/upload", {
           method: "POST",
-          headers: {
-            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-          },
-          body: formData,
+          headers: { ...(csrfToken && { "X-CSRF-Token": csrfToken }) },
+          body: fd,
         });
 
         if (!response.ok) {
-          console.error(`Failed to upload ${doc.file.name}`);
+          console.error(`Failed to upload ${slot.file.name}`);
           allSuccessful = false;
         }
-      } catch (error) {
-        console.error(`Error uploading ${doc.file.name}:`, error);
+      } catch (err) {
+        console.error(`Error uploading ${docType}:`, err);
         allSuccessful = false;
       }
     }
@@ -314,6 +286,12 @@ export default function AddTruckForm() {
     return true;
   };
 
+  // Count uploaded required documents
+  const uploadedRequiredCount = REQUIRED_TRUCK_DOCUMENTS.filter(
+    (type) => documentSlots[type]?.file
+  ).length;
+  const totalRequiredCount = REQUIRED_TRUCK_DOCUMENTS.length;
+
   /**
    * Handle form submission
    */
@@ -322,6 +300,24 @@ export default function AddTruckForm() {
 
     if (!validateForm()) {
       return;
+    }
+
+    // Warn if required documents are missing (don't block — carrier can upload later)
+    if (uploadedRequiredCount < totalRequiredCount) {
+      const missing = REQUIRED_TRUCK_DOCUMENTS.filter(
+        (type) => !documentSlots[type]?.file
+      );
+      const missingLabels = missing.map(
+        (type) =>
+          TRUCK_DOCUMENT_REQUIREMENTS.find((d) => d.type === type)?.label ||
+          type
+      );
+      const proceed = window.confirm(
+        `Missing required documents: ${missingLabels.join(", ")}.\n\n` +
+          `Your truck will stay in PENDING status until all required documents are uploaded and approved.\n\n` +
+          `Continue anyway?`
+      );
+      if (!proceed) return;
     }
 
     setIsSubmitting(true);
@@ -344,7 +340,7 @@ export default function AddTruckForm() {
         currentCity: formData.currentCity || undefined,
         currentRegion: formData.currentRegion || undefined,
         isAvailable: formData.isAvailable,
-        gpsDeviceId: formData.gpsDeviceId || undefined,
+        imei: formData.imei || undefined,
         // G-M9-1: Sprint 8 fields
         lengthM: formData.lengthM ? parseFloat(formData.lengthM) : undefined,
         ownerName: formData.ownerName || undefined,
@@ -366,13 +362,16 @@ export default function AddTruckForm() {
         const responseData = await response.json();
         const createdTruck = responseData.truck;
 
-        // Upload queued documents if any
-        if (queuedDocuments.length > 0) {
+        // Upload document slots
+        const slotsWithFiles = Object.values(documentSlots).filter(
+          (s) => s.file
+        );
+        if (slotsWithFiles.length > 0) {
           toast("Uploading documents...");
-          const docsUploaded = await uploadQueuedDocuments(createdTruck.id);
+          const docsUploaded = await uploadDocumentSlots(createdTruck.id);
           if (!docsUploaded) {
             toast(
-              "Truck created but some documents failed to upload. You can upload them later."
+              "Truck created but some documents failed to upload. You can upload them from the truck detail page."
             );
           } else {
             toast.success("Documents uploaded successfully!");
@@ -626,20 +625,27 @@ export default function AddTruckForm() {
             </div>
           </div>
           <div>
-            <label className={labelClass}>GPS Device ID</label>
+            <label className={labelClass}>
+              GPS IMEI{" "}
+              <span className="font-normal text-[#064d51]/50 normal-case">
+                (optional — required before posting)
+              </span>
+            </label>
             <input
               type="text"
-              name="gpsDeviceId"
-              value={formData.gpsDeviceId}
+              name="imei"
+              value={formData.imei || ""}
               onChange={handleChange}
-              placeholder="GPS123456 (optional)"
+              placeholder="15-digit IMEI number"
+              maxLength={15}
+              pattern="\d{15}"
               className={inputClass}
             />
           </div>
         </div>
       </div>
 
-      {/* Documents Section */}
+      {/* Documents Section — Checklist */}
       <div className="overflow-hidden rounded-lg border border-[#064d51]/20 bg-white dark:border-slate-700 dark:bg-slate-900">
         <div className="border-b border-[#064d51]/10 bg-[#f0fdfa] px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-[#064d51] dark:text-gray-200">
@@ -657,166 +663,176 @@ export default function AddTruckForm() {
               />
             </svg>
             Documents
-            <span className="text-xs font-normal text-[#064d51]/50">
-              (optional)
-            </span>
           </h3>
+          <p className="mt-0.5 text-xs text-[#064d51]/60 dark:text-gray-400">
+            Upload all required documents for truck approval
+            <span className="ml-2 font-medium text-[#1e9c99]">
+              {uploadedRequiredCount}/{totalRequiredCount} required
+            </span>
+          </p>
         </div>
-        <div className="space-y-3 p-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Document Type</label>
-              <select
-                value={selectedDocType}
-                onChange={(e) =>
-                  setSelectedDocType(e.target.value as TruckDocumentType)
-                }
-                className={selectClass}
-              >
-                {TRUCK_DOCUMENT_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>File</label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileSelect}
-                className="h-9 w-full cursor-pointer text-sm text-[#064d51]/70 file:mr-2 file:h-9 file:rounded file:border-0 file:bg-[#064d51] file:px-3 file:text-xs file:font-medium file:text-white hover:file:bg-[#053d40]"
-              />
-            </div>
-          </div>
-          {/* Insurance fields (shown when INSURANCE is selected) */}
-          {selectedDocType === "INSURANCE" && (
-            <div className="grid grid-cols-2 gap-3 rounded border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
-              <div className="col-span-2">
-                <p className="mb-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-                  Insurance Details (optional)
-                </p>
-              </div>
-              <div>
-                <label className={labelClass}>Policy Number</label>
-                <input
-                  type="text"
-                  value={insuranceFields.policyNumber}
-                  onChange={(e) =>
-                    setInsuranceFields((prev) => ({
-                      ...prev,
-                      policyNumber: e.target.value,
-                    }))
-                  }
-                  placeholder="POL-12345"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Provider</label>
-                <input
-                  type="text"
-                  value={insuranceFields.insuranceProvider}
-                  onChange={(e) =>
-                    setInsuranceFields((prev) => ({
-                      ...prev,
-                      insuranceProvider: e.target.value,
-                    }))
-                  }
-                  placeholder="Insurance Co."
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Coverage (ETB)</label>
-                <input
-                  type="number"
-                  value={insuranceFields.coverageAmount}
-                  onChange={(e) =>
-                    setInsuranceFields((prev) => ({
-                      ...prev,
-                      coverageAmount: e.target.value,
-                    }))
-                  }
-                  placeholder="500000"
-                  min="0"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Coverage Type</label>
-                <select
-                  value={insuranceFields.coverageType}
-                  onChange={(e) =>
-                    setInsuranceFields((prev) => ({
-                      ...prev,
-                      coverageType: e.target.value,
-                    }))
-                  }
-                  className={selectClass}
-                >
-                  <option value="">Select...</option>
-                  <option value="CARGO">Cargo</option>
-                  <option value="LIABILITY">Liability</option>
-                  <option value="COMPREHENSIVE">Comprehensive</option>
-                  <option value="THIRD_PARTY">Third Party</option>
-                </select>
-              </div>
-            </div>
-          )}
-          {queuedDocuments.length > 0 && (
-            <div className="space-y-1.5">
-              {queuedDocuments.map((doc, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded bg-[#f0fdfa] px-3 py-2 text-sm dark:bg-slate-800"
-                >
+        <div className="divide-y divide-[#064d51]/10 dark:divide-slate-700">
+          {TRUCK_DOCUMENT_REQUIREMENTS.map((docReq) => {
+            const slot = documentSlots[docReq.type];
+            const hasFile = !!slot?.file;
+
+            return (
+              <div key={docReq.type} className="p-4">
+                {/* Document header */}
+                <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <svg
-                      className="h-4 w-4 text-[#1e9c99]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                        hasFile
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-slate-100 text-slate-400"
+                      }`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    <span className="text-[#064d51] dark:text-gray-300">
-                      {doc.file.name}
+                      {hasFile ? "✓" : ""}
                     </span>
-                    <span className="text-xs text-[#064d51]/60">
-                      ({doc.type.replace(/_/g, " ")})
+                    <span className="text-sm font-medium text-[#064d51] dark:text-gray-200">
+                      {docReq.label}
+                    </span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        docReq.required
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                      }`}
+                    >
+                      {docReq.required ? "Required" : "Optional"}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeQueuedDocument(index)}
-                    className="p-1 text-red-500 hover:text-red-700"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  {hasFile && (
+                    <button
+                      type="button"
+                      onClick={() => removeSlotFile(docReq.type)}
+                      className="text-xs text-red-500 hover:text-red-700"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+                      Remove
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="mb-2 text-xs text-[#064d51]/50 dark:text-gray-500">
+                  {docReq.description}
+                </p>
+
+                {/* File input or uploaded indicator */}
+                {hasFile ? (
+                  <div className="flex items-center gap-2 rounded bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                    <span>{slot!.file!.name}</span>
+                    <span className="text-xs text-emerald-500">
+                      ({(slot!.file!.size / 1024).toFixed(0)} KB)
+                    </span>
+                  </div>
+                ) : (
+                  <input
+                    ref={(el) => {
+                      fileInputRefs.current[docReq.type] = el;
+                    }}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleFileSelectForSlot(docReq.type, e)}
+                    className="h-9 w-full cursor-pointer text-sm text-[#064d51]/70 file:mr-2 file:h-9 file:rounded file:border-0 file:bg-[#064d51] file:px-3 file:text-xs file:font-medium file:text-white hover:file:bg-[#053d40]"
+                  />
+                )}
+
+                {/* Expiry date (for document types that have expiry) */}
+                {docReq.hasExpiry && (
+                  <div className="mt-2">
+                    <label className={labelClass}>Expiry Date</label>
+                    <input
+                      type="date"
+                      value={slot?.expiresAt || ""}
+                      onChange={(e) =>
+                        updateSlotField(
+                          docReq.type,
+                          "expiresAt",
+                          e.target.value
+                        )
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+
+                {/* Insurance-specific fields */}
+                {docReq.hasInsuranceFields && (
+                  <div className="mt-2 grid grid-cols-2 gap-2 rounded border border-blue-200 bg-blue-50 p-2.5 dark:border-blue-800 dark:bg-blue-900/20">
+                    <div>
+                      <label className={labelClass}>Policy Number</label>
+                      <input
+                        type="text"
+                        value={slot?.insuranceFields?.policyNumber || ""}
+                        onChange={(e) =>
+                          updateSlotField(
+                            docReq.type,
+                            "policyNumber",
+                            e.target.value
+                          )
+                        }
+                        placeholder="POL-12345"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Provider</label>
+                      <input
+                        type="text"
+                        value={slot?.insuranceFields?.insuranceProvider || ""}
+                        onChange={(e) =>
+                          updateSlotField(
+                            docReq.type,
+                            "insuranceProvider",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Insurance Co."
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Coverage (ETB)</label>
+                      <input
+                        type="number"
+                        value={slot?.insuranceFields?.coverageAmount || ""}
+                        onChange={(e) =>
+                          updateSlotField(
+                            docReq.type,
+                            "coverageAmount",
+                            e.target.value
+                          )
+                        }
+                        placeholder="500000"
+                        min="0"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Coverage Type</label>
+                      <select
+                        value={slot?.insuranceFields?.coverageType || ""}
+                        onChange={(e) =>
+                          updateSlotField(
+                            docReq.type,
+                            "coverageType",
+                            e.target.value
+                          )
+                        }
+                        className={selectClass}
+                      >
+                        <option value="">Select...</option>
+                        <option value="CARGO">Cargo</option>
+                        <option value="LIABILITY">Liability</option>
+                        <option value="COMPREHENSIVE">Comprehensive</option>
+                        <option value="THIRD_PARTY">Third Party</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import { TripStatus, Prisma } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
 import { logger } from "@/lib/logger";
+import { createNotification, NotificationType } from "@/lib/notifications";
 import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText, zodErrorResponse } from "@/lib/validation";
@@ -212,9 +213,30 @@ export async function PATCH(
       }
     }
 
+    // Critical field change guard — editing truckType, capacity, or licensePlate
+    // on an APPROVED truck auto-reverts to PENDING for re-approval
+    const CRITICAL_FIELDS = ["truckType", "capacity", "licensePlate"] as const;
+    const updateData: Record<string, unknown> = { ...validatedData };
+
+    if (truck.approvalStatus === "APPROVED") {
+      const hasCriticalChange = CRITICAL_FIELDS.some(
+        (field) =>
+          updateData[field] !== undefined &&
+          String(updateData[field]) !== String(truck[field])
+      );
+
+      if (hasCriticalChange) {
+        updateData.approvalStatus = "PENDING";
+        updateData.documentsLockedAt = null; // Unlock docs for re-upload
+        logger.warn(
+          `Truck ${id} reverted to PENDING — critical field changed by ${session.userId}`
+        );
+      }
+    }
+
     const updatedTruck = await db.truck.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
       include: {
         carrier: {
           select: {
@@ -226,6 +248,30 @@ export async function PATCH(
         gpsDevice: true,
       },
     });
+
+    // Notify if reverted to PENDING
+    if (
+      truck.approvalStatus === "APPROVED" &&
+      updatedTruck.approvalStatus === "PENDING"
+    ) {
+      // Notify admin
+      const admins = await db.user.findMany({
+        where: { role: "ADMIN", status: "ACTIVE" },
+        select: { id: true },
+        take: 10,
+      });
+      for (const admin of admins) {
+        createNotification({
+          userId: admin.id,
+          type:
+            NotificationType.TRUCK_RESUBMITTED ||
+            ("TRUCK_RESUBMITTED" as string),
+          title: "Truck Modified After Approval",
+          message: `Truck ${updatedTruck.licensePlate} was modified after approval and needs re-review.`,
+          metadata: { truckId: id },
+        }).catch(() => {});
+      }
+    }
 
     // P1-001-B FIX: Invalidate cache after truck update to ensure fresh data
     await CacheInvalidation.truck(

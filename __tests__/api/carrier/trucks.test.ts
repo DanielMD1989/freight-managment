@@ -886,11 +886,11 @@ describe("Carrier Truck Management", () => {
       const res = await callHandler(updateTruck, req, { id: approvedTruck.id });
       expect(res.status).toBe(200);
 
-      // Capacity updated, but approvalStatus must remain APPROVED
+      // Capacity is a critical field — changing it on APPROVED truck reverts to PENDING
       const after = await db.truck.findUnique({
         where: { id: approvedTruck.id },
       });
-      expect(after.approvalStatus).toBe("APPROVED");
+      expect(after.approvalStatus).toBe("PENDING");
       expect(after.capacity).toBe(12000);
     });
 
