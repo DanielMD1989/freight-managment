@@ -49,6 +49,7 @@ class TruckService {
     ownerName?: string;
     contactName?: string;
     contactPhone?: string;
+    imei?: string;
   }): Promise<Truck> {
     try {
       const response = await apiClient.post("/api/trucks", data);

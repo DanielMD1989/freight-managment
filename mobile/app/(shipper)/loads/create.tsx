@@ -58,9 +58,20 @@ const loadSchema = z.object({
   bookMode: z.string().optional(),
   isAnonymous: z.boolean().optional(),
   shipperContactName: z.string().optional(),
-  shipperContactPhone: z.string().optional(),
+  shipperContactPhone: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || /^(\+251|0)\d{9,}$/.test(v),
+      "Enter valid Ethiopian phone (+251... or 09...)"
+    ),
   specialInstructions: z.string().optional(),
   status: z.string().optional(),
+  // Insurance (optional)
+  isInsured: z.boolean().optional(),
+  insuranceProvider: z.string().optional(),
+  insurancePolicyNumber: z.string().optional(),
+  insuranceCoverageAmount: z.string().optional(),
 });
 
 type LoadForm = z.infer<typeof loadSchema>;
@@ -102,6 +113,10 @@ export default function CreateLoadScreen() {
       shipperContactPhone: "",
       specialInstructions: "",
       status: "POSTED",
+      isInsured: false,
+      insuranceProvider: "",
+      insurancePolicyNumber: "",
+      insuranceCoverageAmount: "",
     },
   });
 
@@ -154,6 +169,12 @@ export default function CreateLoadScreen() {
         deliveryAddress: data.deliveryAddress || undefined,
         specialInstructions: data.specialInstructions || undefined,
         status: data.status || "POSTED",
+        isInsured: data.isInsured ?? false,
+        insuranceProvider: data.insuranceProvider || undefined,
+        insurancePolicyNumber: data.insurancePolicyNumber || undefined,
+        insuranceCoverageAmount: data.insuranceCoverageAmount
+          ? parseFloat(data.insuranceCoverageAmount)
+          : undefined,
       },
       {
         onSuccess: () => {
@@ -546,6 +567,60 @@ export default function CreateLoadScreen() {
                 />
               )}
             />
+            {/* Insurance */}
+            <Controller
+              control={control}
+              name="isInsured"
+              render={({ field: { onChange, value } }) => (
+                <SwitchRow
+                  label="Load is insured"
+                  value={value ?? false}
+                  onValueChange={onChange}
+                />
+              )}
+            />
+            {formValues.isInsured && (
+              <>
+                <Controller
+                  control={control}
+                  name="insuranceProvider"
+                  render={({ field: { onChange, value } }) => (
+                    <Input
+                      label="Insurance Provider"
+                      value={value ?? ""}
+                      onChangeText={onChange}
+                      placeholder="e.g., Ethio Insurance"
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="insurancePolicyNumber"
+                  render={({ field: { onChange, value } }) => (
+                    <Input
+                      label="Policy Number"
+                      value={value ?? ""}
+                      onChangeText={onChange}
+                      placeholder="POL-12345"
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="insuranceCoverageAmount"
+                  render={({ field: { onChange, value } }) => (
+                    <Input
+                      label="Coverage Amount (ETB)"
+                      value={value ?? ""}
+                      onChangeText={onChange}
+                      placeholder="100000"
+                      keyboardType="numeric"
+                    />
+                  )}
+                />
+              </>
+            )}
+
             <Text style={styles.fieldLabel}>{t("load.status")}</Text>
             <Controller
               control={control}

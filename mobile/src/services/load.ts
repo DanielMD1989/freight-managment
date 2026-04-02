@@ -66,6 +66,10 @@ class LoadService {
     deliveryAddress?: string;
     specialInstructions?: string;
     status?: string;
+    isInsured?: boolean;
+    insuranceProvider?: string;
+    insurancePolicyNumber?: string;
+    insuranceCoverageAmount?: number;
   }): Promise<Load> {
     try {
       const response = await apiClient.post("/api/loads", data);

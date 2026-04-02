@@ -43,6 +43,10 @@ const truckSchema = z.object({
   ownerName: z.string().optional(),
   contactName: z.string().optional(),
   contactPhone: z.string().optional(),
+  imei: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d{15}$/.test(v), "IMEI must be 15 digits"),
 });
 
 type TruckForm = z.infer<typeof truckSchema>;
@@ -67,6 +71,7 @@ export default function AddTruckScreen() {
       ownerName: "",
       contactName: "",
       contactPhone: "",
+      imei: "",
     },
   });
 
@@ -81,6 +86,7 @@ export default function AddTruckScreen() {
         ownerName: data.ownerName || undefined,
         contactName: data.contactName || undefined,
         contactPhone: data.contactPhone || undefined,
+        imei: data.imei || undefined,
       },
       {
         onSuccess: () => {
@@ -235,6 +241,23 @@ export default function AddTruckScreen() {
               value={value ?? ""}
               onChangeText={onChange}
               keyboardType="phone-pad"
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="imei"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label="GPS IMEI (optional — required before posting)"
+              value={value ?? ""}
+              onChangeText={onChange}
+              error={errors.imei?.message}
+              keyboardType="numeric"
+              maxLength={15}
+              placeholder="15-digit IMEI number"
+              testID="truck-imei"
             />
           )}
         />
