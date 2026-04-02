@@ -831,8 +831,8 @@ export default function PostLoadsTab({
       {/* TAB 1: MY LOADS */}
       {activeMainTab === "postings" && (
         <>
-          {/* Header Row */}
-          <div className="flex items-center justify-between">
+          {/* Header Row — stacks on mobile */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <button
               onClick={() => router.push("/shipper/loads/create")}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
@@ -853,11 +853,13 @@ export default function PostLoadsTab({
               POST NEW LOAD
             </button>
 
-            <StatusTabs
-              tabs={statusTabs}
-              activeTab={activeStatus}
-              onTabChange={(tab) => setActiveStatus(tab as LoadStatus)}
-            />
+            <div className="w-full overflow-x-auto">
+              <StatusTabs
+                tabs={statusTabs}
+                activeTab={activeStatus}
+                onTabChange={(tab) => setActiveStatus(tab as LoadStatus)}
+              />
+            </div>
           </div>
 
           {/* Inline form removed — single creation flow via /shipper/loads/create */}

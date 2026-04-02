@@ -140,7 +140,7 @@ export default function ShipperLoadboardClient({
   };
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       {/* Page Header */}
       <div className="mb-6">
         <h1
@@ -156,7 +156,7 @@ export default function ShipperLoadboardClient({
 
       {/* Tab Navigation */}
       <div
-        className="mb-6 flex w-fit gap-1 rounded-lg p-1"
+        className="mb-6 flex w-full flex-wrap gap-1 rounded-lg p-1 md:w-fit"
         style={{ background: "var(--bg-tinted)" }}
       >
         {TABS.map((tab) => {
