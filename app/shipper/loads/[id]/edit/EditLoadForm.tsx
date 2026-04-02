@@ -77,6 +77,10 @@ interface Load {
   isAnonymous?: boolean;
   shipperContactName?: string | null;
   shipperContactPhone?: string | null;
+  isInsured?: boolean;
+  insuranceProvider?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceCoverageAmount?: number | string | null;
   status: string;
 }
 
@@ -109,6 +113,10 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
     isAnonymous: load.isAnonymous || false,
     shipperContactName: load.shipperContactName || "",
     shipperContactPhone: load.shipperContactPhone || "",
+    isInsured: load.isInsured || false,
+    insuranceProvider: load.insuranceProvider || "",
+    insurancePolicyNumber: load.insurancePolicyNumber || "",
+    insuranceCoverageAmount: load.insuranceCoverageAmount?.toString() || "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -182,6 +190,12 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
         isFragile: formData.isFragile,
         requiresRefrigeration: formData.requiresRefrigeration,
         isAnonymous: formData.isAnonymous,
+        isInsured: formData.isInsured,
+        insuranceProvider: formData.insuranceProvider || null,
+        insurancePolicyNumber: formData.insurancePolicyNumber || null,
+        insuranceCoverageAmount: formData.insuranceCoverageAmount
+          ? parseFloat(formData.insuranceCoverageAmount as string)
+          : null,
       };
 
       const response = await fetch(`/api/loads/${load.id}`, {
@@ -559,6 +573,102 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
           >
             Options
           </h3>
+
+          {/* Insurance */}
+          <div>
+            <label
+              className="mb-2 block text-[10px] font-semibold tracking-wide uppercase"
+              style={{ color: "var(--foreground-muted)" }}
+            >
+              Insurance{" "}
+              <span className="font-normal normal-case">(optional)</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <input
+                type="checkbox"
+                checked={formData.isInsured}
+                onChange={(e) => updateField("isInsured", e.target.checked)}
+                className="h-4 w-4 rounded accent-teal-600"
+              />
+              <span className="text-sm" style={{ color: "var(--foreground)" }}>
+                This load is insured
+              </span>
+            </label>
+            {formData.isInsured && (
+              <div
+                className="mt-2 grid grid-cols-1 gap-2 rounded-lg p-3 md:grid-cols-3"
+                style={{ background: "var(--bg-tinted)" }}
+              >
+                <div>
+                  <label
+                    className="mb-1 block text-[10px] font-semibold tracking-wide uppercase"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
+                    Provider
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.insuranceProvider}
+                    onChange={(e) =>
+                      updateField("insuranceProvider", e.target.value)
+                    }
+                    placeholder="e.g., Ethio Insurance"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--card)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border)",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    className="mb-1 block text-[10px] font-semibold tracking-wide uppercase"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
+                    Policy Number
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.insurancePolicyNumber}
+                    onChange={(e) =>
+                      updateField("insurancePolicyNumber", e.target.value)
+                    }
+                    placeholder="POL-12345"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--card)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border)",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    className="mb-1 block text-[10px] font-semibold tracking-wide uppercase"
+                    style={{ color: "var(--foreground-muted)" }}
+                  >
+                    Coverage (ETB)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.insuranceCoverageAmount}
+                    onChange={(e) =>
+                      updateField("insuranceCoverageAmount", e.target.value)
+                    }
+                    placeholder="100000"
+                    min="0"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    style={{
+                      background: "var(--card)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border)",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Booking Mode */}
           <div>

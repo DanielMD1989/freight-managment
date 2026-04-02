@@ -1130,6 +1130,33 @@ export async function createInsuranceDocForTruck(
   truckId: string,
   uploadedById: string = "carrier-user-1"
 ) {
+  // Create ALL required documents (not just insurance) to satisfy the approval gate
+  const requiredTypes = ["REGISTRATION", "TITLE_DEED", "ROAD_WORTHINESS"];
+  for (const type of requiredTypes) {
+    const existingDoc = await db.truckDocument.findFirst({
+      where: { truckId, type, verificationStatus: "APPROVED", deletedAt: null },
+    });
+    if (!existingDoc) {
+      await db.truckDocument.create({
+        data: {
+          id: `${type.toLowerCase()}-${truckId}-${insuranceDocCounter}`,
+          truckId,
+          type,
+          fileName: `${type.toLowerCase()}.pdf`,
+          fileUrl: `/uploads/${type.toLowerCase()}-${truckId}.pdf`,
+          fileSize: 1024,
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
+          expiresAt:
+            type !== "TITLE_DEED"
+              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              : undefined,
+          uploadedById,
+        },
+      });
+    }
+  }
+
   const docId = `insurance-doc-${insuranceDocCounter++}`;
   const doc = await db.truckDocument.create({
     data: {
@@ -1157,6 +1184,56 @@ export async function createInsuranceDocForTruck(
     },
   });
   return doc;
+}
+
+let requiredDocCounter = 0;
+
+/**
+ * Create all required truck documents for approval.
+ * Creates REGISTRATION, INSURANCE, TITLE_DEED, ROAD_WORTHINESS with APPROVED status.
+ */
+export async function createRequiredTruckDocs(
+  truckId: string,
+  uploadedById: string = "carrier-user-1"
+) {
+  const types = ["REGISTRATION", "INSURANCE", "TITLE_DEED", "ROAD_WORTHINESS"];
+  for (const type of types) {
+    const docId = `req-doc-${type.toLowerCase()}-${requiredDocCounter++}`;
+    await db.truckDocument.create({
+      data: {
+        id: docId,
+        truckId,
+        type,
+        fileName: `${type.toLowerCase()}.pdf`,
+        fileUrl: `/uploads/${docId}.pdf`,
+        fileSize: 1024,
+        mimeType: "application/pdf",
+        verificationStatus: "APPROVED",
+        expiresAt:
+          type === "INSURANCE" ||
+          type === "REGISTRATION" ||
+          type === "ROAD_WORTHINESS"
+            ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+            : undefined,
+        uploadedById,
+        ...(type === "INSURANCE"
+          ? {
+              policyNumber: `POL-${docId}`,
+              insuranceProvider: "Ethiopian Insurance Corp",
+              coverageAmount: 500000,
+              coverageType: "THIRD_PARTY",
+            }
+          : {}),
+      },
+    });
+  }
+  await db.truck.update({
+    where: { id: truckId },
+    data: {
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+    },
+  });
 }
 
 /**

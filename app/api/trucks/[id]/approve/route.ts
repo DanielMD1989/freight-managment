@@ -24,6 +24,7 @@ import { sendEmail, createEmailHTML } from "@/lib/email";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
+import { REQUIRED_TRUCK_DOCUMENTS } from "@/lib/constants/truckDocuments";
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
@@ -120,6 +121,30 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
+      // Required document gate: all required types must have at least one APPROVED document
+      const approvedDocs = await db.truckDocument.findMany({
+        where: {
+          truckId,
+          deletedAt: null,
+          verificationStatus: "APPROVED",
+        },
+        select: { type: true },
+      });
+      const approvedTypes = new Set(approvedDocs.map((d) => d.type));
+      const missingRequired = REQUIRED_TRUCK_DOCUMENTS.filter(
+        (t) => !approvedTypes.has(t)
+      );
+      if (missingRequired.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Missing required approved documents: ${missingRequired.join(", ")}`,
+            missingDocuments: missingRequired,
+            hint: "All required documents must be uploaded and approved before truck approval",
+          },
+          { status: 400 }
+        );
+      }
+
       // P0 Insurance Gate: Require approved insurance document before truck approval
       const { validateTruckInsurance } =
         await import("@/lib/insuranceValidation");
@@ -255,6 +280,31 @@ export async function POST(
         },
       });
 
+      // Query affected shippers BEFORE cascade (for notifications)
+      const affectedTruckRequests = await db.truckRequest.findMany({
+        where: { truckId, status: "PENDING" },
+        select: {
+          shipperId: true,
+          load: { select: { pickupCity: true, deliveryCity: true } },
+        },
+      });
+      const affectedLoadRequests = await db.loadRequest.findMany({
+        where: { truckId, status: "PENDING" },
+        select: {
+          load: {
+            select: { shipperId: true, pickupCity: true, deliveryCity: true },
+          },
+        },
+      });
+      const affectedProposals = await db.matchProposal.findMany({
+        where: { truckId, status: "PENDING" },
+        select: {
+          load: {
+            select: { shipperId: true, pickupCity: true, deliveryCity: true },
+          },
+        },
+      });
+
       // G-M12-1: Cancel active postings and pending requests for rejected truck
       await db.truckPosting.updateMany({
         where: { truckId, status: "ACTIVE" },
@@ -272,6 +322,44 @@ export async function POST(
         where: { truckId, status: "PENDING" },
         data: { status: "CANCELLED" },
       });
+
+      // Notify affected shippers (fire-and-forget)
+      const affectedShipperOrgIds = new Set<string>();
+      for (const req of affectedTruckRequests) {
+        if (req.shipperId) affectedShipperOrgIds.add(req.shipperId);
+      }
+      for (const req of affectedLoadRequests) {
+        if (req.load?.shipperId) affectedShipperOrgIds.add(req.load.shipperId);
+      }
+      for (const prop of affectedProposals) {
+        if (prop.load?.shipperId)
+          affectedShipperOrgIds.add(prop.load.shipperId);
+      }
+      if (affectedShipperOrgIds.size > 0) {
+        db.user
+          .findMany({
+            where: {
+              organizationId: { in: Array.from(affectedShipperOrgIds) },
+              status: "ACTIVE",
+            },
+            select: { id: true },
+            take: 100,
+          })
+          .then(async (users) => {
+            for (const u of users) {
+              await createNotification({
+                userId: u.id,
+                type:
+                  NotificationType.TRUCK_REQUEST_REJECTED ||
+                  ("TRUCK_REQUEST_REJECTED" as string),
+                title: "Request Cancelled",
+                message: `A truck you requested has been removed from the marketplace. Your pending request has been cancelled.`,
+                metadata: { truckId, licensePlate: truck.licensePlate },
+              }).catch(() => {});
+            }
+          })
+          .catch(() => {});
+      }
 
       // Find carrier users to notify
       const carrierUsers = await db.user.findMany({

@@ -207,7 +207,26 @@ export async function GET(
       where: {
         status: { in: ["POSTED", "SEARCHING", "OFFERED"] },
       },
-      include: {
+      select: {
+        id: true,
+        status: true,
+        pickupCity: true,
+        deliveryCity: true,
+        pickupDate: true,
+        deliveryDate: true,
+        truckType: true,
+        weight: true,
+        lengthM: true,
+        fullPartial: true,
+        cargoDescription: true,
+        isAnonymous: true,
+        isInsured: true,
+        shipperContactName: true,
+        shipperContactPhone: true,
+        currency: true,
+        createdAt: true,
+        postedAt: true,
+        shipperId: true,
         shipper: {
           select: {
             id: true,

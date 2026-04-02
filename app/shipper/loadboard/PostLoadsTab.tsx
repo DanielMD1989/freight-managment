@@ -217,25 +217,33 @@ export default function PostLoadsTab({
       const loadsData: Load[] = data.loads || [];
 
       // Fetch match counts for POSTED loads in parallel
-      // H29 FIX: Check response.ok for match counts
-      // L16 FIX: Properly typed load in map
-      const loadsWithMatchCounts = await Promise.all(
-        loadsData.map(async (load: Load) => {
-          if (load.status === "POSTED") {
-            try {
-              const matchResponse = await fetch(
-                `/api/loads/${load.id}/matching-trucks?limit=1`
-              );
-              if (!matchResponse.ok) return { ...load, matchCount: 0 };
-              const matchData = await matchResponse.json();
-              return { ...load, matchCount: matchData.total || 0 };
-            } catch {
-              return { ...load, matchCount: 0 };
-            }
+      // Batch fetch match counts (single request instead of N+1)
+      const postedLoadIds = loadsData
+        .filter((l: Load) => l.status === "POSTED")
+        .map((l: Load) => l.id);
+
+      let matchCounts: Record<string, number> = {};
+      if (postedLoadIds.length > 0) {
+        try {
+          const batchRes = await fetch("/api/loads/batch-match-counts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ loadIds: postedLoadIds }),
+          });
+          if (batchRes.ok) {
+            const batchData = await batchRes.json();
+            matchCounts = batchData.counts || {};
           }
-          return { ...load, matchCount: 0 };
-        })
-      );
+        } catch {
+          // Fallback: all counts stay 0
+        }
+      }
+
+      const loadsWithMatchCounts = loadsData.map((load: Load) => ({
+        ...load,
+        matchCount: matchCounts[load.id] || 0,
+      }));
 
       setLoads(loadsWithMatchCounts);
 

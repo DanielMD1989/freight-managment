@@ -228,33 +228,45 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         trucksData = data.truckPostings || [];
       }
 
-      // Fetch match counts for POSTED/ACTIVE trucks in parallel
-      const trucksWithMatchCounts = await Promise.all(
-        trucksData.map(async (truck: TruckWithPosting) => {
-          if (truck.status === "POSTED" || truck.status === "ACTIVE") {
-            try {
-              const matchResponse = await fetch(
-                `/api/truck-postings/${truck.id}/matching-loads?limit=1`
-              );
-              if (matchResponse.status === 402) {
-                const errData = await matchResponse.json();
-                toast.error(
-                  errData.error ||
-                    "Insufficient wallet balance for marketplace access."
-                );
-                return { ...truck, matchCount: 0 };
-              }
-              const matchData = await matchResponse.json();
-              return { ...truck, matchCount: matchData.totalMatches || 0 };
-            } catch (error) {
-              console.error(
-                `Failed to fetch matches for truck ${truck.id}:`,
-                error
-              );
-              return { ...truck, matchCount: 0 };
+      // Batch fetch match counts (single request instead of N+1)
+      const activePostingIds = trucksData
+        .filter(
+          (t: TruckWithPosting) =>
+            t.status === "POSTED" || t.status === "ACTIVE"
+        )
+        .map((t: TruckWithPosting) => t.id);
+
+      let truckMatchCounts: Record<string, number> = {};
+      if (activePostingIds.length > 0) {
+        try {
+          const batchRes = await fetch(
+            "/api/truck-postings/batch-match-counts",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ postingIds: activePostingIds }),
             }
+          );
+          if (batchRes.status === 402) {
+            const errData = await batchRes.json();
+            toast.error(
+              errData.error ||
+                "Insufficient wallet balance for marketplace access."
+            );
+          } else if (batchRes.ok) {
+            const batchData = await batchRes.json();
+            truckMatchCounts = batchData.counts || {};
           }
-          return { ...truck, matchCount: 0 };
+        } catch {
+          // Fallback: all counts stay 0
+        }
+      }
+
+      const trucksWithMatchCounts = trucksData.map(
+        (truck: TruckWithPosting) => ({
+          ...truck,
+          matchCount: truckMatchCounts[truck.id] || 0,
         })
       );
 

@@ -116,6 +116,7 @@ export async function GET(
             capacity: true,
             lengthM: true,
             licensePlate: true,
+            insuranceStatus: true,
           },
         },
       },
