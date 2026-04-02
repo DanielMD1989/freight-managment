@@ -18,18 +18,10 @@ import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText, zodErrorResponse } from "@/lib/validation";
 import { checkWalletGate } from "@/lib/walletGate";
+import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 
 const createTruckSchema = z.object({
-  truckType: z.enum([
-    "FLATBED",
-    "REFRIGERATED",
-    "TANKER",
-    "CONTAINER",
-    "DRY_VAN",
-    "LOWBOY",
-    "DUMP_TRUCK",
-    "BOX_TRUCK",
-  ]),
+  truckType: z.enum(TRUCK_TYPE_VALUES),
   licensePlate: z.string().min(3).max(20),
   capacity: z.number().positive(),
   volume: z.number().positive().optional(),

@@ -23,6 +23,7 @@
 import { db } from "@/lib/db";
 import { Load, TruckPosting, Truck, EthiopianLocation } from "@prisma/client";
 import { calculateDistanceKm } from "@/lib/geo";
+import { areTruckTypesCompatible } from "@/lib/constants/truckTypes";
 
 interface MatchScore {
   score: number; // 0-100
@@ -211,9 +212,17 @@ function calculateCapacityScore(
     }
   }
 
-  // Check truck type match
-  if (truck.truckType !== load.truckType) {
-    return { score: 5, fit: true }; // Different type but capacity fits
+  // Check truck type compatibility using shared groups
+  const typeCompat = areTruckTypesCompatible(load.truckType, truck.truckType);
+  if (typeCompat === "incompatible") {
+    return { score: 0, fit: false }; // Incompatible type = hard exclude
+  }
+  if (typeCompat === "compatible") {
+    // Same group but different type — slight penalty vs exact match
+    const utilizationRate = Number(load.weight) / truckWeight;
+    if (utilizationRate >= 0.8) return { score: 18, fit: true };
+    if (utilizationRate >= 0.5) return { score: 13, fit: true };
+    return { score: 8, fit: true };
   }
 
   // Check full/partial load type match
@@ -584,7 +593,11 @@ export async function enhanceMatchesWithRoadDistances<
 interface LoadMatchCriteria {
   id?: string;
   pickupCity: string;
+  pickupCityLat?: number | null;
+  pickupCityLon?: number | null;
   deliveryCity: string;
+  deliveryCityLat?: number | null;
+  deliveryCityLon?: number | null;
   pickupDate?: Date | string | null;
   truckType: string;
   weight?: number | null;
@@ -599,7 +612,11 @@ interface LoadMatchCriteria {
 interface TruckMatchCriteria {
   id?: string;
   currentCity: string;
+  currentCityLat?: number | null;
+  currentCityLon?: number | null;
   destinationCity?: string | null;
+  destinationCityLat?: number | null;
+  destinationCityLon?: number | null;
   availableDate?: Date | string | null;
   truckType: string;
   maxWeight?: number | null;
@@ -620,100 +637,19 @@ interface MatchResult {
   excludeReason?: string;
 }
 
-// ============================================================================
-// ETHIOPIAN CITY DISTANCE LOOKUP TABLE
-// Used when GPS coordinates are not available
-// Distances in kilometers (approximate road distances)
-// ============================================================================
-const ETHIOPIAN_CITY_DISTANCES: Record<string, Record<string, number>> = {
-  "addis ababa": {
-    "addis ababa": 0,
-    "dire dawa": 450,
-    djibouti: 910,
-    mekelle: 780,
-    mekele: 780,
-    hawassa: 275,
-    "bahir dar": 565,
-    gondar: 740,
-    jimma: 350,
-    adama: 100,
-    nazret: 100,
-  },
-  "dire dawa": {
-    "dire dawa": 0,
-    "addis ababa": 450,
-    djibouti: 310,
-    mekelle: 850,
-    mekele: 850,
-    hawassa: 725,
-    harar: 55,
-  },
-  djibouti: {
-    djibouti: 0,
-    "addis ababa": 910,
-    "dire dawa": 310,
-    mekelle: 1100,
-    mekele: 1100,
-  },
-  mekelle: {
-    mekelle: 0,
-    mekele: 0,
-    "addis ababa": 780,
-    "dire dawa": 850,
-    djibouti: 1100,
-    gondar: 440,
-    "bahir dar": 570,
-  },
-  mekele: {
-    mekele: 0,
-    mekelle: 0,
-    "addis ababa": 780,
-    "dire dawa": 850,
-    djibouti: 1100,
-  },
-  hawassa: {
-    hawassa: 0,
-    "addis ababa": 275,
-    "dire dawa": 725,
-    djibouti: 1000,
-  },
-};
-
 /**
- * Get distance between two Ethiopian cities in km
- * Returns null if distance is unknown
+ * Calculate distance between two cities using coordinates (Haversine).
+ * No hardcoded distance tables — uses EthiopianLocation lat/lon from the database.
+ * Blueprint §9: distances are admin-configured (corridors) or calculated from coordinates.
  */
-function getEthiopianCityDistance(city1: string, city2: string): number | null {
-  const c1 = city1.toLowerCase().trim();
-  const c2 = city2.toLowerCase().trim();
-
-  // Same city
-  if (c1 === c2) return 0;
-
-  // Handle spelling variations
-  const normalize = (s: string) => s.replace(/e+l+e?$/i, "elle"); // Mekele -> Mekelle
-  const n1 = normalize(c1);
-  const n2 = normalize(c2);
-
-  if (n1 === n2) return 0;
-
-  // Look up in table
-  if (ETHIOPIAN_CITY_DISTANCES[n1]?.[n2] !== undefined) {
-    return ETHIOPIAN_CITY_DISTANCES[n1][n2];
-  }
-  if (ETHIOPIAN_CITY_DISTANCES[n2]?.[n1] !== undefined) {
-    return ETHIOPIAN_CITY_DISTANCES[n2][n1];
-  }
-
-  // Try original names too
-  if (ETHIOPIAN_CITY_DISTANCES[c1]?.[c2] !== undefined) {
-    return ETHIOPIAN_CITY_DISTANCES[c1][c2];
-  }
-  if (ETHIOPIAN_CITY_DISTANCES[c2]?.[c1] !== undefined) {
-    return ETHIOPIAN_CITY_DISTANCES[c2][c1];
-  }
-
-  return null; // Unknown distance
+function getDistanceFromCoordinates(
+  lat1: number | null | undefined,
+  lon1: number | null | undefined,
+  lat2: number | null | undefined,
+  lon2: number | null | undefined
+): number | null {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  return calculateDistanceKm(lat1, lon1, lat2, lon2);
 }
 
 /**
@@ -732,50 +668,8 @@ function isSameCity(city1: string, city2: string): boolean {
 
 // ============================================================================
 // HARD FILTER: Truck Type Compatibility
+// Imported from lib/constants/truckTypes.ts — single source of truth
 // ============================================================================
-
-/**
- * Compatible truck type groups for Ethiopian freight
- * - General cargo: DRY_VAN, FLATBED, CONTAINER, VAN (interchangeable)
- * - Temperature controlled: REFRIGERATED, REEFER (interchangeable)
- * These groups are NOT compatible with each other
- */
-const TRUCK_TYPE_GROUPS: Record<string, string[]> = {
-  GENERAL: ["DRY_VAN", "FLATBED", "CONTAINER", "VAN"],
-  COLD_CHAIN: ["REFRIGERATED", "REEFER"],
-};
-
-/**
- * Check if truck type is compatible with load requirement
- * Returns: 'exact' | 'compatible' | 'incompatible'
- */
-function checkTruckTypeCompatibility(
-  loadType: string,
-  truckType: string
-): "exact" | "compatible" | "incompatible" {
-  const loadNorm = loadType?.toUpperCase() || "";
-  const truckNorm = truckType?.toUpperCase() || "";
-
-  // Exact match
-  if (loadNorm === truckNorm) return "exact";
-
-  // Find which group each type belongs to
-  let loadGroup: string | null = null;
-  let truckGroup: string | null = null;
-
-  for (const [group, types] of Object.entries(TRUCK_TYPE_GROUPS)) {
-    if (types.includes(loadNorm)) loadGroup = group;
-    if (types.includes(truckNorm)) truckGroup = group;
-  }
-
-  // Same group = compatible
-  if (loadGroup && truckGroup && loadGroup === truckGroup) {
-    return "compatible";
-  }
-
-  // Different groups or unknown = incompatible
-  return "incompatible";
-}
 
 // ============================================================================
 // SCORING FUNCTIONS
@@ -885,10 +779,7 @@ function calcLoadTruckMatchScore(
   // ============================================
   // HARD FILTER 1: Truck Type Compatibility
   // ============================================
-  const typeCompat = checkTruckTypeCompatibility(
-    load.truckType,
-    truck.truckType
-  );
+  const typeCompat = areTruckTypesCompatible(load.truckType, truck.truckType);
 
   if (typeCompat === "incompatible") {
     return {
@@ -904,24 +795,31 @@ function calcLoadTruckMatchScore(
   // ============================================
   // HARD FILTER 2: DH-O Distance
   // ============================================
-  const dhOriginKm = getEthiopianCityDistance(
-    truck.currentCity,
-    load.pickupCity
-  );
-
-  // If we can't determine distance and cities are different, assume too far
-  if (dhOriginKm === null && !isSameCity(truck.currentCity, load.pickupCity)) {
-    return {
-      score: 0,
-      matchReasons: [],
-      isExactMatch: false,
-      dhOriginKm: 9999,
-      excluded: true,
-      excludeReason: `Unknown distance: ${truck.currentCity} to ${load.pickupCity}`,
-    };
+  // Calculate DH-O using coordinates (Haversine) — no hardcoded distance tables
+  let actualDhKm: number;
+  if (isSameCity(truck.currentCity, load.pickupCity)) {
+    actualDhKm = 0;
+  } else {
+    const coordDistance = getDistanceFromCoordinates(
+      truck.currentCityLat,
+      truck.currentCityLon,
+      load.pickupCityLat,
+      load.pickupCityLon
+    );
+    if (coordDistance !== null) {
+      actualDhKm = Math.round(coordDistance);
+    } else {
+      // No coordinates available — cannot determine distance, exclude
+      return {
+        score: 0,
+        matchReasons: [],
+        isExactMatch: false,
+        dhOriginKm: 9999,
+        excluded: true,
+        excludeReason: `No coordinates: ${truck.currentCity} to ${load.pickupCity}`,
+      };
+    }
   }
-
-  const actualDhKm = dhOriginKm ?? 0;
 
   if (actualDhKm > 200) {
     return {
@@ -986,9 +884,17 @@ function calcLoadTruckMatchScore(
     reasons.push(`Compatible: ${truck.truckType} for ${load.truckType}`);
   }
 
-  // Calculate final score: Route 30%, DH-O 30%, Capacity 20%, Time 20%
-  const finalScore = Math.round(
-    routeScore * 0.3 + dhScore * 0.3 + capacityScore * 0.2 + timeScore * 0.2
+  // Calculate final score: Route 30%, DH-O 30%, Capacity 20%, Time 20% + exact type bonus
+  const typeBonus = typeCompat === "exact" ? 5 : 0;
+  const finalScore = Math.min(
+    100,
+    Math.round(
+      routeScore * 0.3 +
+        dhScore * 0.3 +
+        capacityScore * 0.2 +
+        timeScore * 0.2 +
+        typeBonus
+    )
   );
 
   // Exact match: high score + exact type + same city

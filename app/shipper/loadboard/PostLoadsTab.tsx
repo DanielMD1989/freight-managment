@@ -69,16 +69,7 @@ type LoadStatus =
   | "EXPIRED";
 type MainTab = "postings" | "matching";
 
-const truckTypes = [
-  { value: "REFRIGERATED", label: "Reefer" },
-  { value: "DRY_VAN", label: "Van" },
-  { value: "FLATBED", label: "Flatbed" },
-  { value: "CONTAINER", label: "Container" },
-  { value: "TANKER", label: "Tanker" },
-  { value: "BOX_TRUCK", label: "Box Truck" },
-  { value: "LOWBOY", label: "Lowboy" },
-  { value: "DUMP_TRUCK", label: "Dump Truck" },
-];
+import { TRUCK_TYPES as truckTypes } from "@/lib/constants/truckTypes";
 
 const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
   if (!enumValue) return "N/A";

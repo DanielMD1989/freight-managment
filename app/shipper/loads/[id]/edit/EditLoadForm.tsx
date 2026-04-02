@@ -11,16 +11,24 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
-const TRUCK_TYPES = [
-  { value: "FLATBED", label: "Flatbed", icon: "🚛" },
-  { value: "REFRIGERATED", label: "Refrigerated", icon: "❄️" },
-  { value: "TANKER", label: "Tanker", icon: "🛢️" },
-  { value: "CONTAINER", label: "Container", icon: "📦" },
-  { value: "DRY_VAN", label: "Dry Van", icon: "🚚" },
-  { value: "LOWBOY", label: "Lowboy", icon: "🔧" },
-  { value: "DUMP_TRUCK", label: "Dump Truck", icon: "🏗️" },
-  { value: "BOX_TRUCK", label: "Box Truck", icon: "📤" },
-];
+import { TRUCK_TYPES as BASE_TRUCK_TYPES } from "@/lib/constants/truckTypes";
+
+const TRUCK_TYPES = BASE_TRUCK_TYPES.map((t) => ({
+  ...t,
+  icon:
+    (
+      {
+        FLATBED: "🚛",
+        REFRIGERATED: "❄️",
+        TANKER: "🛢️",
+        CONTAINER: "📦",
+        DRY_VAN: "🚚",
+        LOWBOY: "🔧",
+        DUMP_TRUCK: "🏗️",
+        BOX_TRUCK: "📤",
+      } as Record<string, string>
+    )[t.value] || "🚛",
+}));
 
 const ETHIOPIAN_CITIES = [
   "Addis Ababa",

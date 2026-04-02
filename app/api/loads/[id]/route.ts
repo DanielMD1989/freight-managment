@@ -20,6 +20,7 @@ import { sanitizeText } from "@/lib/validation";
 import { createNotification } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
 import { refundServiceFee } from "@/lib/serviceFeeManagement";
+import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 
 /**
  * Helper function to apply RPS rate limiting
@@ -77,18 +78,7 @@ const updateLoadSchema = z
     deliveryDockHours: z.string().max(100).optional().nullable(),
     pickupDate: z.string().optional(),
     deliveryDate: z.string().optional().nullable(),
-    truckType: z
-      .enum([
-        "FLATBED",
-        "REFRIGERATED",
-        "TANKER",
-        "CONTAINER",
-        "DRY_VAN",
-        "LOWBOY",
-        "DUMP_TRUCK",
-        "BOX_TRUCK",
-      ])
-      .optional(),
+    truckType: z.enum(TRUCK_TYPE_VALUES).optional(),
     weight: z.number().positive().max(50000).optional(),
     lengthM: z.number().positive().optional(),
     fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),

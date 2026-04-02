@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import FindMatchesModal from "@/components/dispatcher/FindMatchesModal";
+import { TRUCK_TYPES as TRUCK_TYPES_CONST } from "@/lib/constants/truckTypes";
 
 interface Truck {
   id: string;
@@ -133,16 +134,7 @@ export default function TrucksClient() {
     return <span className="text-xs text-slate-400">No GPS</span>;
   };
 
-  const truckTypes = [
-    "FLATBED",
-    "REFRIGERATED",
-    "TANKER",
-    "CONTAINER",
-    "DRY_VAN",
-    "LOWBOY",
-    "DUMP_TRUCK",
-    "BOX_TRUCK",
-  ];
+  const truckTypes = TRUCK_TYPES_CONST.map((t) => t.value);
 
   return (
     <div className="space-y-6">

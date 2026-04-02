@@ -89,6 +89,7 @@ export async function POST(
             carrierId: true,
             licensePlate: true,
             approvalStatus: true, // G-M12-2a: needed for approval re-check
+            insuranceStatus: true, // §9: insurance check at assignment time
             imei: true,
             gpsVerifiedAt: true,
             carrier: {
@@ -204,6 +205,21 @@ export async function POST(
         return NextResponse.json(
           { error: "Insufficient wallet balance for marketplace access" },
           { status: 402 }
+        );
+      }
+
+      // Insurance gate — truck must have valid insurance at assignment time
+      if (
+        !["VALID", "EXPIRING"].includes(
+          truckRequest.truck.insuranceStatus ?? "MISSING"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Truck insurance has expired or is missing. Renew insurance before accepting loads.",
+          },
+          { status: 400 }
         );
       }
 

@@ -13,6 +13,7 @@ import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
 import { calculateDistanceKm } from "@/lib/geo";
 import { checkWalletGate } from "@/lib/walletGate";
+import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 
 const createLoadSchema = z
   .object({
@@ -40,16 +41,7 @@ const createLoadSchema = z
     destinationLon: z.number().min(-180).max(180).optional(),
 
     // Load Details
-    truckType: z.enum([
-      "FLATBED",
-      "REFRIGERATED",
-      "TANKER",
-      "CONTAINER",
-      "DRY_VAN",
-      "LOWBOY",
-      "DUMP_TRUCK",
-      "BOX_TRUCK",
-    ]),
+    truckType: z.enum(TRUCK_TYPE_VALUES),
     weight: z.number().positive().max(50000),
     volume: z.number().positive().optional(),
     cargoDescription: z.string().min(5).max(2000),

@@ -48,6 +48,8 @@ export async function GET(
         weight: true,
         lengthM: true,
         fullPartial: true,
+        pickupLocation: { select: { latitude: true, longitude: true } },
+        deliveryLocation: { select: { latitude: true, longitude: true } },
       },
     });
 
@@ -96,11 +98,15 @@ export async function GET(
         originCity: {
           select: {
             name: true,
+            latitude: true,
+            longitude: true,
           },
         },
         destinationCity: {
           select: {
             name: true,
+            latitude: true,
+            longitude: true,
           },
         },
         truck: {
@@ -119,7 +125,19 @@ export async function GET(
     // Calculate matches
     const loadCriteria = {
       pickupCity: load.pickupCity,
+      pickupCityLat: load.pickupLocation
+        ? Number(load.pickupLocation.latitude)
+        : null,
+      pickupCityLon: load.pickupLocation
+        ? Number(load.pickupLocation.longitude)
+        : null,
       deliveryCity: load.deliveryCity,
+      deliveryCityLat: load.deliveryLocation
+        ? Number(load.deliveryLocation.latitude)
+        : null,
+      deliveryCityLon: load.deliveryLocation
+        ? Number(load.deliveryLocation.longitude)
+        : null,
       pickupDate: load.pickupDate,
       truckType: load.truckType,
       weight: load.weight ? Number(load.weight) : null,
@@ -130,7 +148,19 @@ export async function GET(
     const trucksCriteria = trucks.map((truck) => ({
       id: truck.id,
       currentCity: truck.originCity?.name || "",
+      currentCityLat: truck.originCity
+        ? Number(truck.originCity.latitude)
+        : null,
+      currentCityLon: truck.originCity
+        ? Number(truck.originCity.longitude)
+        : null,
       destinationCity: truck.destinationCity?.name || null,
+      destinationCityLat: truck.destinationCity
+        ? Number(truck.destinationCity.latitude)
+        : null,
+      destinationCityLon: truck.destinationCity
+        ? Number(truck.destinationCity.longitude)
+        : null,
       availableDate: truck.availableFrom,
       truckType: truck.truck?.truckType || "",
       maxWeight: truck.availableWeight ? Number(truck.availableWeight) : null,

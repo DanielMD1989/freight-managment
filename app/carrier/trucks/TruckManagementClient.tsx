@@ -40,17 +40,9 @@ interface Truck {
   } | null;
 }
 
-const TRUCK_TYPES = [
-  { value: "all", label: "All Types" },
-  { value: "FLATBED", label: "Flatbed" },
-  { value: "REFRIGERATED", label: "Refrigerated" },
-  { value: "TANKER", label: "Tanker" },
-  { value: "CONTAINER", label: "Container" },
-  { value: "DRY_VAN", label: "Dry Van" },
-  { value: "LOWBOY", label: "Lowboy" },
-  { value: "DUMP_TRUCK", label: "Dump Truck" },
-  { value: "BOX_TRUCK", label: "Box Truck" },
-];
+import { TRUCK_TYPES as BASE_TRUCK_TYPES } from "@/lib/constants/truckTypes";
+
+const TRUCK_TYPES = [{ value: "all", label: "All Types" }, ...BASE_TRUCK_TYPES];
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },

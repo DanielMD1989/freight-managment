@@ -10,6 +10,7 @@ import { TripStatus, Prisma } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
 import { logger } from "@/lib/logger";
+import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText, zodErrorResponse } from "@/lib/validation";
 
@@ -46,18 +47,7 @@ async function applyFleetRpsLimit(
 }
 
 const updateTruckSchema = z.object({
-  truckType: z
-    .enum([
-      "FLATBED",
-      "REFRIGERATED",
-      "TANKER",
-      "CONTAINER",
-      "DRY_VAN",
-      "LOWBOY",
-      "DUMP_TRUCK",
-      "BOX_TRUCK",
-    ])
-    .optional(),
+  truckType: z.enum(TRUCK_TYPE_VALUES).optional(),
   licensePlate: z.string().min(3).max(20).optional(),
   capacity: z.number().positive().optional(),
   volume: z.number().positive().optional().nullable(),

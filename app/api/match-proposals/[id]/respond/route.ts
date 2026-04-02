@@ -90,6 +90,7 @@ export async function POST(
             carrierId: true,
             licensePlate: true,
             approvalStatus: true, // G-M12-2d: needed for approval re-check
+            insuranceStatus: true, // §9: insurance check at assignment time
             imei: true,
             gpsVerifiedAt: true,
           },
@@ -183,6 +184,42 @@ export async function POST(
     }
 
     if (data.action === "ACCEPT") {
+      // §8 Wallet gate — carrier must meet minimum balance before accepting (blueprint: "before ANY action")
+      const isAdminOrSuper =
+        user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN;
+      if (!isAdminOrSuper && session.organizationId) {
+        const carrierWallet = await db.financialAccount.findFirst({
+          where: { organizationId: session.organizationId, isActive: true },
+          select: { balance: true, minimumBalance: true },
+        });
+        if (
+          carrierWallet &&
+          carrierWallet.balance < carrierWallet.minimumBalance
+        ) {
+          return NextResponse.json(
+            {
+              error: "Insufficient wallet balance for marketplace access",
+            },
+            { status: 402 }
+          );
+        }
+      }
+
+      // Insurance gate — truck must have valid insurance at assignment time
+      if (
+        !["VALID", "EXPIRING"].includes(
+          proposal.truck.insuranceStatus ?? "MISSING"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Truck insurance has expired or is missing. Renew insurance before accepting loads.",
+          },
+          { status: 400 }
+        );
+      }
+
       // P0-007 FIX: All checks and operations now inside atomic transaction
       // with fresh re-fetch to prevent race conditions
       // FIX: Use explicit interface for transaction result

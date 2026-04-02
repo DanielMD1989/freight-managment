@@ -225,7 +225,19 @@ export async function GET(
     const truckCriteria = {
       id: truckPosting.id,
       currentCity: truckPosting.originCity?.name || "",
+      currentCityLat: truckPosting.originCity
+        ? Number(truckPosting.originCity.latitude)
+        : null,
+      currentCityLon: truckPosting.originCity
+        ? Number(truckPosting.originCity.longitude)
+        : null,
       destinationCity: truckPosting.destinationCity?.name || null,
+      destinationCityLat: truckPosting.destinationCity
+        ? Number(truckPosting.destinationCity.latitude)
+        : null,
+      destinationCityLon: truckPosting.destinationCity
+        ? Number(truckPosting.destinationCity.longitude)
+        : null,
       availableDate: truckPosting.availableFrom,
       truckType: truckPosting.truck?.truckType || "",
       maxWeight: truckPosting.availableWeight
@@ -240,23 +252,31 @@ export async function GET(
     // Prepare loads criteria (filter out loads with missing required fields)
     const loadsCriteria = loads
       .filter((load) => load.pickupCity && load.deliveryCity && load.truckType)
-      .map((load) => ({
-        id: load.id,
-        pickupCity: load.pickupCity!,
-        deliveryCity: load.deliveryCity!,
-        pickupDate: load.pickupDate,
-        truckType: load.truckType,
-        weight: load.weight ? Number(load.weight) : null,
-        lengthM: load.lengthM ? Number(load.lengthM) : null,
-        fullPartial: load.fullPartial,
-        shipper: load.shipper,
-        isAnonymous: load.isAnonymous,
-        shipperContactName: load.shipperContactName,
-        shipperContactPhone: load.shipperContactPhone,
-        currency: load.currency,
-        createdAt: load.createdAt,
-        status: load.status,
-      }));
+      .map((load) => {
+        const pickupCoords = getCityCoords(load.pickupCity);
+        const deliveryCoords = getCityCoords(load.deliveryCity);
+        return {
+          id: load.id,
+          pickupCity: load.pickupCity!,
+          pickupCityLat: pickupCoords?.lat ?? null,
+          pickupCityLon: pickupCoords?.lon ?? null,
+          deliveryCity: load.deliveryCity!,
+          deliveryCityLat: deliveryCoords?.lat ?? null,
+          deliveryCityLon: deliveryCoords?.lon ?? null,
+          pickupDate: load.pickupDate,
+          truckType: load.truckType,
+          weight: load.weight ? Number(load.weight) : null,
+          lengthM: load.lengthM ? Number(load.lengthM) : null,
+          fullPartial: load.fullPartial,
+          shipper: load.shipper,
+          isAnonymous: load.isAnonymous,
+          shipperContactName: load.shipperContactName,
+          shipperContactPhone: load.shipperContactPhone,
+          currency: load.currency,
+          createdAt: load.createdAt,
+          status: load.status,
+        };
+      });
 
     // Get truck coordinates
     const truckOriginCoords =

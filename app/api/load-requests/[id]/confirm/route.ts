@@ -87,6 +87,7 @@ export async function POST(
             licensePlate: true,
             carrierId: true,
             approvalStatus: true, // G-M12-2c: needed for approval re-check
+            insuranceStatus: true, // §9: insurance check at assignment time
             imei: true,
             gpsVerifiedAt: true,
           },
@@ -182,6 +183,21 @@ export async function POST(
             { status: 402 }
           );
         }
+      }
+
+      // Insurance gate — truck must have valid insurance at assignment time
+      if (
+        !["VALID", "EXPIRING"].includes(
+          loadRequest.truck.insuranceStatus ?? "MISSING"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Truck insurance has expired or is missing. Renew insurance before accepting loads.",
+          },
+          { status: 400 }
+        );
       }
 
       try {

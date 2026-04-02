@@ -27,6 +27,7 @@ import {
 } from "@/types/loadboard-ui";
 import TruckBookingModal from "./TruckBookingModal";
 import { getCSRFToken } from "@/lib/csrfFetch";
+import { TRUCK_TYPES as TRUCK_TYPES_CONST } from "@/lib/constants/truckTypes";
 import type { Organization, Truck } from "@/lib/types/shipper";
 
 // Session user shape (from auth)
@@ -358,17 +359,23 @@ export default function SearchTrucksTab({
    * Truck types list with enum values and display labels
    */
   const truckTypes = useMemo(
-    () => [
-      { value: "AUTO_CARRIER", label: "Auto Carrier", code: "AC" },
-      { value: "CONTAINER", label: "Container", code: "C" },
-      { value: "DUMP_TRUCK", label: "Dump Truck", code: "DK" },
-      { value: "FLATBED", label: "Flatbed", code: "F" },
-      { value: "DRY_VAN", label: "Van", code: "V" },
-      { value: "BOX_TRUCK", label: "Box Truck", code: "BX" },
-      { value: "REFRIGERATED", label: "Reefer", code: "R" },
-      { value: "TANKER", label: "Tanker", code: "T" },
-      { value: "LOWBOY", label: "Lowboy", code: "LB" },
-    ],
+    () =>
+      TRUCK_TYPES_CONST.map((t) => ({
+        ...t,
+        code:
+          (
+            {
+              FLATBED: "F",
+              REFRIGERATED: "R",
+              TANKER: "T",
+              CONTAINER: "C",
+              DRY_VAN: "V",
+              LOWBOY: "LB",
+              DUMP_TRUCK: "DK",
+              BOX_TRUCK: "BX",
+            } as Record<string, string>
+          )[t.value] || t.value.slice(0, 2),
+      })),
     []
   );
 

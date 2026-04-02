@@ -12,17 +12,9 @@
  */
 
 import { z } from "zod";
+import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 
-const VALID_TRUCK_TYPES = [
-  "FLATBED",
-  "REFRIGERATED",
-  "TANKER",
-  "CONTAINER",
-  "DRY_VAN",
-  "LOWBOY",
-  "DUMP_TRUCK",
-  "BOX_TRUCK",
-] as const;
+const VALID_TRUCK_TYPES = TRUCK_TYPE_VALUES;
 
 /** Minimal required-fields schema for POST /api/loads */
 const loadPayloadSchema = z.object({

@@ -8,11 +8,24 @@ import { findMatchingLoads, findMatchingTrucks } from "@/lib/matchingEngine";
 
 describe("lib/matchingEngine", () => {
   // Sample data
+  // Ethiopian city coordinates for distance calculations
+  const COORDS = {
+    addisAbaba: { lat: 9.0222, lon: 38.7468 },
+    direDawa: { lat: 9.5931, lon: 41.8661 },
+    mekelle: { lat: 13.4967, lon: 39.4753 },
+    djibouti: { lat: 11.5886, lon: 43.1456 },
+    hawassa: { lat: 7.0621, lon: 38.4763 },
+  };
+
   const sampleTrucks = [
     {
       id: "truck-1",
       currentCity: "Addis Ababa",
+      currentCityLat: COORDS.addisAbaba.lat,
+      currentCityLon: COORDS.addisAbaba.lon,
       destinationCity: "Djibouti",
+      destinationCityLat: COORDS.djibouti.lat,
+      destinationCityLon: COORDS.djibouti.lon,
       truckType: "DRY_VAN",
       maxWeight: 20000,
       availableDate: new Date("2025-01-15"),
@@ -20,6 +33,8 @@ describe("lib/matchingEngine", () => {
     {
       id: "truck-2",
       currentCity: "Dire Dawa",
+      currentCityLat: COORDS.direDawa.lat,
+      currentCityLon: COORDS.direDawa.lon,
       destinationCity: null, // Flexible
       truckType: "FLATBED",
       maxWeight: 25000,
@@ -28,7 +43,11 @@ describe("lib/matchingEngine", () => {
     {
       id: "truck-3",
       currentCity: "Mekelle",
+      currentCityLat: COORDS.mekelle.lat,
+      currentCityLon: COORDS.mekelle.lon,
       destinationCity: "Addis Ababa",
+      destinationCityLat: COORDS.addisAbaba.lat,
+      destinationCityLon: COORDS.addisAbaba.lon,
       truckType: "REFRIGERATED",
       maxWeight: 15000,
       availableDate: new Date("2025-01-14"),
@@ -36,7 +55,11 @@ describe("lib/matchingEngine", () => {
     {
       id: "truck-4",
       currentCity: "Djibouti", // Far from Addis
+      currentCityLat: COORDS.djibouti.lat,
+      currentCityLon: COORDS.djibouti.lon,
       destinationCity: "Addis Ababa",
+      destinationCityLat: COORDS.addisAbaba.lat,
+      destinationCityLon: COORDS.addisAbaba.lon,
       truckType: "DRY_VAN",
       maxWeight: 20000,
       availableDate: new Date("2025-01-15"),
@@ -47,7 +70,11 @@ describe("lib/matchingEngine", () => {
     {
       id: "load-1",
       pickupCity: "Addis Ababa",
+      pickupCityLat: COORDS.addisAbaba.lat,
+      pickupCityLon: COORDS.addisAbaba.lon,
       deliveryCity: "Djibouti",
+      deliveryCityLat: COORDS.djibouti.lat,
+      deliveryCityLon: COORDS.djibouti.lon,
       truckType: "DRY_VAN",
       weight: 15000,
       pickupDate: new Date("2025-01-15"),
@@ -55,7 +82,11 @@ describe("lib/matchingEngine", () => {
     {
       id: "load-2",
       pickupCity: "Addis Ababa",
+      pickupCityLat: COORDS.addisAbaba.lat,
+      pickupCityLon: COORDS.addisAbaba.lon,
       deliveryCity: "Dire Dawa",
+      deliveryCityLat: COORDS.direDawa.lat,
+      deliveryCityLon: COORDS.direDawa.lon,
       truckType: "FLATBED",
       weight: 10000,
       pickupDate: new Date("2025-01-16"),
@@ -63,7 +94,11 @@ describe("lib/matchingEngine", () => {
     {
       id: "load-3",
       pickupCity: "Hawassa",
+      pickupCityLat: COORDS.hawassa.lat,
+      pickupCityLon: COORDS.hawassa.lon,
       deliveryCity: "Addis Ababa",
+      deliveryCityLat: COORDS.addisAbaba.lat,
+      deliveryCityLon: COORDS.addisAbaba.lon,
       truckType: "DRY_VAN",
       weight: 18000,
       pickupDate: new Date("2025-01-17"),
@@ -71,7 +106,11 @@ describe("lib/matchingEngine", () => {
     {
       id: "load-4",
       pickupCity: "Addis Ababa",
+      pickupCityLat: COORDS.addisAbaba.lat,
+      pickupCityLon: COORDS.addisAbaba.lon,
       deliveryCity: "Mekelle",
+      deliveryCityLat: COORDS.mekelle.lat,
+      deliveryCityLon: COORDS.mekelle.lon,
       truckType: "REFRIGERATED", // Cold chain
       weight: 12000,
       pickupDate: new Date("2025-01-15"),
@@ -292,13 +331,19 @@ describe("lib/matchingEngine", () => {
     it("should match exact truck types", () => {
       const truck = {
         currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
         truckType: "DRY_VAN",
         maxWeight: 20000,
       };
       const loads = [
         {
           pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
           deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
           truckType: "DRY_VAN",
           weight: 10000,
         },
@@ -311,13 +356,19 @@ describe("lib/matchingEngine", () => {
     it("should match compatible types within GENERAL group", () => {
       const truck = {
         currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
         truckType: "FLATBED",
         maxWeight: 20000,
       };
       const loads = [
         {
           pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
           deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
           truckType: "DRY_VAN",
           weight: 10000,
         },
@@ -330,13 +381,19 @@ describe("lib/matchingEngine", () => {
     it("should NOT match COLD_CHAIN with GENERAL", () => {
       const truck = {
         currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
         truckType: "REFRIGERATED",
         maxWeight: 20000,
       };
       const loads = [
         {
           pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
           deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
           truckType: "DRY_VAN",
           weight: 10000,
         },
@@ -346,17 +403,98 @@ describe("lib/matchingEngine", () => {
       expect(matches).toHaveLength(0);
     });
 
-    it("should match REFRIGERATED with REEFER", () => {
+    it("should match REFRIGERATED with REFRIGERATED (exact)", () => {
       const truck = {
         currentCity: "Addis Ababa",
-        truckType: "REEFER",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
+        truckType: "REFRIGERATED",
         maxWeight: 20000,
       };
       const loads = [
         {
           pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
           deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
           truckType: "REFRIGERATED",
+          weight: 10000,
+        },
+      ];
+
+      const matches = findMatchingLoads(truck as any, loads as any, 0);
+      expect(matches.length).toBeGreaterThan(0);
+    });
+
+    it("should match BOX_TRUCK with DRY_VAN (same GENERAL group)", () => {
+      const truck = {
+        currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
+        truckType: "BOX_TRUCK",
+        maxWeight: 20000,
+      };
+      const loads = [
+        {
+          pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
+          deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
+          truckType: "DRY_VAN",
+          weight: 10000,
+        },
+      ];
+
+      const matches = findMatchingLoads(truck as any, loads as any, 0);
+      expect(matches.length).toBeGreaterThan(0);
+    });
+
+    it("should NOT match TANKER with FLATBED (different groups)", () => {
+      const truck = {
+        currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
+        truckType: "TANKER",
+        maxWeight: 20000,
+      };
+      const loads = [
+        {
+          pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
+          deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
+          truckType: "FLATBED",
+          weight: 10000,
+        },
+      ];
+
+      const matches = findMatchingLoads(truck as any, loads as any, 0);
+      expect(matches).toHaveLength(0);
+    });
+
+    it("should match TANKER with TANKER (exact)", () => {
+      const truck = {
+        currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
+        truckType: "TANKER",
+        maxWeight: 20000,
+      };
+      const loads = [
+        {
+          pickupCity: "Addis Ababa",
+          pickupCityLat: 9.0222,
+          pickupCityLon: 38.7468,
+          deliveryCity: "Dire Dawa",
+          deliveryCityLat: 9.5931,
+          deliveryCityLon: 41.8661,
+          truckType: "TANKER",
           weight: 10000,
         },
       ];
@@ -373,6 +511,8 @@ describe("lib/matchingEngine", () => {
     it("should have 0 distance for same city", () => {
       const truck = {
         currentCity: "Addis Ababa",
+        currentCityLat: 9.0222,
+        currentCityLon: 38.7468,
         truckType: "DRY_VAN",
         maxWeight: 20000,
       };
@@ -392,6 +532,8 @@ describe("lib/matchingEngine", () => {
     it("should calculate correct distance for Addis-Dire Dawa", () => {
       const truck = {
         currentCity: "Dire Dawa",
+        currentCityLat: 9.5931,
+        currentCityLon: 41.8661,
         truckType: "DRY_VAN",
         maxWeight: 20000,
       };

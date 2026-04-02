@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
         isAvailable: true,
         licensePlate: true,
         approvalStatus: true,
+        insuranceStatus: true,
       },
     });
 
@@ -147,6 +148,32 @@ export async function POST(request: NextRequest) {
     if (!truck.isAvailable) {
       return NextResponse.json(
         { error: "Truck is not currently available" },
+        { status: 400 }
+      );
+    }
+
+    // §8 Wallet gate — carrier being proposed to must meet minimum balance ("cannot be requested" if below)
+    const carrierWallet = await db.financialAccount.findFirst({
+      where: { organizationId: truck.carrierId, isActive: true },
+      select: { balance: true, minimumBalance: true },
+    });
+    if (carrierWallet && carrierWallet.balance < carrierWallet.minimumBalance) {
+      return NextResponse.json(
+        {
+          error:
+            "Carrier's wallet balance is below minimum for marketplace activity",
+        },
+        { status: 402 }
+      );
+    }
+
+    // Insurance gate — truck must have valid insurance to be proposed
+    if (!["VALID", "EXPIRING"].includes(truck.insuranceStatus ?? "MISSING")) {
+      return NextResponse.json(
+        {
+          error:
+            "Truck insurance has expired or is missing. Cannot propose match.",
+        },
         { status: 400 }
       );
     }

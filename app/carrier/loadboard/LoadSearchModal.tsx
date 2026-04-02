@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from "react";
+import { TRUCK_TYPES } from "@/lib/constants/truckTypes";
 import { ActionButton } from "@/components/loadboard-ui";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
@@ -211,11 +212,11 @@ export default function LoadSearchModal({
                     className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                   >
                     <option value="">Any</option>
-                    <option value="VAN">VAN</option>
-                    <option value="FLATBED">FLATBED</option>
-                    <option value="REFRIGERATED">REFRIGERATED</option>
-                    <option value="TANKER">TANKER</option>
-                    <option value="CONTAINER">CONTAINER</option>
+                    {TRUCK_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
