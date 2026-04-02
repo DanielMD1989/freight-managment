@@ -2403,6 +2403,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 loading={loadingMatches}
                 emptyMessage="No matching loads found. Post a truck to see matching loads."
                 rowKey="id"
+                cardPrimaryColumns={[
+                  "pickupCity",
+                  "deliveryCity",
+                  "truckType",
+                  "actions",
+                ]}
+                cardTitleColumn="pickupCity"
+                cardSubtitleColumn="deliveryCity"
               />
             </div>
           </div>
