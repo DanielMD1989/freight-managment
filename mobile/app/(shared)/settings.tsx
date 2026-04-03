@@ -21,19 +21,11 @@ import { Button } from "../../src/components/Button";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
-import i18n from "../../src/i18n/config";
-
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const {
-    locale,
-    setLocale,
-    pushEnabled,
-    setPushEnabled,
-    gpsEnabled,
-    setGpsEnabled,
-  } = useSettingsStore();
+  const { locale, pushEnabled, setPushEnabled, gpsEnabled, setGpsEnabled } =
+    useSettingsStore();
   const logout = useAuthStore((s) => s.logout);
 
   const handlePushToggle = async (value: boolean) => {
@@ -45,23 +37,19 @@ export default function SettingsScreen() {
     setPushEnabled(value);
   };
 
-  const toggleLanguage = async () => {
-    const newLocale = locale === "en" ? "am" : "en";
-    await setLocale(newLocale);
-    i18n.changeLanguage(newLocale);
-  };
-
   return (
     <ScrollView style={styles.container}>
       <Card style={styles.card}>
         <Text style={styles.sectionTitle}>General</Text>
 
-        <SettingRow
-          icon="language-outline"
-          label={t("settings.language")}
-          value={locale === "en" ? "English" : "Amharic"}
-          onPress={toggleLanguage}
-        />
+        <Pressable onPress={() => router.push("/(shared)/appearance")}>
+          <SettingRow
+            icon="color-palette-outline"
+            label="Appearance"
+            value={locale === "en" ? "English" : "Amharic"}
+            onPress={() => router.push("/(shared)/appearance")}
+          />
+        </Pressable>
       </Card>
 
       <Card style={styles.card}>
@@ -133,6 +121,17 @@ export default function SettingsScreen() {
             icon="phone-portrait-outline"
             label="Active Sessions"
             onPress={() => router.push("/(shared)/sessions")}
+          />
+        </Pressable>
+      </Card>
+
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <Pressable onPress={() => router.push("/(shared)/help-support")}>
+          <SettingRow
+            icon="help-circle-outline"
+            label="Help & Support"
+            onPress={() => router.push("/(shared)/help-support")}
           />
         </Pressable>
       </Card>

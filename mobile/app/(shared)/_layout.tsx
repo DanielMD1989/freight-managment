@@ -21,6 +21,8 @@ export default function SharedLayout() {
         name="notification-preferences"
         options={{ title: "Notification Preferences" }}
       />
+      <Stack.Screen name="help-support" options={{ title: "Help & Support" }} />
+      <Stack.Screen name="appearance" options={{ title: "Appearance" }} />
       <Stack.Screen
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}

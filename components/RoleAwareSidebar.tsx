@@ -932,6 +932,17 @@ const navigationSections: Record<string, NavSection[]> = {
         },
       ],
     },
+    {
+      title: "Account",
+      items: [
+        {
+          label: "Settings",
+          href: "/settings/profile",
+          icon: "⚙️",
+          roles: ["DISPATCHER", "ADMIN", "SUPER_ADMIN"],
+        },
+      ],
+    },
   ],
 };
 
