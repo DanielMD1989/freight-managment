@@ -18,6 +18,10 @@ export default function SharedLayout() {
       />
       <Stack.Screen name="sessions" options={{ title: "Active Sessions" }} />
       <Stack.Screen
+        name="notification-preferences"
+        options={{ title: "Notification Preferences" }}
+      />
+      <Stack.Screen
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}
       />

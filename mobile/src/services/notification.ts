@@ -37,6 +37,29 @@ class NotificationService {
       throw new Error(getErrorMessage(error));
     }
   }
+
+  /** Get notification preferences */
+  async getPreferences(): Promise<Record<string, boolean>> {
+    try {
+      const response = await apiClient.get(
+        "/api/user/notification-preferences"
+      );
+      return response.data.preferences ?? {};
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Update notification preferences */
+  async updatePreferences(preferences: Record<string, boolean>): Promise<void> {
+    try {
+      await apiClient.post("/api/user/notification-preferences", {
+        preferences,
+      });
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
 }
 
 export const notificationService = new NotificationService();

@@ -100,6 +100,16 @@ export default function SettingsScreen() {
             trackColor={{ true: colors.primary500 }}
           />
         </View>
+
+        <Pressable
+          onPress={() => router.push("/(shared)/notification-preferences")}
+        >
+          <SettingRow
+            icon="options-outline"
+            label="Notification Preferences"
+            onPress={() => router.push("/(shared)/notification-preferences")}
+          />
+        </Pressable>
       </Card>
 
       <Card style={styles.card}>

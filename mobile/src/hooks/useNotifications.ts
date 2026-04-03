@@ -42,3 +42,27 @@ export function useMarkAllNotificationsRead() {
     },
   });
 }
+
+// ── Notification Preferences (§14) ──
+
+const PREFS_KEY = ["notification-preferences"] as const;
+
+/** Get notification preferences */
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: [...PREFS_KEY],
+    queryFn: () => notificationService.getPreferences(),
+  });
+}
+
+/** Update notification preferences */
+export function useUpdateNotificationPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (preferences: Record<string, boolean>) =>
+      notificationService.updatePreferences(preferences),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PREFS_KEY });
+    },
+  });
+}
