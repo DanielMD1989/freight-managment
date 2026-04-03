@@ -19,6 +19,8 @@ import GoogleMap, { MapMarker } from "@/components/GoogleMap";
 import TripHistoryPlayback from "@/components/TripHistoryPlayback";
 import { useGpsRealtime } from "@/hooks/useGpsRealtime";
 import { csrfFetch } from "@/lib/csrfFetch";
+import StarRating from "@/components/StarRating";
+import RatingModal from "@/components/RatingModal";
 
 interface TripPod {
   id: string;
@@ -171,6 +173,24 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   const [, setLoadingPod] = useState(false);
   const [, setPodError] = useState<string | null>(null);
   const [, setLoadingProgress] = useState(false);
+
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [existingRating, setExistingRating] = useState<{
+    stars: number;
+    comment?: string | null;
+  } | null>(null);
+
+  // Fetch existing rating
+  useEffect(() => {
+    if (trip.status === "DELIVERED" || trip.status === "COMPLETED") {
+      fetch(`/api/trips/${trip.id}/rate`, { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.myRating) setExistingRating(data.myRating);
+        })
+        .catch(() => {});
+    }
+  }, [trip.id, trip.status]);
 
   const statusConfig = STATUS_CONFIG[trip.status] || STATUS_CONFIG.ASSIGNED;
   const isActiveTrip = trip.status === "IN_TRANSIT";
@@ -861,6 +881,52 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
               </div>
             </div>
           )}
+
+          {/* §12 Rating */}
+          {isCompletedTrip && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 font-semibold text-slate-800">
+                Rate Carrier
+              </h3>
+              {existingRating ? (
+                <div>
+                  <StarRating value={existingRating.stars} size="md" />
+                  {existingRating.comment && (
+                    <p className="mt-2 text-sm text-slate-600">
+                      &ldquo;{existingRating.comment}&rdquo;
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-400">
+                    Rating submitted
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700"
+                >
+                  Rate Your Experience
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Rating Modal */}
+          <RatingModal
+            isOpen={showRatingModal}
+            onClose={() => setShowRatingModal(false)}
+            tripId={trip.id}
+            ratedOrgName={trip.carrier?.name || "Carrier"}
+            raterLabel="Rate Carrier"
+            onSuccess={() => {
+              fetch(`/api/trips/${trip.id}/rate`, { credentials: "include" })
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data?.myRating) setExistingRating(data.myRating);
+                })
+                .catch(() => {});
+            }}
+          />
 
           {/* Truck Info */}
           {trip.truck && (

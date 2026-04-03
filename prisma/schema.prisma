@@ -330,6 +330,12 @@ model User {
   // PHASE 3: Push Notifications
   deviceTokens DeviceToken[]
 
+  // §12 Ratings given
+  ratingsGiven Rating[] @relation("RatingRater")
+
+  // §13 In-App Messaging
+  messagesSent Message[] @relation("MessageSender")
+
   @@index([email])
   @@index([organizationId])
   @@index([createdById])
@@ -511,6 +517,10 @@ model Organization {
   totalLoadsCancelled Int      @default(0) // Total loads cancelled
   totalDisputes       Int      @default(0) // Total disputes filed
 
+  // §12 Ratings & Reviews
+  averageRating  Decimal? @db.Decimal(2, 1) // 1.0-5.0 average from ratings received
+  totalRatings   Int      @default(0)       // Count of ratings received
+
   // SPRINT 16: Story 16.6 - Anti-Bypass Detection
   suspiciousCancellationCount Int       @default(0) // Cancellations after contact view
   bypassAttemptCount          Int       @default(0) // Reported bypass attempts
@@ -561,6 +571,9 @@ model Organization {
   // Trip relations - carrier and shipper trips
   carrierTrips Trip[] @relation("CarrierTrips")
   shipperTrips Trip[] @relation("ShipperTrips")
+
+  // §12 Ratings received
+  ratingsReceived Rating[] @relation("RatingsReceived")
 
   @@index([type])
   @@index([isVerified])
@@ -1112,6 +1125,12 @@ model Trip {
 
   // POD documents for this trip
   podDocuments TripPod[]
+
+  // §12 Ratings
+  ratings Rating[]
+
+  // §13 In-App Messaging
+  messages Message[]
 
   @@index([status])
   @@index([carrierId])
@@ -1736,6 +1755,64 @@ model Notification {
   @@index([userId, createdAt]) // User's notifications sorted by date
   @@index([userId, read, createdAt]) // Unread notifications sorted by date
   @@map("notifications")
+}
+
+// ============================================================================
+// §12: RATINGS & REVIEWS
+// ============================================================================
+
+model Rating {
+  id        String   @id @default(cuid())
+  stars     Int // 1-5
+  comment   String?  @db.VarChar(300)
+  raterRole String // "SHIPPER" or "CARRIER"
+
+  tripId     String
+  trip       Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  raterId    String
+  rater      User         @relation("RatingRater", fields: [raterId], references: [id])
+
+  ratedOrgId String
+  ratedOrg   Organization @relation("RatingsReceived", fields: [ratedOrgId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([tripId, raterRole])
+  @@index([ratedOrgId])
+  @@index([tripId])
+  @@map("ratings")
+}
+
+// ============================================================================
+// §13: IN-APP MESSAGING
+// ============================================================================
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.VarChar(2000) // Text content (1-2000 chars)
+
+  // Sender info
+  senderId   String
+  sender     User   @relation("MessageSender", fields: [senderId], references: [id])
+  senderRole String // "SHIPPER" or "CARRIER"
+
+  // Attachment (optional image: JPG/PNG, max 10MB)
+  attachmentUrl String? // Cloudinary/S3 URL
+
+  // Read tracking
+  readAt DateTime? // When the other party read the message
+
+  // Trip scope — one conversation per trip
+  tripId String
+  trip   Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([tripId, createdAt]) // Messages sorted by time within trip
+  @@index([tripId, senderId])  // Unread count: messages in trip NOT from this user
+  @@index([senderId])
+  @@map("messages")
 }
 
 // ============================================================================

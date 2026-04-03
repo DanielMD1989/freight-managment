@@ -49,6 +49,8 @@ jest.mock("@/lib/db", () => {
     invitations: new Map(),
     walletDeposits: new Map(),
     savedSearches: new Map(),
+    ratings: new Map(),
+    messages: new Map(),
   };
 
   let userIdCounter = 1;
@@ -82,6 +84,8 @@ jest.mock("@/lib/db", () => {
   let invitationIdCounter = 1;
   let walletDepositIdCounter = 1;
   let savedSearchIdCounter = 1;
+  let ratingIdCounter = 1;
+  let messageIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -212,6 +216,10 @@ jest.mock("@/lib/db", () => {
     savedSearch: {
       criteria: {},
     },
+    message: {
+      readAt: null,
+      attachmentUrl: null,
+    },
   };
 
   // ── Unified include resolution ──
@@ -258,6 +266,16 @@ jest.mock("@/lib/db", () => {
     deposits:                { type: 'hasMany', store: 'walletDeposits', matchFk: 'financialAccountId' },
     walletDepositsRequested: { type: 'hasMany', store: 'walletDeposits', matchFk: 'requestedById' },
     walletDepositsApproved:  { type: 'hasMany', store: 'walletDeposits', matchFk: 'approvedById' },
+    // §12 Ratings
+    rater:            { fk: 'raterId',    store: 'users' },
+    ratedOrg:         { fk: 'ratedOrgId', store: 'organizations' },
+    ratings:          { type: 'hasMany', store: 'ratings', matchFk: 'tripId' },
+    ratingsReceived:  { type: 'hasMany', store: 'ratings', matchFk: 'ratedOrgId' },
+    ratingsGiven:     { type: 'hasMany', store: 'ratings', matchFk: 'raterId' },
+    // §13 In-App Messaging
+    messages:         { type: 'hasMany', store: 'messages', matchFk: 'tripId',
+                        sort: (a, b) => (a.createdAt || 0) - (b.createdAt || 0) },
+    messagesSent:     { type: 'hasMany', store: 'messages', matchFk: 'senderId' },
   };
 
   function resolveCount(record, countSpec) {
@@ -797,12 +815,35 @@ jest.mock("@/lib/db", () => {
       });
       return Promise.resolve(count);
     }),
-    aggregate: jest.fn(({ _sum } = {}) => {
+    aggregate: jest.fn(({ where, _sum, _avg, _count } = {}) => {
       const result = {};
+      // Filter matching records for aggregate
+      const records = where
+        ? Array.from(store.values()).filter((r) =>
+            Object.entries(where).every(([k, v]) => r[k] === v)
+          )
+        : Array.from(store.values());
       if (_sum) {
         result._sum = {};
         for (const field of Object.keys(_sum)) {
-          result._sum[field] = 0;
+          result._sum[field] = records.reduce((acc, r) => acc + (Number(r[field]) || 0), 0);
+        }
+      }
+      if (_avg) {
+        result._avg = {};
+        for (const field of Object.keys(_avg)) {
+          const vals = records.map((r) => Number(r[field])).filter((v) => !isNaN(v));
+          result._avg[field] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        }
+      }
+      if (_count) {
+        if (typeof _count === 'object') {
+          result._count = {};
+          for (const field of Object.keys(_count)) {
+            result._count[field] = records.filter((r) => r[field] != null).length;
+          }
+        } else {
+          result._count = records.length;
         }
       }
       return Promise.resolve(result);
@@ -874,6 +915,8 @@ jest.mock("@/lib/db", () => {
     invitation: { value: invitationIdCounter },
     walletDeposit: { value: walletDepositIdCounter },
     savedSearch: { value: savedSearchIdCounter },
+    rating: { value: ratingIdCounter },
+    message: { value: messageIdCounter },
   };
 
   const result = {
@@ -1128,6 +1171,16 @@ jest.mock("@/lib/db", () => {
         stores.savedSearches,
         "savedSearch",
         counters.savedSearch
+      ),
+      rating: createModelMethods(
+        stores.ratings,
+        "rating",
+        counters.rating
+      ),
+      message: createModelMethods(
+        stores.messages,
+        "message",
+        counters.message
       ),
       $transaction: jest.fn(),
       // Expose stores for test access

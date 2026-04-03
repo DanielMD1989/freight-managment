@@ -167,6 +167,8 @@ export async function calculateTrustScore(orgId: string): Promise<number> {
       isVerified: true,
       totalLoadsCompleted: true,
       totalLoadsCancelled: true,
+      averageRating: true,
+      totalRatings: true,
     },
   });
 
@@ -193,14 +195,25 @@ export async function calculateTrustScore(orgId: string): Promise<number> {
     ? Number(organization.disputeRate)
     : 0;
 
-  // Calculate weighted score
-  const completionScore = completionRate * 0.4; // 40% weight
-  const cancellationScore = (100 - cancellationRate) * 0.3; // 30% weight (inverted - lower is better)
-  const disputeScore = (100 - disputeRate) * 0.2; // 20% weight (inverted - lower is better)
-  const verifiedScore = organization.isVerified ? 10 : 0; // 10% weight (10 points if verified)
+  // §12: Include average rating in trust score (20% weight)
+  const avgRating = organization.averageRating
+    ? Number(organization.averageRating)
+    : 0;
+  const hasRatings = (organization.totalRatings ?? 0) > 0;
+
+  // Calculate weighted score — §12 reweighted: 30/25/15/20/10
+  const completionScore = completionRate * 0.3; // 30% weight
+  const cancellationScore = (100 - cancellationRate) * 0.25; // 25% weight (inverted)
+  const disputeScore = (100 - disputeRate) * 0.15; // 15% weight (inverted)
+  const ratingScore = hasRatings ? (avgRating / 5) * 100 * 0.2 : 0; // 20% weight (0 if no ratings — no penalty)
+  const verifiedScore = organization.isVerified ? 10 : 0; // 10% weight
 
   const trustScore =
-    completionScore + cancellationScore + disputeScore + verifiedScore;
+    completionScore +
+    cancellationScore +
+    disputeScore +
+    ratingScore +
+    verifiedScore;
 
   // Rounding delegated to lib/rounding.ts:roundPercentage2()
   return roundPercentage2(trustScore);

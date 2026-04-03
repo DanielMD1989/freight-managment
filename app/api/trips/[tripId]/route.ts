@@ -753,6 +753,28 @@ export async function PATCH(
       }
     }
 
+    // §12: Prompt both parties to rate after COMPLETED
+    if (validatedData.status === "COMPLETED") {
+      if (trip.shipperId) {
+        notifyOrganization({
+          organizationId: trip.shipperId,
+          type: NotificationType.RATING_REQUESTED,
+          title: "Rate Your Carrier",
+          message: `Trip completed. Please rate your experience with the carrier.`,
+          metadata: { tripId },
+        }).catch(() => {});
+      }
+      if (trip.carrierId) {
+        notifyOrganization({
+          organizationId: trip.carrierId,
+          type: NotificationType.RATING_REQUESTED,
+          title: "Rate Your Shipper",
+          message: `Trip completed. Please rate your experience with the shipper.`,
+          metadata: { tripId },
+        }).catch(() => {});
+      }
+    }
+
     // Notify all dispatchers when a trip enters EXCEPTION state.
     // Mirrors the pattern from loads/[id]/status/route.ts (EXCEPTION_CREATED notification).
     // Non-blocking: trip state is already persisted.

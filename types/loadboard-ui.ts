@@ -320,6 +320,8 @@ export interface CompanyInfo {
   totalLoads?: number;
   totalTrucks?: number;
   notes?: string;
+  averageRating?: number | null;
+  totalRatings?: number;
 }
 
 export interface CompanyLinkProps {

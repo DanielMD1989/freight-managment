@@ -412,6 +412,170 @@ Revenue     = Shipper Fee + Carrier Fee
 - At completion with no GPS data → corridor fallback
   - Admin alert
 
-_Blueprint version: 1.5 — Delivery completion paths added: carrier POD, shipper confirmation without POD, 48h auto-close cron._
+---
+
+## 12. Ratings & Reviews
+
+### Trigger
+
+After a trip reaches DELIVERED status, both parties are prompted to rate each other:
+
+- **Shipper rates Carrier** (how was the transport service?)
+- **Carrier rates Shipper** (how was the load accuracy, communication, loading dock?)
+
+### Rating Model
+
+| Field     | Type     | Details                               |
+| --------- | -------- | ------------------------------------- |
+| id        | String   | Unique rating ID                      |
+| tripId    | String   | FK to Trip (one rating pair per trip) |
+| raterId   | String   | FK to User who submitted the rating   |
+| ratedId   | String   | FK to User being rated                |
+| raterRole | Enum     | SHIPPER or CARRIER                    |
+| stars     | Int      | 1–5 (single overall score)            |
+| comment   | String?  | Optional text, max 300 characters     |
+| createdAt | DateTime | Timestamp of submission               |
+
+- One rating per direction per trip (shipper→carrier and carrier→shipper)
+- Ratings are immutable after submission (no edits)
+- Both parties can rate independently (no requirement for both to rate)
+
+### Computed Fields
+
+- `Organization.averageRating` — computed from all ratings where `ratedId` belongs to that org
+- `Organization.totalRatings` — count of ratings received
+- Displayed on company profiles and in matching/request results
+
+### Visibility
+
+- Shipper sees carrier's average rating when viewing match proposals, truck postings, and load requests
+- Carrier sees shipper's average rating when viewing posted loads and truck requests
+- Dispatcher sees both ratings when proposing matches
+- Ratings are public within the platform (all authenticated users)
+
+### UI Flow
+
+1. Trip reaches DELIVERED → rating prompt appears on trip detail page (web) and push notification (mobile)
+2. User selects 1–5 stars
+3. Optionally adds comment (max 300 chars)
+4. Submit → saved to database
+5. Average rating recalculated
+6. Rating displayed on profile pages, proposal/request cards, and matching results
+
+### Platforms
+
+Web + Mobile (both shipper and carrier apps)
+
+---
+
+## 13. In-App Messaging
+
+### Scope
+
+One conversation thread per trip. Only the Shipper and the assigned Carrier for that trip can participate.
+
+### Message Model
+
+| Field         | Type      | Details                                  |
+| ------------- | --------- | ---------------------------------------- |
+| id            | String    | Unique message ID                        |
+| tripId        | String    | FK to Trip (conversation scoped to trip) |
+| senderId      | String    | FK to User who sent the message          |
+| senderRole    | Enum      | SHIPPER or CARRIER                       |
+| content       | String    | Text content (max 2000 chars)            |
+| attachmentUrl | String?   | Image/file attachment URL (nullable)     |
+| createdAt     | DateTime  | Timestamp of message                     |
+| readAt        | DateTime? | When the other party read the message    |
+
+### Rules
+
+- Chat becomes **active** when trip is created (ASSIGNED) and stays active through DELIVERED
+- Chat becomes **read-only** after trip reaches COMPLETED or CANCELLED — both parties can still view history but cannot send new messages
+- Messages are permanent (no delete) — useful for dispute evidence
+- Unread message count tracked per user per trip for notification badges
+
+### Notifications
+
+- Push notification sent when new message received (if recipient has push enabled)
+- Unread badge shown on trip card in loadboard/trip list
+- Notification type: `NEW_MESSAGE`
+
+### Content Types
+
+- Text messages (required, 1–2000 chars)
+- Image attachments (optional, same upload rules as documents: JPG/PNG, max 10MB)
+- No video, no voice — text + images only
+
+### Access Control
+
+- Only the shipper who owns the load and the carrier who owns the assigned truck can read/write messages for that trip
+- Admin can view messages (read-only) for dispute resolution
+- Dispatcher has no message access
+
+### UI Flow
+
+1. Access chat from trip detail page (button: "Messages" or chat icon with unread count)
+2. Message list: newest at bottom, scroll up for history
+3. Text input at bottom + attachment button (camera/gallery picker on mobile)
+4. Real-time display (polling or WebSocket — polling for MVP)
+5. After trip completed → "This conversation is now read-only" banner at top, input disabled
+
+### Platforms
+
+Web + Mobile (both shipper and carrier apps)
+
+---
+
+## 14. Settings, Help & Support
+
+### Universal Settings (All Roles)
+
+Accessible via profile menu (header dropdown) at `/settings/*`:
+
+| Page           | Route                     | Content                                                        |
+| -------------- | ------------------------- | -------------------------------------------------------------- |
+| Profile        | `/settings/profile`       | Edit name, phone. View email, role, status, org info.          |
+| Security       | `/settings/security`      | Change password, MFA setup/disable, active sessions, audit log |
+| Notifications  | `/settings/notifications` | Toggle per-type notification preferences                       |
+| Help & Support | `/settings/support`       | Help documentation, contact info, report issue form            |
+
+### Role-Specific Settings
+
+| Role            | Route              | Content                                                                          |
+| --------------- | ------------------ | -------------------------------------------------------------------------------- |
+| Carrier/Shipper | `/{role}/settings` | Company profile (name, description, contact, license, tax)                       |
+| Admin           | `/admin/settings`  | System config: rate limits, matching thresholds, email toggles, maintenance mode |
+| Dispatcher      | `/settings/*`      | Uses universal settings (no role-specific settings page)                         |
+
+### Help Documentation Topics
+
+| Topic                  | Content                                                         |
+| ---------------------- | --------------------------------------------------------------- |
+| Getting Started        | Account setup, document upload, verification process            |
+| Posting Loads          | Load creation, status tabs, matching, requesting trucks         |
+| GPS Tracking           | Device setup, IMEI registration, live tracking, signal loss     |
+| Payments & Settlements | Wallet top-up, service fees, corridor rates, settlement process |
+
+### Support & Reporting
+
+- Contact: email (support@freightet.com) + phone (+251 911 123 456)
+- Report types: BUG, MISCONDUCT, FEEDBACK, OTHER
+- Reports generate reference ID (SR-{timestamp})
+- Admin notified of new reports
+- User can view status of submitted reports
+
+### Mobile Settings
+
+Mobile apps mirror web settings with platform-appropriate UI:
+
+- Company profile edit (carrier + shipper)
+- Security: change password, MFA, session management
+- Notification preferences toggle
+- Language and theme selection
+- Help/support with contact info and report form
+
+---
+
+_Blueprint version: 1.6 — Added: Ratings & Reviews (§12), In-App Messaging (§13), Settings & Help documentation (§14). Fixes: truck type single source of truth, wallet gates on match-proposals, hardcoded distance table replaced with Haversine, insurance enforcement at assignment, required document enforcement at truck approval, load insurance UI, batch match counts, rejection cascade notifications, truck document checklist, post-approval edit guard, mobile parity (insurance fields, IMEI, phone validation)._
 
 ---

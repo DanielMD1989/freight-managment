@@ -339,6 +339,26 @@ export async function POST(
       }
     }
 
+    // §12: Prompt both parties to rate after completion
+    if (trip.shipperId) {
+      notifyOrganization({
+        organizationId: trip.shipperId,
+        type: NotificationType.RATING_REQUESTED,
+        title: "Rate Your Carrier",
+        message: `Trip completed. Please rate your experience with the carrier.`,
+        metadata: { tripId },
+      }).catch(() => {});
+    }
+    if (trip.carrier?.id) {
+      notifyOrganization({
+        organizationId: trip.carrier.id,
+        type: NotificationType.RATING_REQUESTED,
+        title: "Rate Your Shipper",
+        message: `Trip completed. Please rate your experience with the shipper.`,
+        metadata: { tripId },
+      }).catch(() => {});
+    }
+
     return NextResponse.json({
       message: "Delivery confirmed successfully. Trip completed.",
       trip: {

@@ -12,6 +12,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { csrfFetch } from "@/lib/csrfFetch";
+import StarRating from "@/components/StarRating";
+import RatingModal from "@/components/RatingModal";
 
 interface Trip {
   id: string; // Trip ID
@@ -106,6 +108,24 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
   // Exception modal state
   const [showExceptionModal, setShowExceptionModal] = useState(false);
   const [exceptionReason, setExceptionReason] = useState("");
+
+  // §12 Rating state
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [existingRating, setExistingRating] = useState<{
+    stars: number;
+    comment?: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (trip.status === "DELIVERED" || trip.status === "COMPLETED") {
+      fetch(`/api/trips/${trip.id}/rate`, { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.myRating) setExistingRating(data.myRating);
+        })
+        .catch(() => {});
+    }
+  }, [trip.id, trip.status]);
 
   // Trip progress state (for IN_TRANSIT — matches shipper W9 pattern)
   const [tripProgress, setTripProgress] = useState({
@@ -1022,6 +1042,49 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
               )}
             </div>
           )}
+
+          {/* §12 Rating */}
+          {(trip.status === "DELIVERED" || trip.status === "COMPLETED") && (
+            <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                Rate Shipper
+              </h2>
+              {existingRating ? (
+                <div>
+                  <StarRating value={existingRating.stars} size="md" />
+                  {existingRating.comment && (
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                      &ldquo;{existingRating.comment}&rdquo;
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-400">Rating submitted</p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowRatingModal(true)}
+                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700"
+                >
+                  Rate Your Experience
+                </button>
+              )}
+            </div>
+          )}
+
+          <RatingModal
+            isOpen={showRatingModal}
+            onClose={() => setShowRatingModal(false)}
+            tripId={trip.id}
+            ratedOrgName={trip.shipper?.name || "Shipper"}
+            raterLabel="Rate Shipper"
+            onSuccess={() => {
+              fetch(`/api/trips/${trip.id}/rate`, { credentials: "include" })
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data?.myRating) setExistingRating(data.myRating);
+                })
+                .catch(() => {});
+            }}
+          />
 
           {/* Truck Info */}
           {trip.truck && (
