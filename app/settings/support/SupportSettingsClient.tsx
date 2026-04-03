@@ -21,7 +21,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
   const [showReportForm, setShowReportForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportForm, setReportForm] = useState({
-    type: "FRAUD",
+    type: "BUG",
     description: "",
     entityType: "",
     entityId: "",
@@ -55,7 +55,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
       );
       setShowReportForm(false);
       setReportForm({
-        type: "FRAUD",
+        type: "BUG",
         description: "",
         entityType: "",
         entityId: "",
@@ -81,7 +81,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
           <path d="M10 1a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 1zM5.05 3.05a.75.75 0 011.06 0l1.062 1.06A.75.75 0 116.11 5.173L5.05 4.11a.75.75 0 010-1.06zm9.9 0a.75.75 0 010 1.06l-1.06 1.062a.75.75 0 01-1.062-1.061l1.061-1.06a.75.75 0 011.06 0zM3 8a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 013 8zm11 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 0114 8zm-6.828 2.828a.75.75 0 010 1.061L6.11 12.95a.75.75 0 01-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zm3.594-3.317a.75.75 0 00-1.37.364l-.492 6.861a.75.75 0 001.204.65l1.043-.799.985 3.678a.75.75 0 001.45-.388l-.978-3.646 1.292.204a.75.75 0 00.74-1.16l-3.874-5.764z" />
         </svg>
       ),
-      link: "#",
+      link: "/settings/support/help/getting-started",
     },
     {
       title: "Posting Loads",
@@ -98,7 +98,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
           <path d="M15.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
         </svg>
       ),
-      link: "#",
+      link: "/settings/support/help/posting-loads",
     },
     {
       title: "GPS Tracking",
@@ -117,7 +117,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
           />
         </svg>
       ),
-      link: "#",
+      link: "/settings/support/help/gps-tracking",
     },
     {
       title: "Payments & Settlements",
@@ -136,7 +136,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
           />
         </svg>
       ),
-      link: "#",
+      link: "/settings/support/help/payments-settlements",
     },
   ];
 
@@ -280,10 +280,9 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
                 }
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-teal-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
               >
-                <option value="FRAUD">Fraud</option>
-                <option value="HARASSMENT">Harassment</option>
-                <option value="SPAM">Spam</option>
-                <option value="SAFETY_VIOLATION">Safety Violation</option>
+                <option value="BUG">Bug Report</option>
+                <option value="MISCONDUCT">Misconduct</option>
+                <option value="FEEDBACK">Feedback</option>
                 <option value="OTHER">Other</option>
               </select>
             </div>
@@ -343,7 +342,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
                 onClick={() => {
                   setShowReportForm(false);
                   setReportForm({
-                    type: "FRAUD",
+                    type: "BUG",
                     description: "",
                     entityType: "",
                     entityId: "",
