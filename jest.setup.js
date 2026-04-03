@@ -107,6 +107,7 @@ jest.mock("@/lib/db", () => {
     user: {
       isActive: true,
       emailVerified: false,
+      avatarUrl: null, // §14: Profile picture
       // G-A1-1: OTP fields
       otpCode: null,
       otpExpiresAt: null,

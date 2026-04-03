@@ -35,12 +35,14 @@ const updateProfileSchema = z
       .max(100, "Last name is too long")
       .optional(),
     phone: z.union([phoneSchema, z.null()]).optional(),
+    avatarUrl: z.union([z.string().url(), z.null()]).optional(),
   })
   .refine(
     (data) =>
       data.firstName !== undefined ||
       data.lastName !== undefined ||
-      data.phone !== undefined,
+      data.phone !== undefined ||
+      data.avatarUrl !== undefined,
     { message: "No fields to update" }
   );
 
@@ -60,6 +62,7 @@ export async function GET() {
         firstName: true,
         lastName: true,
         phone: true,
+        avatarUrl: true,
         role: true,
         status: true,
         isActive: true,
@@ -113,7 +116,7 @@ export async function PATCH(request: NextRequest) {
       return zodErrorResponse(validation.error);
     }
 
-    const { firstName, lastName, phone } = validation.data;
+    const { firstName, lastName, phone, avatarUrl } = validation.data;
 
     // Build update data
     const updateData: Record<string, string | null> = {};
@@ -134,6 +137,11 @@ export async function PATCH(request: NextRequest) {
       changes.push("phone");
     }
 
+    if (avatarUrl !== undefined) {
+      updateData.avatarUrl = avatarUrl;
+      changes.push("avatarUrl");
+    }
+
     // Update user profile
     const updatedUser = await db.user.update({
       where: { id: session.userId },
@@ -147,6 +155,7 @@ export async function PATCH(request: NextRequest) {
         firstName: true,
         lastName: true,
         phone: true,
+        avatarUrl: true,
         role: true,
         status: true,
         updatedAt: true,

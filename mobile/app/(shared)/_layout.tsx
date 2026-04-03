@@ -24,6 +24,10 @@ export default function SharedLayout() {
       <Stack.Screen name="help-support" options={{ title: "Help & Support" }} />
       <Stack.Screen name="appearance" options={{ title: "Appearance" }} />
       <Stack.Screen
+        name="delete-account"
+        options={{ title: "Delete Account" }}
+      />
+      <Stack.Screen
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}
       />

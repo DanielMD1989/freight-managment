@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Switch,
   Pressable,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -133,6 +134,30 @@ export default function SettingsScreen() {
             label="Help & Support"
             onPress={() => router.push("/(shared)/help-support")}
           />
+        </Pressable>
+      </Card>
+
+      <Card style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: colors.error }]}>
+          Danger Zone
+        </Text>
+        <Pressable
+          onPress={() => {
+            Alert.alert(
+              "Delete Account",
+              "Your account will be deactivated and all sessions revoked. You can contact support within 30 days to restore it.\n\nContinue to the deletion screen?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Continue",
+                  style: "destructive",
+                  onPress: () => router.push("/(shared)/delete-account"),
+                },
+              ]
+            );
+          }}
+        >
+          <SettingRow icon="trash-outline" label="Delete Account" />
         </Pressable>
       </Card>
 

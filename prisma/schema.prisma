@@ -276,6 +276,7 @@ model User {
   // G-A17-3: Access revocation audit fields
   revokedAt               DateTime?  // set when admin revokes access
   revocationReason        String?    // admin-supplied reason (10–500 chars)
+  avatarUrl               String?   // §14: Profile picture URL (Cloudinary/S3)
   lastLoginAt             DateTime?
   notificationPreferences Json? // PHASE 2: Story 15.13 - User notification preferences
   createdAt               DateTime   @default(now())

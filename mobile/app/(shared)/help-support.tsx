@@ -30,12 +30,38 @@ const REPORT_TYPES = [
   { value: "OTHER", label: "Other" },
 ] as const;
 
+interface Report {
+  id: string;
+  referenceId: string;
+  type: string;
+  subject: string;
+  status: string;
+  submittedAt: string | null;
+}
+
 export default function HelpSupportScreen() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("BUG");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+
+  const fetchReports = React.useCallback(async () => {
+    try {
+      const response = await apiClient.get("/api/support/report");
+      setReports(response.data.reports || []);
+    } catch {
+      // Silent
+    } finally {
+      setLoadingReports(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const handleSubmit = async () => {
     if (subject.trim().length < 3) {
@@ -66,6 +92,7 @@ export default function HelpSupportScreen() {
               setSubject("");
               setDescription("");
               setSelectedType("BUG");
+              fetchReports();
             },
           },
         ]
@@ -204,6 +231,49 @@ export default function HelpSupportScreen() {
           </View>
         )}
       </Card>
+
+      {/* My Reports */}
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>My Reports</Text>
+        <Text style={styles.sectionDesc}>
+          Track the status of your submitted reports
+        </Text>
+
+        {loadingReports ? (
+          <Text style={styles.emptyText}>Loading...</Text>
+        ) : reports.length === 0 ? (
+          <Text style={styles.emptyText}>No reports submitted yet</Text>
+        ) : (
+          reports.map((report) => (
+            <View key={report.id} style={styles.reportItem}>
+              <View style={styles.reportHeader}>
+                <View style={styles.reportTypeBadge}>
+                  <Text style={styles.reportTypeText}>{report.type}</Text>
+                </View>
+                <Text style={styles.reportRef}>{report.referenceId}</Text>
+              </View>
+              <Text style={styles.reportSubject} numberOfLines={1}>
+                {report.subject}
+              </Text>
+              <View style={styles.reportFooter}>
+                {report.submittedAt && (
+                  <Text style={styles.reportDate}>
+                    {new Date(report.submittedAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Text>
+                )}
+                <View style={styles.reportStatusBadge}>
+                  <Text style={styles.reportStatusText}>
+                    {report.status === "SUBMITTED" ? "Pending" : report.status}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ))
+        )}
+      </Card>
     </ScrollView>
   );
 }
@@ -321,5 +391,63 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: spacing.md,
     marginTop: spacing.lg,
+  },
+  emptyText: {
+    ...typography.bodyMedium,
+    color: colors.textTertiary,
+    textAlign: "center",
+    paddingVertical: spacing.lg,
+  },
+  reportItem: {
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.slate100,
+  },
+  reportHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  reportTypeBadge: {
+    backgroundColor: colors.slate100,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  reportTypeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.slate600,
+    textTransform: "uppercase",
+  },
+  reportRef: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+  },
+  reportSubject: {
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
+  },
+  reportFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.xs,
+  },
+  reportDate: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+  },
+  reportStatusBadge: {
+    backgroundColor: colors.warningLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  reportStatusText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.warningDark,
   },
 });

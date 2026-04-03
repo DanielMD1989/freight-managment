@@ -8,7 +8,7 @@
  * Help, support, and reporting functionality
  */
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
@@ -17,15 +17,46 @@ interface SupportSettingsClientProps {
   userRole: string;
 }
 
+interface Report {
+  id: string;
+  referenceId: string;
+  type: string;
+  subject: string;
+  status: string;
+  submittedAt: string | null;
+}
+
 export default function SupportSettingsClient({}: SupportSettingsClientProps) {
   const [showReportForm, setShowReportForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
   const [reportForm, setReportForm] = useState({
     type: "BUG",
     description: "",
     entityType: "",
     entityId: "",
   });
+
+  const fetchReports = useCallback(async () => {
+    try {
+      const res = await fetch("/api/support/report", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReports(data.reports || []);
+      }
+    } catch {
+      // Silent — non-critical
+    } finally {
+      setLoadingReports(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const handleSubmitReport = async () => {
     if (!reportForm.description.trim()) {
@@ -60,6 +91,7 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
         entityType: "",
         entityId: "",
       });
+      fetchReports();
     } catch {
       toast.error("Failed to submit report");
     } finally {
@@ -360,6 +392,66 @@ export default function SupportSettingsClient({}: SupportSettingsClientProps) {
                 {isSubmitting ? "Submitting..." : "Submit Report"}
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* My Reports — §14 */}
+      <div className="mt-8 overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700">
+        <div className="bg-gray-50 px-4 py-3 dark:bg-slate-800">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+            My Reports
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Track the status of your submitted reports
+          </p>
+        </div>
+
+        {loadingReports ? (
+          <div className="p-6 text-center text-sm text-gray-500">
+            Loading reports...
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            No reports submitted yet
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200 dark:divide-slate-700">
+            {reports.map((report) => (
+              <div
+                key={report.id}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 uppercase dark:bg-slate-700 dark:text-gray-300">
+                      {report.type}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {report.referenceId}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-gray-900 dark:text-white">
+                    {report.subject}
+                  </p>
+                  {report.submittedAt && (
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {new Date(report.submittedAt).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )}
+                    </p>
+                  )}
+                </div>
+                <span className="ml-3 shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  {report.status === "SUBMITTED" ? "Pending" : report.status}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>
