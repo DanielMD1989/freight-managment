@@ -9,6 +9,15 @@ export default function SharedLayout() {
       <Stack.Screen name="wallet" options={{ title: "Wallet" }} />
       <Stack.Screen name="team" options={{ title: "Team" }} />
       <Stack.Screen
+        name="change-password"
+        options={{ title: "Change Password" }}
+      />
+      <Stack.Screen
+        name="mfa"
+        options={{ title: "Two-Factor Authentication" }}
+      />
+      <Stack.Screen name="sessions" options={{ title: "Active Sessions" }} />
+      <Stack.Screen
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}
       />

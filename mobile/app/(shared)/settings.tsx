@@ -2,7 +2,15 @@
  * Settings Screen
  */
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, Switch } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Pressable,
+} from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "../../src/stores/settings";
@@ -17,6 +25,7 @@ import i18n from "../../src/i18n/config";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const {
     locale,
     setLocale,
@@ -95,13 +104,27 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={styles.sectionTitle}>{t("settings.security")}</Text>
-        <SettingRow
-          icon="lock-closed-outline"
-          label={t("settings.changePassword")}
-          onPress={() => {
-            /* Navigate to change password */
-          }}
-        />
+        <Pressable onPress={() => router.push("/(shared)/change-password")}>
+          <SettingRow
+            icon="lock-closed-outline"
+            label={t("settings.changePassword")}
+            onPress={() => router.push("/(shared)/change-password")}
+          />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(shared)/mfa")}>
+          <SettingRow
+            icon="shield-checkmark-outline"
+            label="Two-Factor Authentication"
+            onPress={() => router.push("/(shared)/mfa")}
+          />
+        </Pressable>
+        <Pressable onPress={() => router.push("/(shared)/sessions")}>
+          <SettingRow
+            icon="phone-portrait-outline"
+            label="Active Sessions"
+            onPress={() => router.push("/(shared)/sessions")}
+          />
+        </Pressable>
       </Card>
 
       <View style={styles.actions}>
