@@ -86,6 +86,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Parse optional date range for chart data (default: last 30 days)
+    const searchParams = request.nextUrl.searchParams;
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+    const chartStart = startDateParam
+      ? new Date(startDateParam + "T00:00:00")
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const chartEnd = endDateParam
+      ? new Date(endDateParam + "T23:59:59")
+      : new Date();
+
     // Get statistics in parallel using Trip model for carrier-specific data
     const [
       totalTrucks,
@@ -98,6 +109,8 @@ export async function GET(request: NextRequest) {
       walletAccount,
       recentPostings,
       pendingApprovals,
+      tripsOverTimeRaw,
+      earningsOverTimeRaw,
     ] = await Promise.all([
       // Total trucks owned by this carrier
       db.truck.count({
@@ -191,6 +204,34 @@ export async function GET(request: NextRequest) {
           approvalStatus: "PENDING",
         },
       }),
+
+      // Trips over time (for chart)
+      db.$queryRaw<{ date: Date; completed: bigint; cancelled: bigint }[]>`
+        SELECT
+          DATE_TRUNC('day', "updatedAt") as date,
+          COUNT(*) FILTER (WHERE status IN ('DELIVERED', 'COMPLETED')) as completed,
+          COUNT(*) FILTER (WHERE status = 'CANCELLED') as cancelled
+        FROM trips
+        WHERE "carrierId" = ${session.organizationId}
+          AND "updatedAt" >= ${chartStart} AND "updatedAt" <= ${chartEnd}
+          AND status IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
+        GROUP BY DATE_TRUNC('day', "updatedAt")
+        ORDER BY date ASC
+      `,
+
+      // Earnings over time (for chart)
+      db.$queryRaw<{ date: Date; amount: number }[]>`
+        SELECT DATE_TRUNC('day', l."serviceFeeDeductedAt") as date,
+               COALESCE(SUM(l."carrierServiceFee"), 0) as amount
+        FROM loads l
+        JOIN trucks t ON l."assignedTruckId" = t.id
+        WHERE t."carrierId" = ${session.organizationId}
+          AND (l."carrierFeeStatus" = 'DEDUCTED' OR (l."carrierFeeStatus" = 'PENDING' AND l."serviceFeeStatus" = 'DEDUCTED'))
+          AND l."serviceFeeDeductedAt" >= ${chartStart}
+          AND l."serviceFeeDeductedAt" <= ${chartEnd}
+        GROUP BY DATE_TRUNC('day', l."serviceFeeDeductedAt")
+        ORDER BY date ASC
+      `,
     ]);
 
     // Calculate total distance from trips
@@ -223,6 +264,17 @@ export async function GET(request: NextRequest) {
       },
       recentPostings,
       pendingApprovals,
+      charts: {
+        tripsOverTime: tripsOverTimeRaw.map((item) => ({
+          date: item.date,
+          completed: Number(item.completed),
+          cancelled: Number(item.cancelled),
+        })),
+        earningsOverTime: earningsOverTimeRaw.map((item) => ({
+          date: item.date,
+          amount: Number(item.amount),
+        })),
+      },
     });
   } catch (error) {
     return handleApiError(error, "Carrier dashboard error");

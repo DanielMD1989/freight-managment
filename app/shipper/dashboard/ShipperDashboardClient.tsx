@@ -11,14 +11,28 @@
  * Sections: Active Shipments, My Posted Loads, Carrier Applications, Recent Deliveries, Spending Overview, Notifications
  */
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import DateRangePicker, {
+  getDefaultDateRange,
+  type DateRangeValue,
+} from "@/components/DateRangePicker";
 import {
   StatCard,
   DashboardSection,
   QuickActionButton,
   StatusBadge,
-  SpendingChart,
   PackageIcon,
   TruckIcon,
   ClockIcon,
@@ -60,6 +74,10 @@ interface DashboardData {
     pendingPayments: number;
   };
   loadsByStatus?: Array<{ status: string; count: number }>;
+  charts?: {
+    loadsOverTime: Array<{ date: string; count: number }>;
+    spendingOverTime: Array<{ date: string; amount: number }>;
+  };
 }
 
 interface CarrierApplication {
@@ -126,6 +144,41 @@ export default function ShipperDashboardClient({
   };
 
   const loadsByStatus = dashboardData?.loadsByStatus || [];
+
+  // Chart data with date range picker
+  const [dateRange, setDateRange] = useState<DateRangeValue>(
+    getDefaultDateRange("30d")
+  );
+  const [chartData, setChartData] = useState<{
+    loadsOverTime: Array<{ date: string; count: number }>;
+    spendingOverTime: Array<{ date: string; amount: number }>;
+  }>({
+    loadsOverTime: dashboardData?.charts?.loadsOverTime || [],
+    spendingOverTime: dashboardData?.charts?.spendingOverTime || [],
+  });
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+      const res = await fetch(`/api/shipper/dashboard?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setChartData({
+          loadsOverTime: data.charts?.loadsOverTime || [],
+          spendingOverTime: data.charts?.spendingOverTime || [],
+        });
+      }
+    } catch {
+      // keep existing data on error
+    }
+  }, [dateRange.startDate, dateRange.endDate]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   const firstName =
     user.name?.split(" ")[0] || user.email?.split("@")[0] || "Shipper";
@@ -655,14 +708,128 @@ export default function ShipperDashboardClient({
             </DashboardSection>
           </div>
 
-          {/* Spending Overview + Documents */}
+          {/* Charts + Documents */}
           <div className="space-y-6">
-            {/* Spending Chart */}
+            {/* Spending Chart (Recharts) */}
             <DashboardSection
               title="Spending Overview"
               subtitle="Your shipping costs"
             >
-              <SpendingChart organizationId={user.organizationId} />
+              <div className="mb-3">
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+              </div>
+              {chartData.spendingOverTime.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={chartData.spendingOverTime}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "1px solid rgba(6,77,81,0.15)",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                      }}
+                      labelFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      formatter={
+                        ((value: number) => [
+                          `${value.toLocaleString()} ETB`,
+                          "Spent",
+                        ]) as unknown as (value: unknown) => string
+                      }
+                    />
+                    <Bar
+                      dataKey="amount"
+                      name="Spending"
+                      fill="#1e9c99"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[200px] items-center justify-center text-sm text-[#064d51]/40">
+                  No spending data for this period
+                </div>
+              )}
+            </DashboardSection>
+
+            {/* Loads Over Time (Line Chart) */}
+            <DashboardSection
+              title="Loads Posted"
+              subtitle="Load creation trend"
+            >
+              {chartData.loadsOverTime.length > 0 ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={chartData.loadsOverTime}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "1px solid rgba(6,77,81,0.15)",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                      }}
+                      labelFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      name="Loads"
+                      stroke="#064d51"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: "#064d51" }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[180px] items-center justify-center text-sm text-[#064d51]/40">
+                  No load data for this period
+                </div>
+              )}
             </DashboardSection>
 
             {/* Loads by Status */}

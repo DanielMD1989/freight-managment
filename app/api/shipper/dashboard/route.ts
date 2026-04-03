@@ -30,7 +30,6 @@ import { handleApiError } from "@/lib/apiErrors";
  * - Pending matches
  * - Recent activity
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     const session = await requireActiveUser();
@@ -71,6 +70,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Parse optional date range for chart data (default: last 30 days)
+    const searchParams = request.nextUrl.searchParams;
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+    const chartStart = startDateParam
+      ? new Date(startDateParam + "T00:00:00")
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const chartEnd = endDateParam
+      ? new Date(endDateParam + "T23:59:59")
+      : new Date();
+
     // Start of current month for "this month" queries
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -86,6 +96,8 @@ export async function GET(request: NextRequest) {
       pendingPaymentsResult,
       loadsByStatus,
       walletAccount,
+      loadsOverTimeRaw,
+      spendingOverTimeRaw,
     ] = await Promise.all([
       // Total loads
       db.load.count({
@@ -161,6 +173,29 @@ export async function GET(request: NextRequest) {
           currency: true,
         },
       }),
+
+      // Loads over time (for chart)
+      db.$queryRaw<{ date: Date; count: bigint }[]>`
+        SELECT DATE_TRUNC('day', "createdAt") as date, COUNT(*) as count
+        FROM loads
+        WHERE "shipperId" = ${session.organizationId}
+          AND "createdAt" >= ${chartStart} AND "createdAt" <= ${chartEnd}
+        GROUP BY DATE_TRUNC('day', "createdAt")
+        ORDER BY date ASC
+      `,
+
+      // Spending over time (for chart)
+      db.$queryRaw<{ date: Date; amount: number }[]>`
+        SELECT DATE_TRUNC('day', "serviceFeeDeductedAt") as date,
+               COALESCE(SUM("shipperServiceFee"), 0) as amount
+        FROM loads
+        WHERE "shipperId" = ${session.organizationId}
+          AND "shipperFeeStatus" = 'DEDUCTED'
+          AND "serviceFeeDeductedAt" >= ${chartStart}
+          AND "serviceFeeDeductedAt" <= ${chartEnd}
+        GROUP BY DATE_TRUNC('day', "serviceFeeDeductedAt")
+        ORDER BY date ASC
+      `,
     ]);
 
     const totalSpent = Number(totalSpentResult._sum?.shipperServiceFee || 0);
@@ -184,6 +219,16 @@ export async function GET(request: NextRequest) {
       wallet: {
         balance: Number(walletAccount?.balance || 0),
         currency: walletAccount?.currency || "ETB",
+      },
+      charts: {
+        loadsOverTime: loadsOverTimeRaw.map((item) => ({
+          date: item.date,
+          count: Number(item.count),
+        })),
+        spendingOverTime: spendingOverTimeRaw.map((item) => ({
+          date: item.date,
+          amount: Number(item.amount),
+        })),
       },
     });
   } catch (error) {

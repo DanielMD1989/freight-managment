@@ -1184,6 +1184,7 @@ jest.mock("@/lib/db", () => {
         counters.message
       ),
       $transaction: jest.fn(),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       // Expose stores for test access
       __stores: stores,
       // Helper to clear all stores between tests if needed

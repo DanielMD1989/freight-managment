@@ -1,11 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
-type TimePeriod = "day" | "week" | "month" | "year";
+import { useState, useEffect, useCallback } from "react";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import DateRangePicker, {
+  getDefaultDateRange,
+  type DateRangeValue,
+} from "@/components/DateRangePicker";
 
 interface AnalyticsData {
-  period: TimePeriod;
+  period: string;
   dateRange: { start: string; end: string };
   summary: {
     revenue: {
@@ -16,7 +32,7 @@ interface AnalyticsData {
       pendingWithdrawals: number;
       transactionsInPeriod: number;
       transactionVolume: number;
-    };
+    } | null;
     trucks: {
       total: number;
       approved: number;
@@ -30,21 +46,7 @@ interface AnalyticsData {
       delivered: number;
       completed: number;
       cancelled: number;
-      byStatus: {
-        draft: number;
-        posted: number;
-        searching: number;
-        offered: number;
-        assigned: number;
-        pickupPending: number;
-        inTransit: number;
-        delivered: number;
-        completed: number;
-        exception: number;
-        cancelled: number;
-        expired: number;
-        unposted: number;
-      };
+      byStatus: Record<string, number>;
       newInPeriod: number;
     };
     trips: {
@@ -87,7 +89,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(dateString: string): string {
+function formatShortDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -127,54 +129,6 @@ function StatCard({
           {subtitle}
         </p>
       )}
-    </div>
-  );
-}
-
-function MiniBarChart({
-  data,
-  valueKey,
-  color = "blue",
-}: {
-  data: Array<{ date: string; [key: string]: string | number }>;
-  valueKey: string;
-  color?: string;
-}) {
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-        No data available
-      </div>
-    );
-  }
-
-  const maxValue = Math.max(...data.map((d) => Number(d[valueKey]) || 0));
-  const colorClasses: Record<string, string> = {
-    blue: "bg-[#1e9c99]",
-    green: "bg-emerald-500",
-    yellow: "bg-amber-500",
-    red: "bg-rose-500",
-    teal: "bg-[#064d51]",
-  };
-
-  return (
-    <div className="flex h-32 items-end gap-1">
-      {data.slice(-14).map((item, index) => {
-        const value = Number(item[valueKey]) || 0;
-        const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
-        return (
-          <div
-            key={index}
-            className="flex flex-1 flex-col items-center"
-            title={`${formatDate(item.date)}: ${value}`}
-          >
-            <div
-              className={`w-full ${colorClasses[color]} rounded-t transition-all hover:opacity-80`}
-              style={{ height: `${Math.max(height, 2)}%` }}
-            />
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -229,40 +183,48 @@ function StatusDistribution({
   );
 }
 
+const chartTooltipStyle = {
+  contentStyle: {
+    backgroundColor: "#fff",
+    border: "1px solid rgba(6,77,81,0.15)",
+    borderRadius: "8px",
+    fontSize: "13px",
+  },
+};
+
 export default function AdminAnalyticsClient() {
-  const [period, setPeriod] = useState<TimePeriod>("month");
+  const [dateRange, setDateRange] = useState<DateRangeValue>(
+    getDefaultDateRange("30d")
+  );
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchAnalytics() {
-      setLoading(true);
-      setError(null);
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const response = await fetch(`/api/admin/analytics?period=${period}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch analytics");
-        }
-        const result = await response.json();
-        setData(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
+    try {
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+      const response = await fetch(`/api/admin/analytics?${params}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch analytics");
       }
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
     }
+  }, [dateRange.startDate, dateRange.endDate]);
 
+  useEffect(() => {
     fetchAnalytics();
-  }, [period]);
-
-  const periodLabels: Record<TimePeriod, string> = {
-    day: "Today",
-    week: "This Week",
-    month: "This Month",
-    year: "This Year",
-  };
+  }, [fetchAnalytics]);
 
   if (loading) {
     return (
@@ -284,95 +246,80 @@ export default function AdminAnalyticsClient() {
     return null;
   }
 
+  const periodLabel = `${formatShortDate(data.dateRange.start)} - ${formatShortDate(data.dateRange.end)}`;
+
   return (
     <div className="space-y-6">
-      {/* Header with Period Selector */}
+      {/* Header with Date Range Picker */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#064d51]">
             Platform Analytics
           </h1>
-          <p className="mt-1 text-[#064d51]/70">
-            {periodLabels[period]} &bull;{" "}
-            {new Date(data.dateRange.start).toLocaleDateString()} -{" "}
-            {new Date(data.dateRange.end).toLocaleDateString()}
-          </p>
+          <p className="mt-1 text-[#064d51]/70">{periodLabel}</p>
         </div>
-
-        <div className="flex gap-2">
-          {(["day", "week", "month", "year"] as TimePeriod[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                period === p
-                  ? "bg-[#064d51] text-white shadow-md"
-                  : "border border-[#064d51]/20 bg-white text-[#064d51] hover:bg-[#064d51]/10"
-              }`}
-            >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
-        </div>
+        <DateRangePicker value={dateRange} onChange={setDateRange} />
       </div>
 
       {/* Revenue Stats */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Platform Revenue"
-          value={formatCurrency(data.summary.revenue.platformBalance)}
-          subtitle="Total balance"
-          icon="💰"
-          trend="up"
-        />
-        <StatCard
-          title="Service Fees Collected"
-          value={formatCurrency(data.summary.revenue.serviceFeeCollected)}
-          subtitle={`${periodLabels[period].toLowerCase()}`}
-          icon="📈"
-          trend="up"
-        />
-        <StatCard
-          title="Active Trips"
-          value={data.summary.trips.active}
-          subtitle="Currently in transit"
-          icon="🚚"
-        />
-        <StatCard
-          title="Transaction Volume"
-          value={formatCurrency(data.summary.revenue.transactionVolume)}
-          subtitle={`${data.summary.revenue.transactionsInPeriod} transactions`}
-          icon="💳"
-        />
-      </div>
+      {data.summary.revenue && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Platform Revenue"
+            value={formatCurrency(data.summary.revenue.platformBalance)}
+            subtitle="Total balance"
+            icon="$"
+            trend="up"
+          />
+          <StatCard
+            title="Service Fees Collected"
+            value={formatCurrency(data.summary.revenue.serviceFeeCollected)}
+            subtitle={periodLabel}
+            icon="#"
+            trend="up"
+          />
+          <StatCard
+            title="Active Trips"
+            value={data.summary.trips.active}
+            subtitle="Currently in transit"
+            icon=">"
+          />
+          <StatCard
+            title="Transaction Volume"
+            value={formatCurrency(data.summary.revenue.transactionVolume)}
+            subtitle={`${data.summary.revenue.transactionsInPeriod} transactions`}
+            icon="~"
+          />
+        </div>
+      )}
 
       {/* Users & Organizations */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
           value={data.summary.users.total.toLocaleString()}
-          subtitle={`+${data.summary.users.newInPeriod} ${periodLabels[period].toLowerCase()}`}
-          icon="👥"
+          subtitle={`+${data.summary.users.newInPeriod} new`}
+          icon="U"
           trend={data.summary.users.newInPeriod > 0 ? "up" : "neutral"}
         />
         <StatCard
           title="Organizations"
           value={data.summary.organizations.total.toLocaleString()}
           subtitle="Registered companies"
-          icon="🏢"
+          icon="O"
         />
         <StatCard
           title="Open Disputes"
           value={data.summary.disputes.open}
-          subtitle={`${data.summary.disputes.resolvedInPeriod} resolved ${periodLabels[period].toLowerCase()}`}
-          icon="⚠️"
+          subtitle={`${data.summary.disputes.resolvedInPeriod} resolved`}
+          icon="!"
           trend={data.summary.disputes.open > 0 ? "down" : "neutral"}
         />
         <StatCard
           title="Total Trucks"
           value={data.summary.trucks.total.toLocaleString()}
           subtitle={`${data.summary.trucks.approved} approved, ${data.summary.trucks.pending} pending`}
-          icon="🚛"
+          icon="T"
         />
       </div>
 
@@ -381,8 +328,8 @@ export default function AdminAnalyticsClient() {
         <StatCard
           title="Total Loads"
           value={data.summary.loads.total.toLocaleString()}
-          subtitle={`+${data.summary.loads.newInPeriod} ${periodLabels[period].toLowerCase()}`}
-          icon="📦"
+          subtitle={`+${data.summary.loads.newInPeriod} new`}
+          icon="L"
           trend={data.summary.loads.newInPeriod > 0 ? "up" : "neutral"}
         />
         <StatCard
@@ -391,56 +338,127 @@ export default function AdminAnalyticsClient() {
             data.summary.loads.active + data.summary.loads.inProgress
           ).toLocaleString()}
           subtitle={`${data.summary.loads.inProgress} in progress`}
-          icon="🚚"
+          icon="A"
         />
         <StatCard
           title="Completed Trips"
           value={data.summary.trips.completed.toLocaleString()}
-          subtitle={`${periodLabels[period].toLowerCase()}`}
-          icon="✅"
+          subtitle="in period"
+          icon="C"
           trend="up"
         />
         <StatCard
           title="Cancelled"
           value={data.summary.trips.cancelled.toLocaleString()}
-          subtitle={`${periodLabels[period].toLowerCase()}`}
-          icon="❌"
+          subtitle="in period"
+          icon="X"
           trend={data.summary.trips.cancelled > 0 ? "down" : "neutral"}
         />
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Loads Over Time */}
+        {/* Loads Over Time - Line Chart */}
         <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
             New Loads
           </h3>
-          <MiniBarChart
-            data={data.charts.loadsOverTime}
-            valueKey="count"
-            color="teal"
-          />
-          <p className="mt-2 text-center text-sm text-[#064d51]/60">
-            {data.charts.loadsOverTime.length > 0
-              ? `${formatDate(data.charts.loadsOverTime[0].date)} - ${formatDate(data.charts.loadsOverTime[data.charts.loadsOverTime.length - 1].date)}`
-              : "No data"}
-          </p>
+          {data.charts.loadsOverTime.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={data.charts.loadsOverTime}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatShortDate}
+                  tick={{ fontSize: 12, fill: "#064d51" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#064d51" }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  {...chartTooltipStyle}
+                  labelFormatter={formatShortDate as (label: unknown) => string}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  name="Loads"
+                  stroke="#064d51"
+                  strokeWidth={2}
+                  dot={{ r: 3, fill: "#064d51" }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[250px] items-center justify-center text-sm text-[#064d51]/40">
+              No data available
+            </div>
+          )}
         </div>
 
-        {/* Revenue Over Time */}
+        {/* Revenue Over Time - Area Chart */}
         <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
             Revenue (Service Fees)
           </h3>
-          <MiniBarChart
-            data={data.charts.revenueOverTime}
-            valueKey="total"
-            color="green"
-          />
-          <p className="mt-2 text-center text-sm text-[#064d51]/60">
-            Total: {formatCurrency(data.summary.revenue.serviceFeeCollected)}
-          </p>
+          {data.charts.revenueOverTime.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={data.charts.revenueOverTime}>
+                <defs>
+                  <linearGradient
+                    id="revenueGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="5%" stopColor="#1e9c99" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#1e9c99" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatShortDate}
+                  tick={{ fontSize: 12, fill: "#064d51" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#064d51" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  {...chartTooltipStyle}
+                  labelFormatter={formatShortDate as (label: unknown) => string}
+                  formatter={
+                    ((value: number) => [
+                      formatCurrency(value),
+                      "Revenue",
+                    ]) as unknown as (value: unknown) => string
+                  }
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  name="Revenue"
+                  stroke="#1e9c99"
+                  strokeWidth={2}
+                  fill="url(#revenueGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[250px] items-center justify-center text-sm text-[#064d51]/40">
+              No data available
+            </div>
+          )}
         </div>
 
         {/* Load Status Distribution */}
@@ -451,40 +469,53 @@ export default function AdminAnalyticsClient() {
           <StatusDistribution data={data.charts.loadsByStatus} />
         </div>
 
-        {/* Trips Summary */}
+        {/* Trips Over Time - Bar Chart */}
         <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
             Trip Performance
           </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg bg-emerald-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                <span className="font-medium text-emerald-900">Completed</span>
-              </div>
-              <span className="text-xl font-bold text-emerald-900">
-                {data.summary.trips.completed}
-              </span>
+          {data.charts.tripsOverTime.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={data.charts.tripsOverTime}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatShortDate}
+                  tick={{ fontSize: 12, fill: "#064d51" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#064d51" }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  {...chartTooltipStyle}
+                  labelFormatter={formatShortDate as (label: unknown) => string}
+                />
+                <Legend />
+                <Bar
+                  dataKey="completed"
+                  name="Completed"
+                  fill="#064d51"
+                  radius={[4, 4, 0, 0]}
+                  stackId="trips"
+                />
+                <Bar
+                  dataKey="cancelled"
+                  name="Cancelled"
+                  fill="#f43f5e"
+                  radius={[4, 4, 0, 0]}
+                  stackId="trips"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[250px] items-center justify-center text-sm text-[#064d51]/40">
+              No data available
             </div>
-            <div className="flex items-center justify-between rounded-lg bg-amber-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-amber-500" />
-                <span className="font-medium text-amber-900">In Transit</span>
-              </div>
-              <span className="text-xl font-bold text-amber-900">
-                {data.summary.trips.active}
-              </span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-rose-50 p-3">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-rose-500" />
-                <span className="font-medium text-rose-900">Cancelled</span>
-              </div>
-              <span className="text-xl font-bold text-rose-900">
-                {data.summary.trips.cancelled}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,14 +11,29 @@
  * Sections: Active Jobs, Available Loads, Recent Activity, Fleet Overview, Notifications
  */
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import DateRangePicker, {
+  getDefaultDateRange,
+  type DateRangeValue,
+} from "@/components/DateRangePicker";
 import {
   StatCard,
   DashboardSection,
   QuickActionButton,
   StatusBadge,
-  EarningsChart,
   TruckIcon,
   ClockIcon,
   CurrencyIcon,
@@ -43,6 +58,14 @@ interface DashboardData {
   };
   recentPostings: number;
   pendingApprovals?: number;
+  charts?: {
+    tripsOverTime: Array<{
+      date: string;
+      completed: number;
+      cancelled: number;
+    }>;
+    earningsOverTime: Array<{ date: string; amount: number }>;
+  };
 }
 
 interface Load {
@@ -138,6 +161,45 @@ export default function CarrierDashboardClient({
     recentPostings: 0,
     pendingApprovals: 0,
   };
+
+  // Chart data with date range picker
+  const [dateRange, setDateRange] = useState<DateRangeValue>(
+    getDefaultDateRange("30d")
+  );
+  const [chartData, setChartData] = useState<{
+    tripsOverTime: Array<{
+      date: string;
+      completed: number;
+      cancelled: number;
+    }>;
+    earningsOverTime: Array<{ date: string; amount: number }>;
+  }>({
+    tripsOverTime: dashboardData?.charts?.tripsOverTime || [],
+    earningsOverTime: dashboardData?.charts?.earningsOverTime || [],
+  });
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+      const res = await fetch(`/api/carrier/dashboard?${params}`);
+      if (res.ok) {
+        const result = await res.json();
+        setChartData({
+          tripsOverTime: result.charts?.tripsOverTime || [],
+          earningsOverTime: result.charts?.earningsOverTime || [],
+        });
+      }
+    } catch {
+      // keep existing data on error
+    }
+  }, [dateRange.startDate, dateRange.endDate]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   // Use dashboard API data for accurate counts (trucks prop is limited to 5 for display)
   const totalTrucks = data.totalTrucks;
@@ -652,9 +714,131 @@ export default function CarrierDashboardClient({
               )}
             </DashboardSection>
 
-            {/* Earnings Chart */}
+            {/* Earnings Chart (Recharts) */}
             <DashboardSection title="Earnings" subtitle="Revenue overview">
-              <EarningsChart organizationId={user.organizationId} />
+              <div className="mb-3">
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+              </div>
+              {chartData.earningsOverTime.length > 0 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={chartData.earningsOverTime}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "1px solid rgba(6,77,81,0.15)",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                      }}
+                      labelFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      formatter={
+                        ((value: number) => [
+                          `${value.toLocaleString()} ETB`,
+                          "Earnings",
+                        ]) as unknown as (value: unknown) => string
+                      }
+                    />
+                    <Bar
+                      dataKey="amount"
+                      name="Earnings"
+                      fill="#064d51"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[200px] items-center justify-center text-sm text-[#064d51]/40">
+                  No earnings data for this period
+                </div>
+              )}
+            </DashboardSection>
+
+            {/* Trips Over Time (Line Chart) */}
+            <DashboardSection
+              title="Trip Activity"
+              subtitle="Completed vs cancelled"
+            >
+              {chartData.tripsOverTime.length > 0 ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={chartData.tripsOverTime}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#064d51" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "1px solid rgba(6,77,81,0.15)",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                      }}
+                      labelFormatter={(d) =>
+                        new Date(d).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })
+                      }
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="completed"
+                      name="Completed"
+                      stroke="#064d51"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: "#064d51" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cancelled"
+                      name="Cancelled"
+                      stroke="#f43f5e"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: "#f43f5e" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[180px] items-center justify-center text-sm text-[#064d51]/40">
+                  No trip data for this period
+                </div>
+              )}
             </DashboardSection>
 
             {/* Notifications */}

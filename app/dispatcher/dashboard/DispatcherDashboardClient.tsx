@@ -15,6 +15,23 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  ReferenceLine,
+} from "recharts";
+import DateRangePicker, {
+  getDefaultDateRange,
+  type DateRangeValue,
+} from "@/components/DateRangePicker";
+import {
   StatCard,
   DashboardSection,
   QuickActionButton,
@@ -170,6 +187,43 @@ export default function DispatcherDashboardClient({
   const exceptionTrips = stats?.exceptionTrips ?? 0;
   const pendingProposals = stats?.pendingProposals ?? 0;
   const openEscalations = stats?.openEscalations ?? 0;
+
+  // Chart data with date range picker
+  const [chartDateRange, setChartDateRange] = useState<DateRangeValue>(
+    getDefaultDateRange("30d")
+  );
+  const [chartData, setChartData] = useState<{
+    onTimeRateTrend: Array<{ date: string; rate: number; total: number }>;
+    loadVolumeByDay: Array<{
+      date: string;
+      posted: number;
+      inTransit: number;
+      delivered: number;
+    }>;
+  }>({ onTimeRateTrend: [], loadVolumeByDay: [] });
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({
+        startDate: chartDateRange.startDate,
+        endDate: chartDateRange.endDate,
+      });
+      const res = await fetch(`/api/dispatcher/dashboard?${params}`);
+      if (res.ok) {
+        const result = await res.json();
+        setChartData({
+          onTimeRateTrend: result.charts?.onTimeRateTrend || [],
+          loadVolumeByDay: result.charts?.loadVolumeByDay || [],
+        });
+      }
+    } catch {
+      // keep existing data on error
+    }
+  }, [chartDateRange.startDate, chartDateRange.endDate]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   // Today's pickups - use API data when available
   const todayStr = new Date().toISOString().split("T")[0];
@@ -333,6 +387,164 @@ export default function DispatcherDashboardClient({
               variant="outline"
             />
           </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* On-Time Rate Trend */}
+          <DashboardSection
+            title="On-Time Delivery Rate"
+            subtitle="Daily delivery performance"
+          >
+            <div className="mb-3">
+              <DateRangePicker
+                value={chartDateRange}
+                onChange={setChartDateRange}
+              />
+            </div>
+            {chartData.onTimeRateTrend.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={chartData.onTimeRateTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(d) =>
+                      new Date(d).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                    tick={{ fontSize: 11, fill: "#064d51" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontSize: 11, fill: "#064d51" }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "1px solid rgba(6,77,81,0.15)",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                    }}
+                    labelFormatter={(d) =>
+                      new Date(d).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                    formatter={
+                      ((value: number, name: string) => [
+                        `${value}%`,
+                        name === "rate" ? "On-Time Rate" : name,
+                      ]) as unknown as (value: unknown) => string
+                    }
+                  />
+                  <ReferenceLine
+                    y={90}
+                    stroke="#064d51"
+                    strokeDasharray="3 3"
+                    strokeOpacity={0.4}
+                    label={{
+                      value: "90% target",
+                      position: "insideTopRight",
+                      fontSize: 11,
+                      fill: "#064d51",
+                      opacity: 0.6,
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rate"
+                    name="On-Time Rate"
+                    stroke="#1e9c99"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "#1e9c99" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[220px] items-center justify-center text-sm text-[#064d51]/40">
+                No delivery data for this period
+              </div>
+            )}
+          </DashboardSection>
+
+          {/* Load Volume by Status */}
+          <DashboardSection
+            title="Load Volume"
+            subtitle="Daily load activity by status"
+          >
+            {chartData.loadVolumeByDay.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={chartData.loadVolumeByDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#064d5115" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(d) =>
+                      new Date(d).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                    tick={{ fontSize: 11, fill: "#064d51" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#064d51" }}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "1px solid rgba(6,77,81,0.15)",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                    }}
+                    labelFormatter={(d) =>
+                      new Date(d).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="posted"
+                    name="Posted"
+                    fill="#1e9c99"
+                    radius={[4, 4, 0, 0]}
+                    stackId="volume"
+                  />
+                  <Bar
+                    dataKey="inTransit"
+                    name="In Transit"
+                    fill="#f59e0b"
+                    radius={[0, 0, 0, 0]}
+                    stackId="volume"
+                  />
+                  <Bar
+                    dataKey="delivered"
+                    name="Delivered"
+                    fill="#064d51"
+                    radius={[4, 4, 0, 0]}
+                    stackId="volume"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-[260px] items-center justify-center text-sm text-[#064d51]/40">
+                No load data for this period
+              </div>
+            )}
+          </DashboardSection>
         </div>
 
         {/* Tabs */}

@@ -62,6 +62,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Parse optional date range for chart data (default: last 30 days)
+    const searchParams = request.nextUrl.searchParams;
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+    const chartStart = startDateParam
+      ? new Date(startDateParam + "T00:00:00")
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const chartEnd = endDateParam
+      ? new Date(endDateParam + "T23:59:59")
+      : new Date();
+
     // Get today's date boundaries
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -81,6 +92,8 @@ export async function GET(request: NextRequest) {
       exceptionTrips,
       pendingProposals,
       openEscalations,
+      onTimeRateTrendRaw,
+      loadVolumeByDayRaw,
     ] = await Promise.all([
       // Posted (unassigned) loads
       db.load.count({
@@ -188,6 +201,44 @@ export async function GET(request: NextRequest) {
           status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] },
         },
       }),
+
+      // On-time rate trend (for chart): daily on-time delivery rate
+      db.$queryRaw<{ date: Date; total: bigint; on_time: bigint }[]>`
+        SELECT
+          DATE_TRUNC('day', t."deliveredAt") as date,
+          COUNT(*) as total,
+          COUNT(*) FILTER (
+            WHERE DATE_TRUNC('day', t."deliveredAt") <= DATE_TRUNC('day', l."deliveryDate")
+          ) as on_time
+        FROM trips t
+        JOIN loads l ON t."loadId" = l.id
+        WHERE t.status IN ('DELIVERED', 'COMPLETED')
+          AND t."deliveredAt" >= ${chartStart}
+          AND t."deliveredAt" <= ${chartEnd}
+          AND l."deliveryDate" IS NOT NULL
+        GROUP BY DATE_TRUNC('day', t."deliveredAt")
+        ORDER BY date ASC
+      `,
+
+      // Load volume by day (for chart): daily counts by status category
+      db.$queryRaw<
+        {
+          date: Date;
+          posted: bigint;
+          in_transit: bigint;
+          delivered: bigint;
+        }[]
+      >`
+        SELECT
+          DATE_TRUNC('day', "updatedAt") as date,
+          COUNT(*) FILTER (WHERE status = 'POSTED') as posted,
+          COUNT(*) FILTER (WHERE status = 'IN_TRANSIT') as in_transit,
+          COUNT(*) FILTER (WHERE status IN ('DELIVERED', 'COMPLETED')) as delivered
+        FROM loads
+        WHERE "updatedAt" >= ${chartStart} AND "updatedAt" <= ${chartEnd}
+        GROUP BY DATE_TRUNC('day', "updatedAt")
+        ORDER BY date ASC
+      `,
     ]);
 
     // Calculate on-time rate using Trip.deliveredAt (actual delivery) vs Load.deliveryDate (target)
@@ -221,6 +272,23 @@ export async function GET(request: NextRequest) {
         openEscalations,
       },
       pickupsToday,
+      charts: {
+        onTimeRateTrend: onTimeRateTrendRaw.map((item) => {
+          const total = Number(item.total);
+          const onTime = Number(item.on_time);
+          return {
+            date: item.date,
+            rate: total > 0 ? Math.round((onTime / total) * 100) : 100,
+            total,
+          };
+        }),
+        loadVolumeByDay: loadVolumeByDayRaw.map((item) => ({
+          date: item.date,
+          posted: Number(item.posted),
+          inTransit: Number(item.in_transit),
+          delivered: Number(item.delivered),
+        })),
+      },
     });
   } catch (error) {
     return handleApiError(error, "Dispatcher dashboard error");

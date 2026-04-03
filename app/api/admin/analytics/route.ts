@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
  *
  * Provides comprehensive analytics for admin dashboard
  * Supports time period filtering: day, week, month, year
+ * Also accepts startDate + endDate query params for custom date ranges
  *
  * Uses lib/admin/metrics.ts for consistent metric calculations.
  */
@@ -33,8 +34,18 @@ export async function GET(request: NextRequest) {
     const isDispatcher = session.role === "DISPATCHER";
 
     const searchParams = request.nextUrl.searchParams;
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
     const period = (searchParams.get("period") || "month") as TimePeriod;
-    const dateRange = getDateRangeForPeriod(period);
+
+    // Custom date range takes precedence over period preset
+    const dateRange =
+      startDateParam && endDateParam
+        ? {
+            start: new Date(startDateParam + "T00:00:00"),
+            end: new Date(endDateParam + "T23:59:59"),
+          }
+        : getDateRangeForPeriod(period);
     const { start, end } = dateRange;
 
     // Get all stats using centralized metrics functions
