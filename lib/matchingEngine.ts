@@ -770,6 +770,16 @@ function calcTimeMatchScore(
  * - Capacity: 20%
  * - Time: 20%
  */
+/**
+ * §12 Trust score from org average rating (0-100)
+ * No rating = neutral 50 (doesn't penalize new carriers)
+ */
+function calcTrustScore(averageRating: number | null | undefined): number {
+  if (averageRating == null) return 50; // neutral for unrated
+  // Rating 1-5 maps to score 0-100
+  return Math.round(((Number(averageRating) - 1) / 4) * 100);
+}
+
 function calcLoadTruckMatchScore(
   load: LoadMatchCriteria,
   truck: TruckMatchCriteria
@@ -884,15 +894,23 @@ function calcLoadTruckMatchScore(
     reasons.push(`Compatible: ${truck.truckType} for ${load.truckType}`);
   }
 
-  // Calculate final score: Route 30%, DH-O 30%, Capacity 20%, Time 20% + exact type bonus
+  // §12 Trust score from carrier rating (20%)
+  const trustScore = calcTrustScore(
+    truck.averageRating as number | null | undefined
+  );
+  if (trustScore >= 80) reasons.push("Highly rated carrier");
+  else if (trustScore >= 60) reasons.push("Good carrier rating");
+
+  // Calculate final score: Route 25%, DH-O 25%, Capacity 15%, Time 15%, Trust 20% + exact type bonus
   const typeBonus = typeCompat === "exact" ? 5 : 0;
   const finalScore = Math.min(
     100,
     Math.round(
-      routeScore * 0.3 +
-        dhScore * 0.3 +
-        capacityScore * 0.2 +
-        timeScore * 0.2 +
+      routeScore * 0.25 +
+        dhScore * 0.25 +
+        capacityScore * 0.15 +
+        timeScore * 0.15 +
+        trustScore * 0.2 +
         typeBonus
     )
   );

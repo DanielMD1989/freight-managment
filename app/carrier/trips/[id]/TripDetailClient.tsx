@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { csrfFetch } from "@/lib/csrfFetch";
 import StarRating from "@/components/StarRating";
 import RatingModal from "@/components/RatingModal";
+import TripChat from "@/components/TripChat";
 
 interface Trip {
   id: string; // Trip ID
@@ -79,9 +80,10 @@ interface Trip {
 
 interface Props {
   trip: Trip;
+  userId: string;
 }
 
-export default function TripDetailClient({ trip: initialTrip }: Props) {
+export default function TripDetailClient({ trip: initialTrip, userId }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [trip, setTrip] = useState(initialTrip);
@@ -1132,6 +1134,9 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
           )}
         </div>
       </div>
+
+      {/* §13 In-App Messaging */}
+      <TripChat tripId={trip.id} currentUserId={userId} isShipper={false} />
     </div>
   );
 }

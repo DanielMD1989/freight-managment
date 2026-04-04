@@ -93,6 +93,7 @@ export async function GET(
             id: true,
             name: true,
             isVerified: true,
+            averageRating: true,
           },
         },
         originCity: {
@@ -168,6 +169,9 @@ export async function GET(
       lengthM: truck.availableLength ? Number(truck.availableLength) : null,
       fullPartial: truck.fullPartial,
       carrier: truck.carrier,
+      averageRating: truck.carrier?.averageRating
+        ? Number(truck.carrier.averageRating)
+        : null,
       contactName: truck.contactName,
       contactPhone: truck.contactPhone,
       createdAt: truck.createdAt,

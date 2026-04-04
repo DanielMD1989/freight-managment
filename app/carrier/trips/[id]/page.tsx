@@ -338,7 +338,7 @@ export default async function TripDetailPage({
   return (
     <div className="p-6">
       <Suspense fallback={<TripDetailSkeleton />}>
-        <TripDetailClient trip={trip} />
+        <TripDetailClient trip={trip} userId={session.userId} />
       </Suspense>
     </div>
   );

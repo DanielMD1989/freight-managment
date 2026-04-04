@@ -15,7 +15,7 @@ import {
   Platform,
   Linking,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 // expo-image-picker only works on iOS/Android — lazy-load to avoid web crashes
 let ImagePicker: typeof import("expo-image-picker") | null = null;
@@ -51,6 +51,7 @@ import type { TripStatus } from "../../../src/types";
 
 export default function CarrierTripDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { data: trip, isLoading } = useTrip(id);
   const updateStatus = useUpdateTripStatus();
   const cancelTrip = useCancelTrip();
@@ -479,6 +480,24 @@ export default function CarrierTripDetailsScreen() {
               />
             )}
           </View>
+        )}
+
+        {/* §13 Message Shipper */}
+        {id && (
+          <Button
+            title="Message Shipper"
+            onPress={() => router.push(`/(shared)/chat/${id}`)}
+            variant="outline"
+            fullWidth
+            size="md"
+            icon={
+              <Ionicons
+                name="chatbubbles-outline"
+                size={18}
+                color={colors.primary500}
+              />
+            }
+          />
         )}
 
         <View style={{ height: spacing["3xl"] }} />

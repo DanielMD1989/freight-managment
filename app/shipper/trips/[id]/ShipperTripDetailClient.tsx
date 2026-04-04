@@ -21,6 +21,7 @@ import { useGpsRealtime } from "@/hooks/useGpsRealtime";
 import { csrfFetch } from "@/lib/csrfFetch";
 import StarRating from "@/components/StarRating";
 import RatingModal from "@/components/RatingModal";
+import TripChat from "@/components/TripChat";
 
 interface TripPod {
   id: string;
@@ -99,6 +100,7 @@ interface Trip {
 
 interface Props {
   trip: Trip;
+  userId: string;
 }
 
 const STATUS_CONFIG: Record<
@@ -149,7 +151,10 @@ const EVENT_ICONS: Record<string, string> = {
   POD_UPLOADED: "📄",
 };
 
-export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
+export default function ShipperTripDetailClient({
+  trip: initialTrip,
+  userId,
+}: Props) {
   const router = useRouter();
   const [trip, setTrip] = useState(initialTrip);
   const [showHistoryPlayback, setShowHistoryPlayback] = useState(false);
@@ -1165,6 +1170,9 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
           </div>
         </div>
       )}
+
+      {/* §13 In-App Messaging */}
+      <TripChat tripId={trip.id} currentUserId={userId} isShipper={true} />
     </div>
   );
 }

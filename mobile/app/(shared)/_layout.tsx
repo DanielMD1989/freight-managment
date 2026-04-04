@@ -27,6 +27,7 @@ export default function SharedLayout() {
         name="delete-account"
         options={{ title: "Delete Account" }}
       />
+      <Stack.Screen name="chat/[tripId]" options={{ title: "Trip Chat" }} />
       <Stack.Screen
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}

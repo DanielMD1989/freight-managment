@@ -413,6 +413,24 @@ export default function ShipperTripDetailsScreen() {
           </View>
         )}
 
+      {/* §13 Message Carrier */}
+      {id && (
+        <Button
+          title="Message Carrier"
+          onPress={() => router.push(`/(shared)/chat/${id}`)}
+          variant="outline"
+          fullWidth
+          size="md"
+          icon={
+            <Ionicons
+              name="chatbubbles-outline"
+              size={18}
+              color={colors.primary500}
+            />
+          }
+        />
+      )}
+
       <View style={{ height: spacing["3xl"] }} />
 
       {/* Confirmation Modal */}
