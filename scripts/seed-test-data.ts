@@ -535,6 +535,8 @@ async function main() {
           approvedById: adminUser.id,
           contactName: "Test Driver",
           contactPhone: "+251944444444",
+          insuranceStatus: "VALID",
+          insuranceExpiresAt: new Date("2027-12-31"),
         },
       });
       console.log(
@@ -549,6 +551,8 @@ async function main() {
           approvalStatus: "APPROVED",
           approvedAt: new Date(),
           approvedById: adminUser.id,
+          insuranceStatus: "VALID",
+          insuranceExpiresAt: new Date("2027-12-31"),
         },
       });
       console.log(`   [=] Truck exists: ${truckData.licensePlate} (updated)`);

@@ -873,6 +873,8 @@ async function main() {
         approvedById: approvedById,
         contactName: `Driver ${t.plate}`,
         contactPhone: "+251955500000",
+        insuranceStatus: "VALID",
+        insuranceExpiresAt: new Date("2027-12-31"),
       },
     });
     truckMap[t.plate] = truck.id;
