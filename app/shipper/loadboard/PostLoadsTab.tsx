@@ -454,10 +454,28 @@ export default function PostLoadsTab({
     if (!editingLoadId) return;
 
     const editingLoad = loads.find((l) => l.id === editingLoadId);
-    const wasUnposted = editingLoad?.status === "UNPOSTED";
+    const currentStatus = editingLoad?.status;
+    const isLiveOnMarket =
+      currentStatus === "POSTED" ||
+      currentStatus === "SEARCHING" ||
+      currentStatus === "OFFERED";
 
     try {
       const csrfToken = await getCSRFToken();
+      const headers = {
+        "Content-Type": "application/json",
+        ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+      };
+
+      // If live on marketplace, unpost first so we can edit fields
+      if (isLiveOnMarket) {
+        const unpostRes = await fetch(`/api/loads/${editingLoadId}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ status: "UNPOSTED" }),
+        });
+        if (!unpostRes.ok) throw new Error("Failed to unpost load for editing");
+      }
 
       // L6 FIX: Look up city IDs with proper types
       const pickupCityObj = ethiopianCities.find(
@@ -485,27 +503,25 @@ export default function PostLoadsTab({
         cargoDescription: editForm.cargoDescription || null,
         rate: editForm.rate ? parseFloat(editForm.rate) : null,
         shipperContactPhone: editForm.contactPhone || null,
-        status: undefined as string | undefined,
+        // Re-post after editing (restores to marketplace)
+        status:
+          isLiveOnMarket || currentStatus === "UNPOSTED" ? "POSTED" : undefined,
       };
-
-      // If UNPOSTED, also post it
-      if (wasUnposted) {
-        updatePayload.status = "POSTED";
-      }
 
       const response = await fetch(`/api/loads/${editingLoadId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
+        headers,
         body: JSON.stringify(updatePayload),
       });
 
       if (!response.ok) throw new Error("Failed to update load");
 
       toast.success(
-        wasUnposted ? "Load updated and posted!" : "Load updated successfully!"
+        isLiveOnMarket
+          ? "Load updated and re-posted!"
+          : currentStatus === "UNPOSTED"
+            ? "Load updated and posted!"
+            : "Load updated successfully!"
       );
       setEditingLoadId(null);
       setEditForm({
@@ -521,7 +537,7 @@ export default function PostLoadsTab({
         contactPhone: "",
       });
 
-      if (wasUnposted) {
+      if (currentStatus === "UNPOSTED" || isLiveOnMarket) {
         setActiveStatus("POSTED");
       } else {
         fetchLoads();
