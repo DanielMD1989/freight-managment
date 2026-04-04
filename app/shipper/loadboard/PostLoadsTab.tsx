@@ -225,9 +225,13 @@ export default function PostLoadsTab({
       let matchCounts: Record<string, number> = {};
       if (postedLoadIds.length > 0) {
         try {
+          const csrfToken = await getCSRFToken();
           const batchRes = await fetch("/api/loads/batch-match-counts", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+            },
             credentials: "include",
             body: JSON.stringify({ loadIds: postedLoadIds }),
           });

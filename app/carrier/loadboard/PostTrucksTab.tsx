@@ -239,11 +239,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       let truckMatchCounts: Record<string, number> = {};
       if (activePostingIds.length > 0) {
         try {
+          const csrfToken = await getCSRFToken();
           const batchRes = await fetch(
             "/api/truck-postings/batch-match-counts",
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+              },
               credentials: "include",
               body: JSON.stringify({ postingIds: activePostingIds }),
             }
