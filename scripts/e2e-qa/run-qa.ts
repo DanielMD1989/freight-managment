@@ -334,6 +334,8 @@ function makeLoadPayload(overrides: Record<string, unknown> = {}) {
     cargoDescription: "QA test cargo",
     fullPartial: "FULL",
     bookMode: "REQUEST",
+    shipperContactName: "QA Test Shipper",
+    shipperContactPhone: "+251911111111",
     status: "POSTED",
     ...overrides,
   };
@@ -857,6 +859,31 @@ async function phase4() {
           coverageType: "THIRD_PARTY",
         },
       });
+    }
+  );
+
+  await test(
+    "4.5c",
+    "Seed required truck documents (REGISTRATION, TITLE_DEED, ROAD_WORTHINESS)",
+    async () => {
+      for (const type of [
+        "REGISTRATION",
+        "TITLE_DEED",
+        "ROAD_WORTHINESS",
+      ] as const) {
+        await prisma.truckDocument.create({
+          data: {
+            truckId: ctx.truckId,
+            type,
+            fileName: `${type.toLowerCase()}.pdf`,
+            fileUrl: `/uploads/${type.toLowerCase()}.pdf`,
+            fileSize: 1024,
+            mimeType: "application/pdf",
+            verificationStatus: "APPROVED",
+            uploadedById: ctx.carrierUserId,
+          },
+        });
+      }
     }
   );
 

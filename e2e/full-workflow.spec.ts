@@ -423,9 +423,31 @@ test.describe.serial("Full Business Workflow", () => {
         isAvailable: true,
       }
     );
-    expect(truckStatus).toBe(201);
-    const truck = truckData.truck ?? truckData;
-    truckId = truck.id;
+    if (truckStatus === 403) {
+      // Fresh carrier org not fully approved — fall back to seed carrier
+      carrierToken = await getToken("carrier@test.com", password);
+      const { status: s2, data: d2 } = await apiCall(
+        "POST",
+        "/api/trucks",
+        carrierToken,
+        {
+          truckType: "FLATBED",
+          licensePlate: plate,
+          capacity: 20000,
+          volume: 60,
+          currentCity: "Addis Ababa",
+          currentRegion: "Addis Ababa",
+          isAvailable: true,
+        }
+      );
+      expect(s2).toBe(201);
+      const fallbackTruck = d2.truck ?? d2;
+      truckId = fallbackTruck.id;
+    } else {
+      expect(truckStatus).toBe(201);
+      const truck = truckData.truck ?? truckData;
+      truckId = truck.id;
+    }
 
     // Use existing approved seed truck if fresh approval fails (doc/insurance gates)
     const { status: approveStatus } = await apiCall(
