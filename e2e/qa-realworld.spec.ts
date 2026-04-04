@@ -695,11 +695,15 @@ test.describe.serial("B8 — Security & Edge Cases", () => {
   });
 
   test("B8.5: Unauthenticated user redirects to login", async ({ browser }) => {
-    const page = await browser.newPage();
+    // Fresh context with NO storageState (overrides project default)
+    const context = await browser.newContext({ storageState: undefined });
+    const page = await context.newPage();
+    // Clear any inherited cookies
+    await context.clearCookies();
     await page.goto("/shipper/wallet");
     await page.waitForURL(/login/, { timeout: 15000 });
     expect(page.url()).toContain("/login");
-    await page.close();
+    await context.close();
   });
 
   test("B8.6: Shipper documents page shows lock (org approved)", async ({

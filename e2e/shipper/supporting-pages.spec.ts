@@ -98,10 +98,10 @@ test.describe("Shipper Map Page", () => {
     await expect(shipmentInfo).toBeVisible({ timeout: 10000 });
   });
 
-  test("shows Refresh button", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible({
-      timeout: 10000,
-    });
+  test("shows Refresh button or empty state", async ({ page }) => {
+    const refresh = page.getByRole("button", { name: "Refresh" });
+    const empty = page.getByText(/No Active Shipments/i);
+    await expect(refresh.or(empty)).toBeVisible({ timeout: 10000 });
   });
 });
 

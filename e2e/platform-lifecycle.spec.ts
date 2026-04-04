@@ -290,6 +290,8 @@ function buildLoadPayload(suffix: string) {
     truckType: "FLATBED",
     weight: 8000,
     cargoDescription: `Platform lifecycle E2E cargo — ${suffix}`,
+    shipperContactName: "Lifecycle Shipper",
+    shipperContactPhone: "+251911111111",
     status: "POSTED",
   };
 }

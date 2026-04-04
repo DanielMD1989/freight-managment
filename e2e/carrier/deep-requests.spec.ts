@@ -122,15 +122,10 @@ test.describe("Deep: My Load Requests Tab", () => {
     await tab.click();
     await page.waitForTimeout(2000);
 
-    const requestContent = main
-      .getByText(/LOAD-|Pending|Approved|truck|PENDING|APPROVED/i)
-      .first();
-    const emptyState = main
-      .getByRole("heading", { name: /No Requests/i })
-      .first();
-    await expect(requestContent.or(emptyState)).toBeVisible({
-      timeout: 10000,
-    });
+    // Check for request data OR empty state
+    const requestData = main.getByText(/APPROVED|PENDING|REJECTED/i).first();
+    const emptyState = main.getByRole("heading", { name: /No Requests/i });
+    await expect(requestData.or(emptyState)).toBeVisible({ timeout: 10000 });
   });
 
   test("load request cards show status badges", async ({ page }) => {

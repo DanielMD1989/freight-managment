@@ -165,6 +165,8 @@ test.describe.serial("Full Trip Lifecycle", () => {
       truckType: "FLATBED",
       weight: 5000,
       cargoDescription: "E2E carrier workflow test load - industrial materials",
+      shipperContactName: "Test Shipper",
+      shipperContactPhone: "+251911111111",
       status: "POSTED",
     });
     expect(status).toBe(201);

@@ -48,7 +48,9 @@ test.describe("Deep: Trip History Page", () => {
   test("trip cards show license plate", async ({ page }) => {
     await page.waitForTimeout(2000);
     const main = page.getByRole("main");
-    const plate = main.getByText(/ET-|E2E-|No completed trips/i).first();
+    const plate = main
+      .getByText(/ET-|E2E-|AA-|DD-|MK-|HW-|DJ-|No completed trips/i)
+      .first();
     await expect(plate).toBeVisible({ timeout: 10000 });
   });
 
