@@ -48,7 +48,8 @@ export default function TrucksClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Search + Filters
+  const [searchQuery, setSearchQuery] = useState("");
   const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>("ALL");
   const [postingFilter, setPostingFilter] = useState<PostingFilter>("ALL");
   const [truckTypeFilter, setTruckTypeFilter] = useState("");
@@ -136,11 +137,38 @@ export default function TrucksClient() {
 
   const truckTypes = TRUCK_TYPES_CONST.map((t) => t.value);
 
+  // Client-side search filter
+  const filteredTrucks = searchQuery
+    ? trucks.filter((t) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          t.licensePlate.toLowerCase().includes(q) ||
+          (t.carrier?.name || "").toLowerCase().includes(q) ||
+          (t.currentCity || "").toLowerCase().includes(q) ||
+          t.truckType.toLowerCase().replace(/_/g, " ").includes(q)
+        );
+      })
+    : trucks;
+
   return (
     <div className="space-y-6">
-      {/* Filters */}
+      {/* Search + Filters */}
       <div className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-end gap-4">
+          {/* Search */}
+          <div className="min-w-[200px] flex-1">
+            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+              Search
+            </label>
+            <input
+              type="text"
+              placeholder="Search by plate, carrier, or city..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
           {/* Approval Status Filter */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-500">
@@ -327,7 +355,7 @@ export default function TrucksClient() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {trucks.map((truck) => (
+                {filteredTrucks.map((truck) => (
                   <tr
                     key={truck.id}
                     className="transition-colors hover:bg-slate-50"

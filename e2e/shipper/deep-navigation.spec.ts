@@ -45,7 +45,7 @@ test.describe("Deep: Sidebar Links Exist in DOM", () => {
       { name: "Live Map", href: "/shipper/map" },
       { name: "Loadboard", href: "/shipper/loadboard" },
       { name: "Requests", href: "/shipper/requests" },
-      { name: "My Loads", href: "/shipper/loads" },
+      { name: "Proposals", href: "/shipper/proposals" },
       { name: "Trips", href: "/shipper/trips" },
       { name: "Wallet", href: "/shipper/wallet" },
       { name: "Documents", href: "/shipper/documents" },

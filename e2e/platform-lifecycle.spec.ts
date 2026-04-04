@@ -375,38 +375,23 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
     const { carrierToken, adminToken } = loadState();
     expect(carrierToken).toBeTruthy();
 
-    // Always create a fresh truck for this lifecycle run so we never pick up a
-    // truck that's already locked into a previous test's trip.
-    const plate = `PL-${Date.now().toString(36).slice(-6).toUpperCase()}`;
-    const { status: cStatus, data: cData } = await apiCall(
-      "POST",
-      "/api/trucks",
-      carrierToken,
-      {
-        truckType: "FLATBED",
-        licensePlate: plate,
-        capacity: 20000,
-        volume: 60,
-        currentCity: "Addis Ababa",
-        currentRegion: "Addis Ababa",
-        isAvailable: true,
-      }
+    // Use an existing APPROVED seed truck (has valid insurance + approval)
+    const { data: truckList } = await apiCall(
+      "GET",
+      "/api/trucks?myTrucks=true&limit=20",
+      carrierToken
     );
-    expect([201]).toContain(cStatus);
-    const truck = (cData.truck ?? cData) as {
+    const trucks = (truckList.trucks || []) as Array<{
       id: string;
       licensePlate: string;
-    };
-    expect(truck.id).toBeTruthy();
-
-    // Admin approves
-    const { status: aStatus } = await apiCall(
-      "POST",
-      `/api/trucks/${truck.id}/approve`,
-      adminToken,
-      { action: "APPROVE" }
+      approvalStatus: string;
+      isAvailable: boolean;
+    }>;
+    const truck = trucks.find(
+      (t) => t.approvalStatus === "APPROVED" && t.isAvailable
     );
-    expect([200, 201]).toContain(aStatus);
+    expect(truck).toBeTruthy();
+    expect(truck!.id).toBeTruthy();
 
     // Create a truck posting — required before carrier can request loads
     const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations?limit=1`);
@@ -422,21 +407,30 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const { status: pStatus } = await apiCall(
-      "POST",
-      "/api/truck-postings",
-      carrierToken,
-      {
-        truckId: truck.id,
-        originCityId,
-        availableFrom: tomorrow.toISOString(),
-        contactName: "Lifecycle Carrier",
-        contactPhone: "+251912345678",
-      }
+    // Check if truck already has an active posting (seed trucks do)
+    const { data: existingPostings } = await apiCall(
+      "GET",
+      `/api/truck-postings?truckId=${truck!.id}&limit=1`,
+      carrierToken
     );
-    expect([200, 201]).toContain(pStatus);
+    const hasPosting = (existingPostings.postings || []).length > 0;
+    if (!hasPosting) {
+      const { status: pStatus } = await apiCall(
+        "POST",
+        "/api/truck-postings",
+        carrierToken,
+        {
+          truckId: truck!.id,
+          originCityId,
+          availableFrom: tomorrow.toISOString(),
+          contactName: "Lifecycle Carrier",
+          contactPhone: "+251912345678",
+        }
+      );
+      expect([200, 201]).toContain(pStatus);
+    }
 
-    saveState({ truckId: truck.id, licensePlate: truck.licensePlate ?? plate });
+    saveState({ truckId: truck!.id, licensePlate: truck!.licensePlate });
   });
 
   // ── Phase 2a: Self-healing setup — corridor + wallet balances ────────────

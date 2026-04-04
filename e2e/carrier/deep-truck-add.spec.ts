@@ -63,8 +63,8 @@ test.describe("Deep: Register New Truck", () => {
 
   test("GPS device fields render if available", async ({ page }) => {
     const main = page.getByRole("main");
-    // GPS field is labeled "GPS DEVICE ID" on the add form (always visible)
-    await expect(main.getByText(/GPS Device ID/i).first()).toBeVisible({
+    // GPS field is labeled "GPS IMEI" on the add form
+    await expect(main.getByText(/GPS IMEI/i).first()).toBeVisible({
       timeout: 10000,
     });
   });

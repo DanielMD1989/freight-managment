@@ -29,7 +29,9 @@ test.describe("Shipper Wallet", () => {
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Deposits" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Refunds" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Refunds", exact: true })
+    ).toBeVisible();
   });
 
   test("shows transactions or empty state", async ({ page }) => {

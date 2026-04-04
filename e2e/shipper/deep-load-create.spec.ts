@@ -131,7 +131,9 @@ test.describe("Deep: Load Creation Form", () => {
     await page.locator("textarea").first().fill("Deep test cargo");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    // Step 3 — accept defaults
+    // Step 3 — fill required contact fields
+    await page.getByPlaceholder("Your name").first().fill("Test Shipper");
+    await page.getByPlaceholder("+251").first().fill("+251911111111");
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Step 4 — Review
@@ -205,7 +207,9 @@ test.describe("Deep: Load Creation Form", () => {
       .fill("E2E deep test cargo — full submission");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    // Step 3 — accept defaults
+    // Step 3 — fill required contact fields
+    await page.getByPlaceholder("Your name").first().fill("Test Shipper");
+    await page.getByPlaceholder("+251").first().fill("+251911111111");
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Step 4 — submit

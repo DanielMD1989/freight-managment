@@ -35,10 +35,10 @@ test.describe("Deep: Dispatcher Trucks", () => {
       const headers = main.getByRole("columnheader");
       const headerTexts = await headers.allTextContents();
       const headerStr = headerTexts.join(" ").toUpperCase();
-      expect(headerStr).toContain("TRUCK");
+      expect(headerStr).toContain("LICENSE PLATE");
       expect(headerStr).toContain("TYPE");
-      expect(headerStr).toContain("ROUTE");
       expect(headerStr).toContain("CARRIER");
+      expect(headerStr).toContain("LOCATION");
       expect(headerStr).toContain("GPS");
     } else {
       // May show "Loading trucks..." or empty state
@@ -66,7 +66,9 @@ test.describe("Deep: Dispatcher Trucks", () => {
 
     if (hasSelect) {
       const options = await statusSelect.locator("option").allTextContents();
-      expect(options.some((o) => /Active/i.test(o))).toBe(true);
+      expect(options.some((o) => /Approved|Pending|Rejected/i.test(o))).toBe(
+        true
+      );
     } else {
       await expect(
         main

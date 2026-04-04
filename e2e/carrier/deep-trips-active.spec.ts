@@ -142,7 +142,9 @@ test.describe("Deep: Active Trips Tab", () => {
         /Pickup Pending|In Transit|Delivered|PICKUP_PENDING|IN_TRANSIT|ET-|E2E-/i
       )
       .first();
-    const emptyState = main.getByText(/No active trips|no trips|Start a trip/i);
+    const emptyState = main
+      .getByText(/No Active Trips|no trips|Start a trip/i)
+      .first();
     await expect(tripContent.or(emptyState)).toBeVisible({ timeout: 10000 });
   });
 
@@ -169,7 +171,7 @@ test.describe("Deep: Active Trips Tab", () => {
         name: /Confirm Pickup|Track Live|Mark Delivered|Upload POD/i,
       })
       .first();
-    const emptyState = page.getByText(/No active trips|no trips/i);
+    const emptyState = page.getByText(/No Active Trips|no trips/i).first();
     await expect(actionBtn.or(emptyState)).toBeVisible({ timeout: 10000 });
   });
 });

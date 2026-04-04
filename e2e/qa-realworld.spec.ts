@@ -697,8 +697,7 @@ test.describe.serial("B8 — Security & Edge Cases", () => {
   test("B8.5: Unauthenticated user redirects to login", async ({ browser }) => {
     const page = await browser.newPage();
     await page.goto("/shipper/wallet");
-    await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/login/, { timeout: 15000 });
     expect(page.url()).toContain("/login");
     await page.close();
   });

@@ -110,34 +110,20 @@ test.describe.serial("Full Trip Lifecycle", () => {
   test("ensure truck exists and is approved", async () => {
     test.skip(!carrierToken, "No carrier token");
 
-    // Always create a fresh truck for workflow isolation (avoids TRUCK_BUSY errors)
-    const plate = `ET-WF-${Date.now().toString(36).slice(-5).toUpperCase()}`;
-    const { status, data: created } = await apiCall(
-      "POST",
-      "/api/trucks",
-      carrierToken,
-      {
-        truckType: "FLATBED",
-        licensePlate: plate,
-        capacity: 20000,
-        volume: 60,
-        currentCity: "Addis Ababa",
-        currentRegion: "Addis Ababa",
-        isAvailable: true,
-      }
+    // Use an existing APPROVED seed truck (has valid insurance + approval)
+    // Fetch carrier's trucks and pick the first available APPROVED one
+    const { data: truckList } = await apiCall(
+      "GET",
+      "/api/trucks?myTrucks=true&limit=20",
+      carrierToken
     );
-    expect(status).toBe(201);
-    const truck = created.truck ?? created;
-    truckId = truck.id;
-
-    // Admin-approve the new truck
-    const { status: approveStatus } = await apiCall(
-      "POST",
-      `/api/trucks/${truckId}/approve`,
-      adminToken,
-      { action: "APPROVE" }
+    const trucks = truckList.trucks || [];
+    const availableTruck = trucks.find(
+      (t: { approvalStatus: string; isAvailable: boolean }) =>
+        t.approvalStatus === "APPROVED" && t.isAvailable
     );
-    expect(approveStatus).toBe(200);
+    expect(availableTruck).toBeTruthy();
+    truckId = availableTruck.id;
 
     // Create a truck posting (required before requesting loads)
     await ensureTruckPosting(carrierToken, truckId);

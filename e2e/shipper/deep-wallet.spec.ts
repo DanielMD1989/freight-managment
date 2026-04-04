@@ -69,7 +69,9 @@ test.describe("Deep: Wallet Page", () => {
     ).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Deposits" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Refunds" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Refunds", exact: true })
+    ).toBeVisible();
   });
 
   test("transaction filter tabs switch content", async ({ page }) => {
@@ -81,7 +83,7 @@ test.describe("Deep: Wallet Page", () => {
     ).toBeVisible();
 
     // Click Refunds filter
-    await page.getByRole("button", { name: "Refunds" }).click();
+    await page.getByRole("button", { name: "Refunds", exact: true }).click();
     await page.waitForTimeout(1000);
     await expect(
       page.getByRole("heading", { name: "Transaction History" })

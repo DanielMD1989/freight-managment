@@ -125,7 +125,9 @@ test.describe("Deep: My Load Requests Tab", () => {
     const requestContent = main
       .getByText(/LOAD-|Pending|Approved|truck|PENDING|APPROVED/i)
       .first();
-    const emptyState = main.getByText(/No.*requests|No Requests/i);
+    const emptyState = main
+      .getByRole("heading", { name: /No Requests/i })
+      .first();
     await expect(requestContent.or(emptyState)).toBeVisible({
       timeout: 10000,
     });

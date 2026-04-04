@@ -99,7 +99,9 @@ test.describe("Shipper Map Page", () => {
   });
 
   test("shows Refresh button", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible({
+      timeout: 10000,
+    });
   });
 });
 

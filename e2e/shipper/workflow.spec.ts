@@ -216,7 +216,9 @@ test.describe.serial("Load Posting to Trip Completion", () => {
 
     await page.getByRole("button", { name: "Continue" }).click();
 
-    // ── Step 3: Options (defaults fine — REQUEST mode) ──
+    // ── Step 3: Options — fill required contact fields ──
+    await page.getByPlaceholder("Your name").first().fill("Test Shipper");
+    await page.getByPlaceholder("+251").first().fill("+251911111111");
     await page.getByRole("button", { name: "Continue" }).click();
 
     // ── Step 4: Review → Post Load ──
