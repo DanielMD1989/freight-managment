@@ -62,7 +62,25 @@ export async function POST(request: NextRequest) {
 
     // Fetch all active truck postings — only APPROVED trucks (blueprint §4)
     const trucks = await db.truckPosting.findMany({
-      where: { status: "ACTIVE", truck: { approvalStatus: "APPROVED" } },
+      where: {
+        status: "ACTIVE",
+        truck: {
+          approvalStatus: "APPROVED",
+          trips: {
+            none: {
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
+            },
+          },
+        },
+      },
       include: {
         originCity: {
           select: { name: true, latitude: true, longitude: true },

@@ -885,6 +885,27 @@ async function main() {
     );
   }
 
+  // Create GPS devices for all demo trucks (§11: required before posting)
+  console.log("   [+] Creating GPS devices for demo trucks...");
+  for (const t of trucksData) {
+    const truckId = truckMap[t.plate];
+    if (!truckId) continue;
+    const imei = `DEMO${t.plate.replace(/[^A-Z0-9]/g, "")}001`;
+    const existing = await prisma.gpsDevice.findUnique({ where: { imei } });
+    if (!existing) {
+      const device = await prisma.gpsDevice.create({
+        data: { imei, status: "ACTIVE", lastSeenAt: new Date() },
+      });
+      await prisma.truck.update({
+        where: { id: truckId },
+        data: { gpsDeviceId: device.id, gpsStatus: "ACTIVE" },
+      });
+    }
+  }
+  console.log(
+    `   [+] GPS devices created for ${Object.keys(truckMap).length} demo trucks`
+  );
+
   console.log("");
 
   // ============================================================================

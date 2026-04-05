@@ -174,6 +174,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         capacity: 10000,
         carrierId: "carrier-org-a7",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: true,
       },
     });
@@ -187,6 +188,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         capacity: 10000,
         carrierId: "carrier-org-a7",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: false,
       },
     });
@@ -200,6 +202,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         capacity: 10000,
         carrierId: "carrier-org-a7",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         isAvailable: false,
       },
     });
@@ -488,6 +491,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         isAvailable: false,
         licensePlate: "A7-BUSY-01",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         postings: [{ id: "posting-a7-busy-assigned" }],
         trips: [{ id: "trip-active-1" }],
       } as any);
@@ -516,6 +520,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         isAvailable: false,
         licensePlate: "A7-BUSY-02",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         postings: [{ id: "posting-a7-busy-pickup" }],
         trips: [{ id: "trip-active-2" }],
       } as any);
@@ -544,6 +549,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         isAvailable: true,
         licensePlate: "A7-FREE-01",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         postings: [{ id: "posting-a7-free" }],
         trips: [],
       } as any);
@@ -576,6 +582,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         id: "truck-a7-busy-assigned",
         carrierId: "carrier-org-a7",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         licensePlate: "A7-BUSY-01",
         carrier: { id: "carrier-org-a7", name: "A7 Carrier Co" },
         trips: [{ id: "trip-active-1" }],
@@ -603,6 +610,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         id: "truck-a7-busy-pickup",
         carrierId: "carrier-org-a7",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         licensePlate: "A7-BUSY-02",
         carrier: { id: "carrier-org-a7", name: "A7 Carrier Co" },
         trips: [{ id: "trip-active-2" }],
@@ -630,6 +638,7 @@ describe("Truck Marketplace Search Filters (A7)", () => {
         id: "truck-a7-free",
         carrierId: "carrier-org-a7",
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         licensePlate: "A7-FREE-01",
         carrier: { id: "carrier-org-a7", name: "A7 Carrier Co" },
         trips: [],

@@ -224,6 +224,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Truck insurance must be valid (blueprint §4)
+    if (
+      truck.insuranceStatus !== "VALID" &&
+      truck.insuranceStatus !== "EXPIRING"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Truck insurance has expired or is missing. Renew insurance before requesting loads.",
+        },
+        { status: 400 }
+      );
+    }
+
     // G-A7-6: Reject requests for trucks already on an active trip.
     if (truck.trips.length > 0) {
       return NextResponse.json(

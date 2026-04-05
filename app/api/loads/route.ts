@@ -337,8 +337,11 @@ export async function GET(request: NextRequest) {
 
     const session = await requireActiveUser();
 
-    // A4: Block carrier marketplace browsing if below minimum balance
-    if (session.organizationId && session.role === "CARRIER") {
+    // §8: Block marketplace browsing if below minimum wallet balance
+    if (
+      session.organizationId &&
+      (session.role === "CARRIER" || session.role === "SHIPPER")
+    ) {
       const walletAccount = await db.financialAccount.findFirst({
         where: { organizationId: session.organizationId, isActive: true },
         select: { balance: true, minimumBalance: true },

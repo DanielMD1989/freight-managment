@@ -110,6 +110,8 @@ export async function ensureLoad(token: string): Promise<string> {
     truckType: "FLATBED",
     weight: 5000,
     cargoDescription: "E2E test cargo description",
+    shipperContactName: "E2E Test Shipper",
+    shipperContactPhone: "+251911111111",
     status: "POSTED",
   };
   assertValidLoad(loadPayload);
@@ -144,6 +146,8 @@ export async function ensureTrip(
     truckType: "FLATBED",
     weight: 5000,
     cargoDescription: "E2E test cargo description",
+    shipperContactName: "E2E Test Shipper",
+    shipperContactPhone: "+251911111111",
     status: "POSTED",
   };
   assertValidLoad(tripLoadPayload);

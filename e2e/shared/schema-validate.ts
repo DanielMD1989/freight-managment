@@ -25,6 +25,9 @@ const loadPayloadSchema = z.object({
   truckType: z.enum(VALID_TRUCK_TYPES),
   weight: z.number().positive().max(50000),
   cargoDescription: z.string().min(5).max(2000),
+  // Required when status=POSTED and not anonymous (blueprint §3)
+  shipperContactName: z.string().min(2).max(200),
+  shipperContactPhone: z.string().min(10).max(20),
 });
 
 /**

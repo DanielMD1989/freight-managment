@@ -835,6 +835,7 @@ describe("Marketplace Visibility (U5)", () => {
         carrierId: "carrier-org-u5",
         isAvailable: false,
         approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
         postings: [{ id: "posting-u5-delivered" }],
         trips: [{ id: "trip-u5-delivered" }], // non-empty → 409
       } as any);

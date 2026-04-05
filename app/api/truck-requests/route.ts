@@ -180,6 +180,7 @@ export async function POST(request: NextRequest) {
         isAvailable: true,
         licensePlate: true,
         approvalStatus: true,
+        insuranceStatus: true,
         postings: {
           where: { status: "ACTIVE" },
           select: { id: true },
@@ -214,6 +215,20 @@ export async function POST(request: NextRequest) {
     if (truck.approvalStatus !== "APPROVED") {
       return NextResponse.json(
         { error: "Only approved trucks can be requested" },
+        { status: 400 }
+      );
+    }
+
+    // Truck insurance must be valid (blueprint §4 — carrier must have valid truck)
+    if (
+      truck.insuranceStatus !== "VALID" &&
+      truck.insuranceStatus !== "EXPIRING"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Truck insurance has expired or is missing. Renew insurance before accepting loads.",
+        },
         { status: 400 }
       );
     }
