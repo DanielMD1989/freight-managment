@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
     if (!cronSecret) {
       console.error("[Trip Monitor] CRON_SECRET environment variable not set");
       return NextResponse.json(
-        { error: "Server misconfigured - CRON_SECRET required" },
-        { status: 500 }
+        { error: "Unauthorized — CRON_SECRET not configured" },
+        { status: 401 }
       );
     }
 

@@ -112,20 +112,17 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    // §1: SUPER_ADMIN creates ADMIN; §1: ADMIN creates DISPATCHER
-    const session = await requirePermission(Permission.CREATE_ADMIN);
-
+    // §1+§10: Parse body to determine role, then check appropriate permission
     const body = await request.json();
     const data = createUserSchema.parse(body);
     const targetRole = data.role || "ADMIN";
 
-    // Permission check: ADMIN can only create DISPATCHER, not ADMIN
-    if (targetRole === "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Only Super Admin can create Admin accounts" },
-        { status: 403 }
-      );
-    }
+    // SUPER_ADMIN can create ADMIN (CREATE_ADMIN permission)
+    // ADMIN can create DISPATCHER (CREATE_OPERATIONAL_USERS permission)
+    const session =
+      targetRole === "ADMIN"
+        ? await requirePermission(Permission.CREATE_ADMIN)
+        : await requirePermission(Permission.CREATE_OPERATIONAL_USERS);
 
     // Check if email already exists
     const existing = await db.user.findUnique({
