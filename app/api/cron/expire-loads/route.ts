@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
             ? "Server misconfigured - CRON_SECRET required"
             : "Unauthorized",
         },
-        { status: !cronSecret ? 500 : 401 }
+        { status: 401 }
       );
     }
 

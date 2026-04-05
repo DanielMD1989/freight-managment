@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       console.error("[GPS Monitor] CRON_SECRET environment variable not set");
       return NextResponse.json(
         { error: "Server misconfigured - CRON_SECRET required" },
-        { status: 500 }
+        { status: 401 }
       );
     }
 

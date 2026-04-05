@@ -31,7 +31,6 @@ interface PostTrucksTabProps {
 }
 
 type TruckStatus = "POSTED" | "UNPOSTED" | "MATCHED" | "EXPIRED";
-type LoadTab = "all" | "preferred" | "blocked";
 type MainTab = "postings" | "matching";
 
 export default function PostTrucksTab({ user }: PostTrucksTabProps) {
@@ -47,7 +46,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [editForm, setEditForm] = useState<TruckPostingUpdatePayload>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [showNewTruckForm, setShowNewTruckForm] = useState(false);
-  const [activeLoadTab, setActiveLoadTab] = useState<LoadTab>("all");
 
   // User's approved trucks (from My Trucks)
   const [approvedTrucks, setApprovedTrucks] = useState<Truck[]>([]);
@@ -1321,14 +1319,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     .filter(({ load }) => {
       if (!load) return false;
 
-      // Tab filtering (preferred/blocked companies - future feature)
-      if (activeLoadTab === "preferred") {
-        return false; // TODO: Implement preferred company logic
-      }
-      if (activeLoadTab === "blocked") {
-        return false; // TODO: Implement blocked company logic
-      }
-
       return true;
     })
     .sort((a, b) => {
@@ -2376,37 +2366,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 )}
               </div>
 
-              {/* Tabs on the right */}
+              {/* All loads tab */}
               <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveLoadTab("all")}
-                  className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-colors ${
-                    activeLoadTab === "all"
-                      ? "bg-white text-teal-700"
-                      : "bg-white/20 text-white hover:bg-white/30"
-                  }`}
-                >
+                <button className="rounded-lg bg-white px-4 py-1.5 text-xs font-bold text-teal-700 transition-colors">
                   ALL
-                </button>
-                <button
-                  onClick={() => setActiveLoadTab("preferred")}
-                  className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-colors ${
-                    activeLoadTab === "preferred"
-                      ? "bg-white text-teal-700"
-                      : "bg-white/20 text-white hover:bg-white/30"
-                  }`}
-                >
-                  PREFERRED
-                </button>
-                <button
-                  onClick={() => setActiveLoadTab("blocked")}
-                  className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-colors ${
-                    activeLoadTab === "blocked"
-                      ? "bg-white text-teal-700"
-                      : "bg-white/20 text-white hover:bg-white/30"
-                  }`}
-                >
-                  BLOCKED
                 </button>
               </div>
             </div>

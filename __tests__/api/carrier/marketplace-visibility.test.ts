@@ -522,11 +522,9 @@ describe("Marketplace Visibility (U5)", () => {
       expect(ids).not.toContain("u5-load-assigned");
     });
 
-    it("MV-5: carrier marketplace always returns POSTED+SEARCHING+OFFERED regardless of status param (server invariant)", async () => {
-      // The carrier marketplace branch always forces status = { in: ["POSTED","SEARCHING","OFFERED"] }.
-      // The `status` query param is only respected for SHIPPER/myTrips/dispatcher views.
-      // So the old UI (status=POSTED) produces the same result as the fixed UI (status=POSTED,SEARCHING,OFFERED).
-      // This test documents that invariant so future refactors don't accidentally break it.
+    it("MV-5: carrier marketplace respects status filter within marketplace statuses", async () => {
+      // Carrier marketplace allows filtering within visible statuses (POSTED, SEARCHING, OFFERED).
+      // status=POSTED should return only POSTED loads, not SEARCHING or OFFERED.
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/loads?status=POSTED"
@@ -535,9 +533,9 @@ describe("Marketplace Visibility (U5)", () => {
       expect(res.status).toBe(200);
       const data = await parseResponse(res);
       const ids = data.loads.map((l: { id: string }) => l.id);
-      // Server ignores status=POSTED param for carrier marketplace and returns all three
-      expect(ids).toContain("u5-load-searching");
-      expect(ids).toContain("u5-load-offered");
+      // status=POSTED should filter to only POSTED loads
+      expect(ids).not.toContain("u5-load-searching");
+      expect(ids).not.toContain("u5-load-offered");
     });
   });
 

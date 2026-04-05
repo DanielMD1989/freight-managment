@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     if (!cronSecret) {
       return NextResponse.json(
         { error: "CRON_SECRET not configured" },
-        { status: 500 }
+        { status: 401 }
       );
     }
 

@@ -590,14 +590,22 @@ export async function GET(request: NextRequest) {
       where.status = { in: ["POSTED", "SEARCHING", "OFFERED"] };
     }
 
-    // Allow status filter only for authenticated views (myLoads, myTrips, dispatcher)
-    // Marketplace mode always forces POSTED
+    // Allow status filter for authenticated views (myLoads, myTrips, dispatcher)
+    // For carrier marketplace, restrict within allowed marketplace statuses
     if (status && (user?.role === "SHIPPER" || myTrips || isDispatcher)) {
       // Handle comma-separated statuses (e.g., "PICKUP_PENDING,IN_TRANSIT")
       if (status.includes(",")) {
         where.status = { in: status.split(",") };
       } else {
         where.status = status;
+      }
+    } else if (status && user?.role === "CARRIER" && !myTrips) {
+      // Carrier marketplace: allow filtering within visible statuses
+      const marketplaceStatuses = ["POSTED", "SEARCHING", "OFFERED"];
+      const requested = status.includes(",") ? status.split(",") : [status];
+      const allowed = requested.filter((s) => marketplaceStatuses.includes(s));
+      if (allowed.length > 0) {
+        where.status = allowed.length === 1 ? allowed[0] : { in: allowed };
       }
     }
 
