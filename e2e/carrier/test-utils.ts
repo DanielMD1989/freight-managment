@@ -218,6 +218,9 @@ export async function ensureTruckPosting(
     }
   );
   if (status !== 201) {
+    // Truck already has a posting — extract existing posting ID from error
+    const existingId = created.existingPostId;
+    if (existingId) return existingId;
     throw new Error(`Failed to create posting: ${JSON.stringify(created)}`);
   }
   return created.id ?? created.posting?.id;

@@ -305,6 +305,188 @@ async function main() {
     console.log("   [=] User exists: dispatcher@test.com (updated)");
   }
 
+  // ── Dedicated workflow users (isolated from shared test accounts) ──
+
+  // Workflow Shipper — used by full-workflow.spec.ts
+  const wfShipperOrg = await prisma.organization.upsert({
+    where: { licenseNumber: "WF-SHIPPER-001" },
+    update: { verificationStatus: "APPROVED", isVerified: true },
+    create: {
+      name: "Workflow Shipper Co",
+      type: "SHIPPER",
+      licenseNumber: "WF-SHIPPER-001",
+      contactEmail: "wf-shipper@test.com",
+      contactPhone: "+251911777001",
+      isVerified: true,
+      verificationStatus: "APPROVED",
+      documentsLockedAt: new Date(),
+    },
+  });
+  await prisma.user.upsert({
+    where: { email: "wf-shipper@test.com" },
+    update: { passwordHash: hashedPassword, status: "ACTIVE", isActive: true },
+    create: {
+      email: "wf-shipper@test.com",
+      passwordHash: hashedPassword,
+      firstName: "Workflow",
+      lastName: "Shipper",
+      phone: "+251911777001",
+      role: "SHIPPER",
+      status: "ACTIVE",
+      isActive: true,
+      organizationId: wfShipperOrg.id,
+    },
+  });
+  const existingWfShipperWallet = await prisma.financialAccount.findFirst({
+    where: { organizationId: wfShipperOrg.id, accountType: "SHIPPER_WALLET" },
+  });
+  if (!existingWfShipperWallet) {
+    await prisma.financialAccount.create({
+      data: {
+        organizationId: wfShipperOrg.id,
+        accountType: "SHIPPER_WALLET",
+        balance: 50000,
+        currency: "ETB",
+      },
+    });
+  }
+  console.log("   [+] Workflow shipper: wf-shipper@test.com");
+
+  // Workflow Carrier — used by full-workflow.spec.ts
+  const wfCarrierOrg = await prisma.organization.upsert({
+    where: { licenseNumber: "WF-CARRIER-001" },
+    update: { verificationStatus: "APPROVED", isVerified: true },
+    create: {
+      name: "Workflow Carrier Co",
+      type: "CARRIER_COMPANY",
+      licenseNumber: "WF-CARRIER-001",
+      contactEmail: "wf-carrier@test.com",
+      contactPhone: "+251911777002",
+      isVerified: true,
+      verificationStatus: "APPROVED",
+      documentsLockedAt: new Date(),
+    },
+  });
+  await prisma.user.upsert({
+    where: { email: "wf-carrier@test.com" },
+    update: { passwordHash: hashedPassword, status: "ACTIVE", isActive: true },
+    create: {
+      email: "wf-carrier@test.com",
+      passwordHash: hashedPassword,
+      firstName: "Workflow",
+      lastName: "Carrier",
+      phone: "+251911777002",
+      role: "CARRIER",
+      status: "ACTIVE",
+      isActive: true,
+      organizationId: wfCarrierOrg.id,
+    },
+  });
+  const existingWfCarrierWallet = await prisma.financialAccount.findFirst({
+    where: { organizationId: wfCarrierOrg.id, accountType: "CARRIER_WALLET" },
+  });
+  if (!existingWfCarrierWallet) {
+    await prisma.financialAccount.create({
+      data: {
+        organizationId: wfCarrierOrg.id,
+        accountType: "CARRIER_WALLET",
+        balance: 50000,
+        currency: "ETB",
+      },
+    });
+  }
+  // Create a dedicated workflow truck (approved + insured)
+  const wfTruck = await prisma.truck.upsert({
+    where: { licensePlate: "WF-FB-001" },
+    update: {
+      carrierId: wfCarrierOrg.id,
+      isAvailable: true,
+      approvalStatus: "APPROVED",
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date("2027-12-31"),
+    },
+    create: {
+      carrierId: wfCarrierOrg.id,
+      licensePlate: "WF-FB-001",
+      truckType: "FLATBED",
+      capacity: 20000,
+      lengthM: 14,
+      currentCity: "Addis Ababa",
+      isAvailable: true,
+      approvalStatus: "APPROVED",
+      approvedAt: new Date(),
+      approvedById: adminUser.id,
+      contactName: "WF Driver",
+      contactPhone: "+251911777003",
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date("2027-12-31"),
+    },
+  });
+  console.log("   [+] Workflow carrier: wf-carrier@test.com + truck WF-FB-001");
+
+  // Delete-test user — used by account deletion E2E test
+  const deleteOrg = await prisma.organization.upsert({
+    where: { licenseNumber: "DELETE-TEST-001" },
+    update: { verificationStatus: "APPROVED", isVerified: true },
+    create: {
+      name: "Delete Test Co",
+      type: "SHIPPER",
+      licenseNumber: "DELETE-TEST-001",
+      contactEmail: "delete-test@test.com",
+      contactPhone: "+251911777099",
+      isVerified: true,
+      verificationStatus: "APPROVED",
+    },
+  });
+  await prisma.user.upsert({
+    where: { email: "delete-test@test.com" },
+    update: { passwordHash: hashedPassword, status: "ACTIVE", isActive: true },
+    create: {
+      email: "delete-test@test.com",
+      passwordHash: hashedPassword,
+      firstName: "Delete",
+      lastName: "TestUser",
+      phone: "+251911777099",
+      role: "SHIPPER",
+      status: "ACTIVE",
+      isActive: true,
+      organizationId: deleteOrg.id,
+    },
+  });
+  console.log("   [+] Delete test user: delete-test@test.com");
+
+  // Post workflow truck to marketplace
+  const wfAddis = await prisma.ethiopianLocation.findFirst({
+    where: { name: "Addis Ababa" },
+  });
+  if (wfAddis) {
+    const existingPosting = await prisma.truckPosting.findFirst({
+      where: { truckId: wfTruck.id, status: "ACTIVE" },
+    });
+    if (!existingPosting) {
+      const wfCarrierUser = await prisma.user.findUnique({
+        where: { email: "wf-carrier@test.com" },
+      });
+      await prisma.truckPosting.create({
+        data: {
+          truckId: wfTruck.id,
+          carrierId: wfCarrierOrg.id,
+          createdById: wfCarrierUser!.id,
+          originCityId: wfAddis.id,
+          availableFrom: new Date(),
+          availableTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          fullPartial: "FULL",
+          availableWeight: 20000,
+          contactName: "WF Driver",
+          contactPhone: "+251911777003",
+          status: "ACTIVE",
+          postedAt: new Date(),
+        },
+      });
+    }
+    console.log("   [+] Workflow truck posted to marketplace");
+  }
+
   console.log("");
 
   // ============================================================================
@@ -836,6 +1018,36 @@ async function main() {
   }
 
   console.log("");
+
+  // ============================================================================
+  // 6b. GPS DEVICES (Required before posting trucks to marketplace - §11)
+  // ============================================================================
+  console.log("6b. Creating GPS devices for all trucks...\n");
+
+  const allTrucksForGps = await prisma.truck.findMany({
+    where: { carrierId: { in: [carrierOrg.id, wfCarrierOrg.id] } },
+  });
+  for (const truck of allTrucksForGps) {
+    if (truck.gpsDeviceId) continue; // Already has GPS
+    const imei = `IMEI${truck.licensePlate.replace(/[^A-Z0-9]/g, "")}001`;
+    const existing = await prisma.gpsDevice.findUnique({ where: { imei } });
+    if (!existing) {
+      const device = await prisma.gpsDevice.create({
+        data: {
+          imei,
+          status: "ACTIVE",
+          lastSeenAt: new Date(),
+        },
+      });
+      await prisma.truck.update({
+        where: { id: truck.id },
+        data: { gpsDeviceId: device.id, gpsStatus: "ACTIVE" },
+      });
+    }
+  }
+  console.log(
+    `   [+] GPS devices created for ${allTrucksForGps.length} trucks\n`
+  );
 
   // ============================================================================
   // 7. TEST TRUCK POSTINGS (Posted by Carrier - all 12 trucks)

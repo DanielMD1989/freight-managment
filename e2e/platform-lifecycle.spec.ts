@@ -317,7 +317,7 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
       superAdminToken,
     ] = await Promise.all([
       login("shipper@test.com", TEST_PASSWORD),
-      login("carrier@test.com", TEST_PASSWORD),
+      login("wf-carrier@test.com", TEST_PASSWORD),
       login("admin@test.com", TEST_PASSWORD),
       login("dispatcher@test.com", DISPATCHER_PASSWORD),
       login("superadmin@test.com", TEST_PASSWORD),

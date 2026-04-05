@@ -43,8 +43,9 @@ for (const f of [shipperAuthFile, carrierAuthFile]) {
 
 // ── Shared state across serial tests ────────────────────────────────
 
-let shipperEmail = `full-wf-shipper-${ts}@test.com`;
-let carrierEmail = `full-wf-carrier-${ts}@test.com`;
+// Use dedicated workflow seed users (avoids conflicts with shared test accounts)
+let shipperEmail = "wf-shipper@test.com";
+let carrierEmail = "wf-carrier@test.com";
 const password = "Test123!";
 let shipperUserId: string;
 let carrierUserId: string;

@@ -22,8 +22,7 @@ import path from "path";
 
 import {
   apiCall,
-  getCarrierToken,
-  getShipperToken,
+  getToken,
   getAdminToken,
   ensureTruckPosting,
   BASE_URL,
@@ -54,7 +53,7 @@ async function loginCarrierBrowser(page: import("@playwright/test").Page) {
 
   // Login via UI
   await page.goto("/login");
-  await page.getByLabel("Email address").fill("carrier@test.com");
+  await page.getByLabel("Email address").fill("wf-carrier@test.com");
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
 
@@ -97,10 +96,11 @@ test.describe.serial("Full Trip Lifecycle", () => {
   test("obtain all three role tokens", async () => {
     test.setTimeout(120000);
 
-    carrierToken = await getCarrierToken();
+    // Use dedicated workflow users to avoid shared-state conflicts
+    carrierToken = await getToken("wf-carrier@test.com");
     expect(carrierToken).toBeTruthy();
 
-    shipperToken = await getShipperToken();
+    shipperToken = await getToken("wf-shipper@test.com");
     expect(shipperToken).toBeTruthy();
 
     adminToken = await getAdminToken();
