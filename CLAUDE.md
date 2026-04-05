@@ -17,7 +17,7 @@ npm run type-check       # TypeScript type check (tsconfig.build.json)
 ### Tests
 
 ```bash
-npm test                 # Run all Jest tests (23 suites, 660+ tests)
+npm test                 # Run all Jest tests (191 suites, 3179 tests)
 npm test -- --testPathPattern="auth" # Run tests matching pattern
 npm test -- __tests__/api/trucks.test.ts  # Run single test file
 npm run test:coverage    # Tests with coverage report
@@ -37,7 +37,7 @@ npm run db:studio        # Open Prisma Studio GUI
 
 ```bash
 cd mobile
-npm test                 # Run Jest tests (6 suites, 93 tests)
+npm test                 # Run Jest tests (37 suites, 570 tests)
 npx tsc --noEmit         # TypeScript check
 npx expo start           # Start Expo dev server
 npx expo export --platform web  # Build for web (Playwright-testable)
@@ -84,7 +84,9 @@ mobile/app/       # Expo Router screens (carrier, shipper, shared, auth)
 mobile/src/       # Services, stores, hooks, utils, theme, types, i18n
 mobile-flutter/   # Archived Flutter codebase (reference only)
 prisma/           # Schema and migrations
-__tests__/        # Jest test suites (api/ and components/ subdirs)
+__tests__/        # Jest test suites (191 suites across api/, components/, lib/, etc.)
+e2e/              # Playwright E2E tests (895 tests across shipper/, carrier/, admin/, dispatcher/)
+scripts/          # Seed scripts (seed-test-data.ts, seed-demo-data.ts)
 ```
 
 ## API Response Patterns
@@ -109,7 +111,9 @@ Five roles: `SHIPPER`, `CARRIER`, `DISPATCHER`, `ADMIN`, `SUPER_ADMIN`
 
 ## Trip State Machine
 
-`ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED`
+`ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED → COMPLETED`
+
+Exception path: `IN_TRANSIT → EXCEPTION → ASSIGNED | IN_TRANSIT | CANCELLED | COMPLETED`
 
 Invalid transitions return 400. Canonical transitions defined in `lib/tripStateMachine.ts`.
 
@@ -169,10 +173,41 @@ All mutation API endpoints require CSRF validation via `validateCSRFWithMobile()
 - Mobile requests with `Authorization: Bearer` header skip CSRF
 - Web forms fetch CSRF token from `GET /api/csrf-token`
 
+## E2E Tests (Playwright)
+
+```bash
+npx playwright test                    # Run all 895 E2E tests
+npx playwright test e2e/shipper/       # Run shipper tests only
+npx playwright test --headed           # Run with visible browser
+npx playwright test --ui               # Interactive UI mode
+```
+
+- Tests run against real PostgreSQL (not mocks)
+- Seed data required: `npx ts-node scripts/seed-test-data.ts`
+- Token cache at `e2e/.auth/token-cache.json` (avoids rate limit exhaustion)
+- Login rate limiter (30 req/15min per email) can block tests — restart dev server to clear
+
+## Cron Endpoints
+
+All cron endpoints require `Authorization: Bearer ${CRON_SECRET}` header. Returns 401 without valid secret.
+
+- `POST /api/cron/trip-monitor` — Auto-close 48h+ DELIVERED trips
+- `POST /api/cron/gps-monitor` — GPS position staleness check
+- `POST /api/cron/gps-cleanup` — Purge old GPS positions
+- `POST /api/cron/insurance-monitor` — Insurance expiry notifications
+- `POST /api/cron/saved-search-monitor` — Match new loads to saved searches
+- `POST /api/cron/aggregate-sla` — Daily SLA metric aggregation
+- `POST /api/cron/expire-loads` — Expire old unmatched loads
+- `POST /api/cron/expire-postings` — Expire old truck postings
+- `POST /api/cron/auto-settle` — Auto-settle completed loads
+
+GitHub Actions cron schedule: `.github/workflows/cron.yml` (hourly)
+
 ## Rate Limiting
 
-- Login: In-memory rate limiter (can block repeated attempts ~30s)
+- Login: In-memory rate limiter (30 attempts per 15 min per email+IP)
 - Registration: 3 per hour per IP
+- Marketplace endpoints: RPS-based rate limiting via `checkRpsLimit()`
 - Health endpoint detailed info requires authentication
 
 ## Environment Variables
