@@ -518,7 +518,39 @@ async function main() {
         },
       });
     }
-    console.log("   [+] Workflow truck posted to marketplace");
+    // Post ALL workflow trucks to marketplace (not just WF-FB-001)
+    const wfCarrierUser = await prisma.user.findUnique({
+      where: { email: "wf-carrier@test.com" },
+    });
+    const allWfTrucks = await prisma.truck.findMany({
+      where: { carrierId: wfCarrierOrg.id },
+    });
+    for (const t of allWfTrucks) {
+      const hasPosting = await prisma.truckPosting.findFirst({
+        where: { truckId: t.id, status: "ACTIVE" },
+      });
+      if (!hasPosting) {
+        await prisma.truckPosting.create({
+          data: {
+            truckId: t.id,
+            carrierId: wfCarrierOrg.id,
+            createdById: wfCarrierUser!.id,
+            originCityId: wfAddis.id,
+            availableFrom: new Date(),
+            availableTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            fullPartial: "FULL",
+            availableWeight: Number(t.capacity),
+            contactName: "WF Driver",
+            contactPhone: "+251911777003",
+            status: "ACTIVE",
+            postedAt: new Date(),
+          },
+        });
+      }
+    }
+    console.log(
+      `   [+] ${allWfTrucks.length} workflow trucks posted to marketplace`
+    );
   }
 
   console.log("");
