@@ -171,30 +171,6 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
         return;
       }
 
-      const isLiveOnMarket =
-        load.status === "POSTED" ||
-        load.status === "SEARCHING" ||
-        load.status === "OFFERED";
-
-      const headers = {
-        "Content-Type": "application/json",
-        ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-      };
-
-      // If live on marketplace, unpost first so field edits are allowed
-      if (isLiveOnMarket) {
-        const unpostRes = await fetch(`/api/loads/${load.id}/status`, {
-          method: "PATCH",
-          headers,
-          body: JSON.stringify({ status: "UNPOSTED" }),
-          credentials: "include",
-        });
-        if (!unpostRes.ok) {
-          const err = await unpostRes.json();
-          throw new Error(err.error || "Failed to unpost load for editing");
-        }
-      }
-
       const updateData: Record<string, unknown> = {
         pickupCity: formData.pickupCity,
         deliveryCity: formData.deliveryCity,
@@ -222,24 +198,18 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
           : null,
       };
 
-      // Re-post after editing if it was live on marketplace
-      if (isLiveOnMarket) {
-        updateData.status = "POSTED";
-      }
-
       const response = await fetch(`/api/loads/${load.id}`, {
         method: "PATCH",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
         body: JSON.stringify(updateData),
         credentials: "include",
       });
 
       if (response.ok) {
-        toast.success(
-          isLiveOnMarket
-            ? "Load updated and re-posted!"
-            : "Load updated successfully!"
-        );
+        toast.success("Load updated successfully!");
         router.push(`/shipper/loads/${load.id}`);
         router.refresh();
       } else {
@@ -247,22 +217,6 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
         const errorMessage = errorData.error || "Failed to update load";
         setError(errorMessage);
         toast.error(errorMessage);
-
-        // Recovery: if we unposted but edit failed, re-post to restore state
-        if (isLiveOnMarket) {
-          try {
-            await fetch(`/api/loads/${load.id}/status`, {
-              method: "PATCH",
-              headers,
-              body: JSON.stringify({ status: "POSTED" }),
-              credentials: "include",
-            });
-          } catch {
-            toast.error(
-              "Load was unposted but could not be restored. Please re-post manually from the loads page."
-            );
-          }
-        }
         setIsSubmitting(false);
       }
     } catch (error) {
