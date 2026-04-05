@@ -246,7 +246,7 @@ export async function POST(
                 });
               }
             })
-            .catch(() => {});
+            .catch((err) => console.warn("Notification failed:", err?.message));
 
           return NextResponse.json(
             { error: "Insufficient wallet balance for marketplace access" },

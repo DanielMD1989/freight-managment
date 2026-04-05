@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
             matchCount: matches.length,
             firstLoadId: matches[0].id,
           },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
 
         // Update lastAlertedAt
         await db.savedSearch.update({

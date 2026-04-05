@@ -138,7 +138,7 @@ export async function POST(
             title: "Service fee deduction failed",
             message: `Fee deduction failed on confirm for trip ${tripId}: ${serviceFeeResult.error}`,
             metadata: { tripId, loadId: tripLoadId },
-          }).catch(() => {});
+          }).catch((err) => console.warn("Notification failed:", err?.message));
           return NextResponse.json(
             {
               error: "Cannot confirm delivery: fee deduction failed",
@@ -157,7 +157,7 @@ export async function POST(
         title: "Service fee deduction failed",
         message: `Fee deduction exception on confirm for trip ${tripId}: ${feeError instanceof Error ? feeError.message : "Unknown error"}`,
         metadata: { tripId, loadId: tripLoadId },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
       return NextResponse.json(
         {
           error: "Cannot confirm delivery: fee deduction failed",
@@ -326,7 +326,7 @@ export async function POST(
           title: "Delivery confirmed without POD",
           message: `Shipper confirmed delivery of ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} without POD upload. Trip is now COMPLETED.`,
           metadata: { tripId, loadId: tripLoadId },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
       if (trip.shipperId) {
         notifyOrganization({
@@ -335,7 +335,7 @@ export async function POST(
           title: "Delivery confirmation recorded",
           message: `Your confirmation for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} has been recorded. No carrier POD was uploaded — your confirmation serves as proof of acceptance.`,
           metadata: { tripId, loadId: tripLoadId },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
     }
 
@@ -347,7 +347,7 @@ export async function POST(
         title: "Rate Your Carrier",
         message: `Trip completed. Please rate your experience with the carrier.`,
         metadata: { tripId },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
     if (trip.carrier?.id) {
       notifyOrganization({
@@ -356,7 +356,7 @@ export async function POST(
         title: "Rate Your Shipper",
         message: `Trip completed. Please rate your experience with the shipper.`,
         metadata: { tripId },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
     return NextResponse.json({

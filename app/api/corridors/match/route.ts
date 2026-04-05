@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import {
   findMatchingCorridor,
   calculateFeeFromCorridor,
@@ -29,6 +30,8 @@ const matchCorridorSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
     await requireActiveUser();
 
     const body = await request.json();

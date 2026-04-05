@@ -406,7 +406,7 @@ export async function PATCH(
               truckId: updated.truck.id,
               licensePlate: updated.truck.licensePlate,
             },
-          }).catch(() => {});
+          }).catch((err) => console.warn("Notification failed:", err?.message));
         }
       }
 

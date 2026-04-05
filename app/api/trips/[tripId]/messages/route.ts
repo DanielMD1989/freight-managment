@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 
@@ -52,6 +53,23 @@ export async function POST(
   try {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
+
+    // §13: Rate limit messaging to prevent spam
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.marketplace.endpoint,
+      ip,
+      RPS_CONFIGS.marketplace.rps,
+      RPS_CONFIGS.marketplace.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 }
+      );
+    }
 
     const session = await requireActiveUser();
     const { tripId } = await params;
@@ -163,7 +181,7 @@ export async function POST(
         message:
           content.length > 100 ? content.substring(0, 97) + "..." : content,
         metadata: { tripId, messageId: message.id, senderRole, route },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
     return NextResponse.json({ message }, { status: 201 });

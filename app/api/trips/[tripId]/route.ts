@@ -410,7 +410,7 @@ export async function PATCH(
             title: "Service fee deduction failed",
             message: `Fee deduction failed for trip ${tripId}: ${completionFeeResult.error}`,
             metadata: { tripId, loadId: tripLoadId },
-          }).catch(() => {});
+          }).catch((err) => console.warn("Notification failed:", err?.message));
           return NextResponse.json(
             {
               error: "Cannot complete trip: fee deduction failed",
@@ -428,7 +428,7 @@ export async function PATCH(
           title: "Service fee deduction failed",
           message: `Fee deduction exception for trip ${tripId}: ${feeErr instanceof Error ? feeErr.message : "Unknown error"}`,
           metadata: { tripId, loadId: tripLoadId },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
         return NextResponse.json(
           { error: "Cannot complete trip: fee deduction failed" },
           { status: 400 }
@@ -762,7 +762,7 @@ export async function PATCH(
           title: "Rate Your Carrier",
           message: `Trip completed. Please rate your experience with the carrier.`,
           metadata: { tripId },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
       if (trip.carrierId) {
         notifyOrganization({
@@ -771,7 +771,7 @@ export async function PATCH(
           title: "Rate Your Shipper",
           message: `Trip completed. Please rate your experience with the shipper.`,
           metadata: { tripId },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
     }
 

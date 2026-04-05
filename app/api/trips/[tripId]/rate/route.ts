@@ -148,10 +148,12 @@ export async function POST(
       title: `New ${stars}-Star Rating`,
       message: `${raterRole === "SHIPPER" ? "Shipper" : "Carrier"} rated your service ${stars}/5 for ${route}.`,
       metadata: { tripId, stars, raterRole },
-    }).catch(() => {});
+    }).catch((err) => console.warn("Notification failed:", err?.message));
 
     // Cache invalidation
-    CacheInvalidation.trip(tripId).catch(() => {});
+    CacheInvalidation.trip(tripId).catch((err) =>
+      console.warn("Notification failed:", err?.message)
+    );
 
     return NextResponse.json({ rating }, { status: 201 });
   } catch (error) {

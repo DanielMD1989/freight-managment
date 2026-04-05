@@ -253,7 +253,9 @@ export async function POST(
       });
     } catch (dbError) {
       // Remove orphaned file to prevent disk leaks
-      await unlink(filePath).catch(() => {});
+      await unlink(filePath).catch((err) =>
+        console.warn("Notification failed:", err?.message)
+      );
       throw dbError;
     }
 

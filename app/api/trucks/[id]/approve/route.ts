@@ -355,10 +355,12 @@ export async function POST(
                 title: "Request Cancelled",
                 message: `A truck you requested has been removed from the marketplace. Your pending request has been cancelled.`,
                 metadata: { truckId, licensePlate: truck.licensePlate },
-              }).catch(() => {});
+              }).catch((err) =>
+                console.warn("Notification failed:", err?.message)
+              );
             }
           })
-          .catch(() => {});
+          .catch((err) => console.warn("Notification failed:", err?.message));
       }
 
       // Find carrier users to notify

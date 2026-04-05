@@ -198,7 +198,7 @@ export async function POST(
           title: "Service fee deduction failed",
           message: `Fee deduction failed on POD upload for trip ${tripId}: ${serviceFeeResult.error}`,
           metadata: { tripId, loadId: tripLoadId },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
         return NextResponse.json(
           {
             error: "Cannot complete trip: fee deduction failed",
@@ -215,7 +215,7 @@ export async function POST(
         title: "Service fee deduction failed",
         message: `Fee exception on POD upload for trip ${tripId}: ${feeErr instanceof Error ? feeErr.message : "Unknown"}`,
         metadata: { tripId, loadId: tripLoadId },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
       return NextResponse.json(
         { error: "Cannot complete trip: fee deduction failed" },
         { status: 400 }

@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
               }).catch((err) => console.error("low-balance notify err", err));
             }
           })
-          .catch(() => {});
+          .catch((err) => console.warn("Notification failed:", err?.message));
         return NextResponse.json(
           { error: "Insufficient wallet balance for marketplace access" },
           { status: 402 }

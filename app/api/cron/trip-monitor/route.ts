@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
               loadId: trip.loadId,
               feeCollected: feeSucceeded,
             },
-          }).catch(() => {});
+          }).catch((err) => console.warn("Notification failed:", err?.message));
 
           if (trip.truck?.carrierId) {
             notifyOrganization({
@@ -214,7 +214,9 @@ export async function POST(request: NextRequest) {
               title: "Trip closed — upload POD for records",
               message: `Your trip for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} was automatically completed after ${DELIVERED_TIMEOUT_HOURS} hours. Please upload POD for your records.`,
               metadata: { tripId: trip.id, loadId: trip.loadId },
-            }).catch(() => {});
+            }).catch((err) =>
+              console.warn("Notification failed:", err?.message)
+            );
           }
 
           if (trip.load?.shipperId) {
@@ -224,7 +226,9 @@ export async function POST(request: NextRequest) {
               title: "Delivery automatically confirmed",
               message: `Your delivery for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} has been automatically completed after ${DELIVERED_TIMEOUT_HOURS} hours. Contact Admin if you have concerns.`,
               metadata: { tripId: trip.id, loadId: trip.loadId },
-            }).catch(() => {});
+            }).catch((err) =>
+              console.warn("Notification failed:", err?.message)
+            );
           }
 
           // §7: Notify all dispatchers (blueprint says Admin + Dispatcher + Carrier + Shipper)
@@ -234,7 +238,7 @@ export async function POST(request: NextRequest) {
             title: "Trip auto-closed after 48h",
             message: `Trip ${trip.id} for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} was auto-closed. Fee: ${feeSucceeded ? "collected" : "pending"}.`,
             metadata: { tripId: trip.id, loadId: trip.loadId },
-          }).catch(() => {});
+          }).catch((err) => console.warn("Notification failed:", err?.message));
         } catch (err) {
           // CORRECTION 3: P2025 = trip already resolved by another actor — skip silently
           if (

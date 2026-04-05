@@ -534,7 +534,7 @@ export async function PATCH(
             cancelledBy: session.userId,
             cancelledByRole: session.role,
           },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
 
       createNotificationForRole({
@@ -548,7 +548,7 @@ export async function PATCH(
           tripStatus: load.trip.status,
           cancelledBy: session.userId,
         },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
     // Notify all dispatchers when a load enters EXCEPTION state

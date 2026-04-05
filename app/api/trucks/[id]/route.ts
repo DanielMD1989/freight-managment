@@ -269,7 +269,7 @@ export async function PATCH(
           title: "Truck Modified After Approval",
           message: `Truck ${updatedTruck.licensePlate} was modified after approval and needs re-review.`,
           metadata: { truckId: id },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
     }
 

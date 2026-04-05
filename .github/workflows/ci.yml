@@ -62,7 +62,10 @@ jobs:
         env:
           DATABASE_URL: "postgresql://test:test@localhost:5432/test"
           NEXTAUTH_SECRET: "test-secret"
-          JWT_SECRET: "test-jwt-secret"
+          JWT_SECRET: "test-jwt-secret-minimum-32-chars-for-validation"
+          JWT_ENCRYPTION_KEY: "test-encryption-key-32-chars-min"
+          MFA_TOKEN_SECRET: "test-mfa-secret-32-chars-minimum"
+          CRON_SECRET: "test-cron-secret"
 
   test:
     name: Test
@@ -110,7 +113,10 @@ jobs:
         env:
           DATABASE_URL: "postgresql://test:test@localhost:5432/test"
           NEXTAUTH_SECRET: "test-secret"
-          JWT_SECRET: "test-jwt-secret"
+          JWT_SECRET: "test-jwt-secret-minimum-32-chars-for-validation"
+          JWT_ENCRYPTION_KEY: "test-encryption-key-32-chars-min"
+          MFA_TOKEN_SECRET: "test-mfa-secret-32-chars-minimum"
+          CRON_SECRET: "test-cron-secret"
 
   mobile-test:
     name: Mobile Tests

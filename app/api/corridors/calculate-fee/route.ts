@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { calculateServiceFee } from "@/lib/serviceFeeCalculation";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
@@ -25,6 +26,8 @@ const calculateFeeSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
     await requireActiveUser();
 
     const body = await request.json();

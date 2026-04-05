@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import {
   calculateRoadDistance,
   calculateDeadheadOrigin,
@@ -67,6 +68,8 @@ const batchDistanceSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
     await requireAuth();
 
     const body = await request.json();

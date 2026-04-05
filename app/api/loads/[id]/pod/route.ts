@@ -331,7 +331,7 @@ export async function PUT(
         title: "Service fee deduction failed",
         message: `Fee deduction failed on POD verification for load ${loadId}: ${feeResult.error}`,
         metadata: { loadId },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
       return NextResponse.json(
         {
           error: "Cannot verify POD: fee deduction failed",
@@ -438,7 +438,7 @@ export async function PUT(
           title: "Settlement Completed",
           message: `Service fee of ${feeResult.shipperFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
           metadata: { loadId, fee: feeResult.shipperFee },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
 
       // G-M25-6: Notify ALL active carrier users (same take:1 fix)
@@ -450,7 +450,7 @@ export async function PUT(
           title: "Settlement Completed",
           message: `Service fee of ${feeResult.carrierFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
           metadata: { loadId, fee: feeResult.carrierFee },
-        }).catch(() => {});
+        }).catch((err) => console.warn("Notification failed:", err?.message));
       }
 
       settlementResult = {

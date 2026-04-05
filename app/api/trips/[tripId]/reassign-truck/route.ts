@@ -231,7 +231,7 @@ export async function POST(
           newTruckId,
           previousTruckId: trip.truckId,
         },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
     // 2. Notify carrier org
@@ -247,7 +247,7 @@ export async function POST(
           previousTruckId: trip.truckId,
           newTruckId,
         },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
     // 3. If Dispatcher initiated — notify Admin
@@ -263,7 +263,7 @@ export async function POST(
           newTruckId,
           reassignedBy: session.userId,
         },
-      }).catch(() => {});
+      }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
     return NextResponse.json({
