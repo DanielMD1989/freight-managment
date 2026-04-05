@@ -428,6 +428,7 @@ export default function PostLoadsTab({
    * L5 FIX: Properly typed load parameter
    */
   const handleStartEdit = (load: Load & { matchCount?: number }) => {
+    setExpandedLoadId(load.id);
     setEditingLoadId(load.id);
     setEditForm({
       pickupCity: load.pickupCity || "",
@@ -548,10 +549,9 @@ export default function PostLoadsTab({
         contactPhone: "",
       });
 
+      fetchLoads();
       if (currentStatus === "UNPOSTED" || isLiveOnMarket) {
         setActiveStatus("POSTED");
-      } else {
-        fetchLoads();
       }
     } catch (error) {
       const message =
