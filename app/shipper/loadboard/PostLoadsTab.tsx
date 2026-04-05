@@ -349,7 +349,7 @@ export default function PostLoadsTab({
 
     try {
       const csrfToken = await getCSRFToken();
-      const response = await fetch(`/api/loads/${load.id}`, {
+      const response = await fetch(`/api/loads/${load.id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
