@@ -10,6 +10,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getCSRFToken } from "@/lib/csrfFetch";
+import ReassignTruckModal from "@/app/dispatcher/trips/[id]/ReassignTruckModal";
 import type { TripDetail } from "./page";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -53,6 +54,7 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
   const router = useRouter();
   const [resolving, setResolving] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [showReassign, setShowReassign] = useState(false);
 
   const handleResolve = async (
     newStatus: "ASSIGNED" | "IN_TRANSIT" | "COMPLETED" | "CANCELLED"
@@ -213,8 +215,36 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
                 ? "Cancelling..."
                 : "Cancel Trip → CANCELLED"}
             </button>
+            {trip.truck && trip.carrier && (
+              <button
+                onClick={() => setShowReassign(true)}
+                disabled={resolving !== null}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reassign Truck
+              </button>
+            )}
           </div>
         </div>
+      )}
+
+      {/* §7 Truck Reassignment Modal */}
+      {showReassign && trip.truck && trip.carrier && (
+        <ReassignTruckModal
+          trip={{
+            id: trip.id,
+            truckId: trip.truck.id,
+            truck: {
+              carrierId: trip.carrier.id,
+              licensePlate: trip.truck.licensePlate,
+            },
+          }}
+          onSuccess={() => {
+            setShowReassign(false);
+            router.refresh();
+          }}
+          onClose={() => setShowReassign(false)}
+        />
       )}
 
       {/* Timeline */}

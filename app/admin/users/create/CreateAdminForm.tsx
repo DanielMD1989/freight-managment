@@ -1,27 +1,35 @@
 "use client";
 
 /**
- * Create Admin Form
+ * Create Admin/Dispatcher Form
  *
- * G-SA1-1: Form for SUPER_ADMIN to create new Admin accounts.
+ * §1+§10: SUPER_ADMIN creates Admin; ADMIN creates Dispatcher.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function CreateAdminForm() {
+export default function CreateAdminForm({
+  currentRole,
+}: {
+  currentRole?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSuperAdmin = currentRole === "SUPER_ADMIN";
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     password: "",
+    role: isSuperAdmin ? "ADMIN" : "DISPATCHER",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -40,6 +48,7 @@ export default function CreateAdminForm() {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
+        role: formData.role,
       };
       if (formData.phone.trim()) {
         payload.phone = formData.phone.trim();
@@ -79,6 +88,23 @@ export default function CreateAdminForm() {
           {error}
         </div>
       )}
+
+      {/* Role selector */}
+      <div>
+        <label htmlFor="role" className={labelClass}>
+          Role *
+        </label>
+        <select
+          id="role"
+          name="role"
+          value={formData.role}
+          onChange={handleChange}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+        >
+          {isSuperAdmin && <option value="ADMIN">Admin</option>}
+          <option value="DISPATCHER">Dispatcher</option>
+        </select>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>

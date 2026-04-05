@@ -20,6 +20,7 @@ const createSavedSearchSchema = z.object({
     message: "Type must be LOADS or TRUCKS",
   }),
   criteria: z.record(z.string(), z.any()).optional(),
+  alertsEnabled: z.boolean().optional().default(false),
 });
 
 /**
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       return zodErrorResponse(result.error);
     }
 
-    const { name, type, criteria } = result.data;
+    const { name, type, criteria, alertsEnabled } = result.data;
 
     // Create saved search
     const search = await db.savedSearch.create({
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
         name,
         type,
         criteria: criteria || {},
+        alertsEnabled,
         userId: user.userId,
       },
     });

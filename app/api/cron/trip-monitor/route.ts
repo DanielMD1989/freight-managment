@@ -226,6 +226,15 @@ export async function POST(request: NextRequest) {
               metadata: { tripId: trip.id, loadId: trip.loadId },
             }).catch(() => {});
           }
+
+          // §7: Notify all dispatchers (blueprint says Admin + Dispatcher + Carrier + Shipper)
+          createNotificationForRole({
+            role: "DISPATCHER",
+            type: NotificationType.DELIVERY_CONFIRMED,
+            title: "Trip auto-closed after 48h",
+            message: `Trip ${trip.id} for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} was auto-closed. Fee: ${feeSucceeded ? "collected" : "pending"}.`,
+            metadata: { tripId: trip.id, loadId: trip.loadId },
+          }).catch(() => {});
         } catch (err) {
           // CORRECTION 3: P2025 = trip already resolved by another actor — skip silently
           if (

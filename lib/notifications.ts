@@ -110,6 +110,9 @@ export const NotificationType = {
 
   // §13 In-App Messaging
   NEW_MESSAGE: "NEW_MESSAGE",
+
+  // Load Alerts (saved search match)
+  SAVED_SEARCH_MATCH: "SAVED_SEARCH_MATCH",
 } as const;
 
 /**

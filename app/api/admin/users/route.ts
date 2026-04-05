@@ -96,13 +96,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// G-SA1-1: POST /api/admin/users - Create admin user (SUPER_ADMIN only)
-const createAdminSchema = z.object({
+// §1+§10: POST /api/admin/users - Create admin or dispatcher user
+// SUPER_ADMIN can create ADMIN; ADMIN can create DISPATCHER
+const createUserSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   email: z.string().email(),
   phone: z.string().min(10).max(20).optional(),
   password: z.string().min(8).max(128),
+  role: z.enum(["ADMIN", "DISPATCHER"]).optional(), // defaults to ADMIN for backward compat
 });
 
 export async function POST(request: NextRequest) {
@@ -110,10 +112,20 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
+    // §1: SUPER_ADMIN creates ADMIN; §1: ADMIN creates DISPATCHER
     const session = await requirePermission(Permission.CREATE_ADMIN);
 
     const body = await request.json();
-    const data = createAdminSchema.parse(body);
+    const data = createUserSchema.parse(body);
+    const targetRole = data.role || "ADMIN";
+
+    // Permission check: ADMIN can only create DISPATCHER, not ADMIN
+    if (targetRole === "ADMIN" && session.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only Super Admin can create Admin accounts" },
+        { status: 403 }
+      );
+    }
 
     // Check if email already exists
     const existing = await db.user.findUnique({
@@ -130,6 +142,27 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(data.password);
 
+    // For DISPATCHER, create or find a LOGISTICS_AGENT org
+    let organizationId: string | undefined;
+    if (targetRole === "DISPATCHER") {
+      let dispatchOrg = await db.organization.findFirst({
+        where: { type: "LOGISTICS_AGENT" },
+      });
+      if (!dispatchOrg) {
+        dispatchOrg = await db.organization.create({
+          data: {
+            name: "Dispatch Center",
+            type: "LOGISTICS_AGENT",
+            contactEmail: data.email,
+            contactPhone: data.phone || "+251900000000",
+            isVerified: true,
+            verificationStatus: "APPROVED",
+          },
+        });
+      }
+      organizationId = dispatchOrg.id;
+    }
+
     const user = await db.user.create({
       data: {
         firstName: data.firstName,
@@ -137,11 +170,12 @@ export async function POST(request: NextRequest) {
         email: data.email,
         phone: data.phone || null,
         passwordHash,
-        role: "ADMIN",
+        role: targetRole,
         status: "ACTIVE",
         isActive: true,
         isEmailVerified: true,
-        createdById: session.userId, // §10 V2 FIX: traceability — which SuperAdmin created this Admin
+        createdById: session.userId,
+        ...(organizationId && { organizationId }),
       },
       select: {
         id: true,

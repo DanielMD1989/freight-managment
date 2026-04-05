@@ -1719,12 +1719,14 @@ model TruckDocument {
 // ============================================================================
 
 model SavedSearch {
-  id        String     @id @default(cuid())
-  name      String
-  type      SearchType // LOADS or TRUCKS
-  criteria  Json // Flexible search criteria
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id             String     @id @default(cuid())
+  name           String
+  type           SearchType // LOADS or TRUCKS
+  criteria       Json // Flexible search criteria
+  alertsEnabled  Boolean    @default(false) // Push notification when new match found
+  lastAlertedAt  DateTime? // Last time an alert was sent for this search
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   // Relations
   userId String

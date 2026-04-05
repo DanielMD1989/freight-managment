@@ -38,6 +38,7 @@ const topUpSchema = z.object({
     .default("MANUAL"),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  slipFileUrl: z.string().url().optional(), // Bank transfer slip proof URL
 });
 
 /**
@@ -76,7 +77,8 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { amount, paymentMethod, reference, notes } = topUpSchema.parse(body);
+    const { amount, paymentMethod, reference, notes, slipFileUrl } =
+      topUpSchema.parse(body);
 
     // Get the user and their organization
     const user = await db.user.findUnique({
@@ -151,6 +153,7 @@ export async function POST(
           paymentMethod: paymentMethod as DepositMethod,
           status: "CONFIRMED", // Admin-initiated = immediately confirmed
           externalReference: reference || null,
+          slipFileUrl: slipFileUrl || null,
           notes: description,
           financialAccountId: wallet.id,
           requestedById: session.userId, // Admin is both requester and approver
