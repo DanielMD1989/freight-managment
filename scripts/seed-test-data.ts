@@ -426,6 +426,12 @@ async function main() {
   for (const extra of [
     { plate: "WF-DV-002", type: "DRY_VAN" as const, capacity: 15000 },
     { plate: "WF-CT-003", type: "CONTAINER" as const, capacity: 25000 },
+    { plate: "WF-DV-004", type: "DRY_VAN" as const, capacity: 14000 },
+    { plate: "WF-FB-005", type: "FLATBED" as const, capacity: 18000 },
+    { plate: "WF-RF-006", type: "REFRIGERATED" as const, capacity: 12000 },
+    { plate: "WF-CT-007", type: "CONTAINER" as const, capacity: 28000 },
+    { plate: "WF-DV-008", type: "DRY_VAN" as const, capacity: 16000 },
+    { plate: "WF-FB-009", type: "FLATBED" as const, capacity: 20000 },
   ]) {
     await prisma.truck.upsert({
       where: { licensePlate: extra.plate },
@@ -454,9 +460,7 @@ async function main() {
       },
     });
   }
-  console.log(
-    "   [+] Workflow carrier: wf-carrier@test.com + 3 trucks (WF-FB/DV/CT)"
-  );
+  console.log("   [+] Workflow carrier: wf-carrier@test.com + 9 trucks");
 
   // Delete-test user — used by account deletion E2E test
   const deleteOrg = await prisma.organization.upsert({
@@ -695,6 +699,64 @@ async function main() {
       truckType: "CONTAINER" as const,
       capacity: 25000,
       lengthM: 12,
+      currentCity: "Addis Ababa",
+    },
+
+    // Addis Ababa — extra trucks for test isolation (8 more = 12 total in AA)
+    {
+      licensePlate: "AA-DV-005",
+      truckType: "DRY_VAN" as const,
+      capacity: 14000,
+      lengthM: 11,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-DV-006",
+      truckType: "DRY_VAN" as const,
+      capacity: 16000,
+      lengthM: 13,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-FB-007",
+      truckType: "FLATBED" as const,
+      capacity: 18000,
+      lengthM: 13,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-FB-008",
+      truckType: "FLATBED" as const,
+      capacity: 22000,
+      lengthM: 15,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-RF-009",
+      truckType: "REFRIGERATED" as const,
+      capacity: 10000,
+      lengthM: 9,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-RF-010",
+      truckType: "REFRIGERATED" as const,
+      capacity: 14000,
+      lengthM: 11,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-CT-011",
+      truckType: "CONTAINER" as const,
+      capacity: 28000,
+      lengthM: 13,
+      currentCity: "Addis Ababa",
+    },
+    {
+      licensePlate: "AA-CT-012",
+      truckType: "CONTAINER" as const,
+      capacity: 30000,
+      lengthM: 14,
       currentCity: "Addis Ababa",
     },
 
