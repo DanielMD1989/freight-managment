@@ -82,11 +82,26 @@ export async function GET(
       );
     }
 
-    // Fetch all active truck postings (only APPROVED trucks per blueprint §4)
+    // Fetch active truck postings: APPROVED trucks not on active trips (blueprint §3+§4)
     const trucks = await db.truckPosting.findMany({
       where: {
         status: "ACTIVE",
-        truck: { approvalStatus: "APPROVED" },
+        truck: {
+          approvalStatus: "APPROVED",
+          trips: {
+            none: {
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
+            },
+          },
+        },
       },
       include: {
         carrier: {
