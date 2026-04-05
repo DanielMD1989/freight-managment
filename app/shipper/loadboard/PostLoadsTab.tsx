@@ -467,9 +467,9 @@ export default function PostLoadsTab({
         ...(csrfToken && { "X-CSRF-Token": csrfToken }),
       };
 
-      // If live on marketplace, unpost first so we can edit fields
+      // If live on marketplace, unpost first via status endpoint so we can edit fields
       if (isLiveOnMarket) {
-        const unpostRes = await fetch(`/api/loads/${editingLoadId}`, {
+        const unpostRes = await fetch(`/api/loads/${editingLoadId}/status`, {
           method: "PATCH",
           headers,
           body: JSON.stringify({ status: "UNPOSTED" }),
@@ -485,7 +485,7 @@ export default function PostLoadsTab({
         (c) => c.name.toLowerCase() === editForm.deliveryCity.toLowerCase()
       );
 
-      // L7 FIX: Properly typed update payload
+      // L7 FIX: Properly typed update payload (no status — field edits only)
       const updatePayload = {
         pickupCity: editForm.pickupCity,
         deliveryCity: editForm.deliveryCity,
@@ -503,9 +503,6 @@ export default function PostLoadsTab({
         cargoDescription: editForm.cargoDescription || null,
         rate: editForm.rate ? parseFloat(editForm.rate) : null,
         shipperContactPhone: editForm.contactPhone || null,
-        // Re-post after editing (restores to marketplace)
-        status:
-          isLiveOnMarket || currentStatus === "UNPOSTED" ? "POSTED" : undefined,
       };
 
       const response = await fetch(`/api/loads/${editingLoadId}`, {
@@ -515,6 +512,20 @@ export default function PostLoadsTab({
       });
 
       if (!response.ok) throw new Error("Failed to update load");
+
+      // Re-post after editing via status endpoint (restores to marketplace)
+      if (isLiveOnMarket || currentStatus === "UNPOSTED") {
+        const repostRes = await fetch(`/api/loads/${editingLoadId}/status`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ status: "POSTED" }),
+        });
+        if (!repostRes.ok) {
+          toast.error(
+            "Load updated but failed to re-post. Please re-post manually."
+          );
+        }
+      }
 
       toast.success(
         isLiveOnMarket
@@ -551,7 +562,7 @@ export default function PostLoadsTab({
       if (isLiveOnMarket && editingLoadId) {
         try {
           const csrfToken = await getCSRFToken();
-          await fetch(`/api/loads/${editingLoadId}`, {
+          await fetch(`/api/loads/${editingLoadId}/status`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
