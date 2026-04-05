@@ -80,7 +80,7 @@ const updateLoadSchema = z
     deliveryDate: z.string().optional().nullable(),
     truckType: z.enum(TRUCK_TYPE_VALUES).optional(),
     weight: z.number().positive().max(50000).optional(),
-    lengthM: z.number().positive().optional(),
+    lengthM: z.number().positive().optional().nullable(),
     fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
     tripKm: z.number().positive().optional(),
     estimatedTripKm: z.number().positive().optional(),
