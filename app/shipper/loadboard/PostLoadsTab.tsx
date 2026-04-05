@@ -543,10 +543,29 @@ export default function PostLoadsTab({
         fetchLoads();
       }
     } catch (error) {
-      // L17 FIX: Proper error handling without any
       const message =
         error instanceof Error ? error.message : "Failed to update load";
       toast.error(message);
+
+      // Recovery: if we unposted but edit failed, re-post to restore state
+      if (isLiveOnMarket && editingLoadId) {
+        try {
+          const csrfToken = await getCSRFToken();
+          await fetch(`/api/loads/${editingLoadId}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+            },
+            body: JSON.stringify({ status: "POSTED" }),
+          });
+        } catch {
+          // If re-post also fails, load stays UNPOSTED — user must re-post manually
+          toast.error(
+            "Load was unposted but could not be restored. Please re-post manually."
+          );
+        }
+      }
     }
   };
 

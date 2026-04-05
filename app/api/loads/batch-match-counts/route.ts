@@ -60,9 +60,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Fetch all active truck postings once (shared across all loads)
+    // Fetch all active truck postings — only APPROVED trucks (blueprint §4)
     const trucks = await db.truckPosting.findMany({
-      where: { status: "ACTIVE" },
+      where: { status: "ACTIVE", truck: { approvalStatus: "APPROVED" } },
       include: {
         originCity: {
           select: { name: true, latitude: true, longitude: true },

@@ -82,10 +82,11 @@ export async function GET(
       );
     }
 
-    // Fetch all active truck postings
+    // Fetch all active truck postings (only APPROVED trucks per blueprint §4)
     const trucks = await db.truckPosting.findMany({
       where: {
         status: "ACTIVE",
+        truck: { approvalStatus: "APPROVED" },
       },
       include: {
         carrier: {

@@ -422,7 +422,41 @@ async function main() {
       insuranceExpiresAt: new Date("2027-12-31"),
     },
   });
-  console.log("   [+] Workflow carrier: wf-carrier@test.com + truck WF-FB-001");
+  // Extra workflow trucks (avoid running out if one gets locked in a trip)
+  for (const extra of [
+    { plate: "WF-DV-002", type: "DRY_VAN" as const, capacity: 15000 },
+    { plate: "WF-CT-003", type: "CONTAINER" as const, capacity: 25000 },
+  ]) {
+    await prisma.truck.upsert({
+      where: { licensePlate: extra.plate },
+      update: {
+        carrierId: wfCarrierOrg.id,
+        isAvailable: true,
+        approvalStatus: "APPROVED",
+        insuranceStatus: "VALID",
+        insuranceExpiresAt: new Date("2027-12-31"),
+      },
+      create: {
+        carrierId: wfCarrierOrg.id,
+        licensePlate: extra.plate,
+        truckType: extra.type,
+        capacity: extra.capacity,
+        lengthM: 12,
+        currentCity: "Addis Ababa",
+        isAvailable: true,
+        approvalStatus: "APPROVED",
+        approvedAt: new Date(),
+        approvedById: adminUser.id,
+        contactName: "WF Driver",
+        contactPhone: "+251911777003",
+        insuranceStatus: "VALID",
+        insuranceExpiresAt: new Date("2027-12-31"),
+      },
+    });
+  }
+  console.log(
+    "   [+] Workflow carrier: wf-carrier@test.com + 3 trucks (WF-FB/DV/CT)"
+  );
 
   // Delete-test user — used by account deletion E2E test
   const deleteOrg = await prisma.organization.upsert({
@@ -945,6 +979,8 @@ async function main() {
         cargoDescription: loadData.cargoDescription,
         pickupDate: loadData.pickupDate,
         deliveryDate: loadData.deliveryDate,
+        shipperContactName: "Test Shipper",
+        shipperContactPhone: "+251911111111",
         status: "POSTED",
         postedAt: new Date(),
         bookMode: "REQUEST",
