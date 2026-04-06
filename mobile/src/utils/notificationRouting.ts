@@ -244,6 +244,80 @@ export function getNotificationRoute(
       return "/(shared)/notifications";
     }
 
+    // ── Disputes (G18-3) ─────────────────────────────────────────────────────
+    case "DISPUTE_FILED":
+    case "DISPUTE_STATUS_CHANGED":
+    case "DISPUTE_RESOLVED": {
+      const did = metadata?.disputeId;
+      if (isShipper)
+        return did ? `/(shipper)/disputes/${did}` : "/(shipper)/disputes";
+      if (isCarrier)
+        return did ? `/(carrier)/disputes/${did}` : "/(carrier)/disputes";
+      return null;
+    }
+
+    // ── Saved-search match (G18-3) ───────────────────────────────────────────
+    case "SAVED_SEARCH_MATCH":
+      if (isCarrier) return "/(carrier)/loads";
+      if (isShipper) return "/(shipper)/trucks";
+      return null;
+
+    // ── Insurance lifecycle (G18-3) ──────────────────────────────────────────
+    case "INSURANCE_EXPIRING_SOON":
+    case "INSURANCE_EXPIRING_URGENT":
+    case "INSURANCE_EXPIRING_FINAL":
+    case "INSURANCE_EXPIRED":
+    case "INSURANCE_RENEWED":
+      if (isCarrier) return "/(carrier)/profile/documents";
+      if (isShipper) return "/(shipper)/profile/documents";
+      return null;
+
+    // ── Ratings (G18-3) ──────────────────────────────────────────────────────
+    case "RATING_REQUESTED":
+    case "RATING_REQUESTED_SHIPPER": {
+      const rid = metadata?.tripId ?? metadata?.loadId;
+      if (rid) {
+        if (isShipper) return `/(shipper)/trips/${rid}`;
+        if (isCarrier) return `/(carrier)/trips/${rid}`;
+      }
+      return null;
+    }
+
+    // ── In-app messaging (G18-3) ─────────────────────────────────────────────
+    case "NEW_MESSAGE": {
+      const eid = metadata?.tripId ?? metadata?.loadId;
+      if (!eid) return null;
+      if (isShipper) return `/(shared)/chat/${eid}`;
+      if (isCarrier) return `/(shared)/chat/${eid}`;
+      return null;
+    }
+
+    // ── Self-service deposits (G18-3) ────────────────────────────────────────
+    case "DEPOSIT_REQUESTED":
+      if (isCarrier) return "/(carrier)/wallet";
+      if (isShipper) return "/(shipper)/wallet";
+      return null;
+
+    // ── Partial fee collection (G18-3) ───────────────────────────────────────
+    case "PARTIAL_FEE_COLLECTION":
+      if (isCarrier) return "/(carrier)/wallet";
+      if (isShipper) return "/(shipper)/wallet";
+      return null;
+
+    // ── Generic request rejected (G18-3) ─────────────────────────────────────
+    case "REQUEST_REJECTED":
+      if (isCarrier) return "/(carrier)/requests";
+      if (isShipper) return "/(shipper)/requests";
+      return null;
+
+    // ── GPS no data (G18-3) ──────────────────────────────────────────────────
+    case "GPS_NO_DATA": {
+      const lid = metadata?.loadId;
+      if (isCarrier && lid) return `/(carrier)/trips/${lid}`;
+      if (isShipper && lid) return `/(shipper)/trips/${lid}`;
+      return null;
+    }
+
     // ── No navigation ────────────────────────────────────────────────────────
     case "USER_SUSPENDED":
     case "MARKETING":
