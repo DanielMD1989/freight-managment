@@ -73,10 +73,9 @@ jest.mock("@/lib/validation", () => ({
 }));
 
 // Import handlers AFTER mocks
-const {
-  GET: getWallet,
-  POST: deposit,
-} = require("@/app/api/financial/wallet/route");
+const { GET: getWallet } = require("@/app/api/financial/wallet/route");
+// POST handler removed (2026-04-06) — endpoint was unused dead code with
+// inverted journal sign bug. See app/api/financial/wallet/route.ts comment.
 
 describe("Financial Wallet API", () => {
   const carrierSession = createMockSession({
@@ -218,143 +217,9 @@ describe("Financial Wallet API", () => {
     });
   });
 
-  // ─── POST /api/financial/wallet (deposit) ──────────────────────────────
-
-  describe("POST /api/financial/wallet", () => {
-    const validDeposit = {
-      amount: 1000,
-      paymentMethod: "bank_transfer",
-    };
-
-    describe("Auth & RBAC", () => {
-      it("carrier with DEPOSIT_FUNDS permission → 200", async () => {
-        setAuthSession(carrierSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: validDeposit,
-          }
-        );
-        const res = await deposit(req);
-        expect(res.status).toBe(200);
-      });
-    });
-
-    describe("Organization", () => {
-      it("user without organizationId → 400", async () => {
-        const noOrgSession = createMockSession({
-          userId: "wallet-no-org",
-          role: "CARRIER",
-          organizationId: undefined,
-        });
-        setAuthSession(noOrgSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: validDeposit,
-          }
-        );
-        const res = await deposit(req);
-        expect(res.status).toBe(400);
-      });
-    });
-
-    describe("Wallet not found", () => {
-      it("org with no financial account → 404", async () => {
-        const noWalletSession = createMockSession({
-          userId: "wallet-no-acct",
-          role: "CARRIER",
-          organizationId: "no-wallet-org",
-        });
-        setAuthSession(noWalletSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: validDeposit,
-          }
-        );
-        const res = await deposit(req);
-        expect(res.status).toBe(404);
-      });
-    });
-
-    describe("Validation", () => {
-      it("negative amount → 400", async () => {
-        setAuthSession(carrierSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: { amount: -100, paymentMethod: "bank_transfer" },
-          }
-        );
-        const res = await deposit(req);
-        expect(res.status).toBe(400);
-      });
-
-      it("missing paymentMethod → 400", async () => {
-        setAuthSession(carrierSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: { amount: 1000 },
-          }
-        );
-        const res = await deposit(req);
-        expect(res.status).toBe(400);
-      });
-    });
-
-    describe("Success", () => {
-      it("returns 'Deposit successful' message", async () => {
-        setAuthSession(carrierSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: validDeposit,
-          }
-        );
-        const res = await deposit(req);
-        const data = await parseResponse(res);
-        expect(data.message).toBe("Deposit successful");
-      });
-
-      it("creates journal entry", async () => {
-        setAuthSession(carrierSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: { amount: 500, paymentMethod: "mobile_money" },
-          }
-        );
-        const res = await deposit(req);
-        const data = await parseResponse(res);
-        expect(data.journalEntry).toBeDefined();
-        expect(data.journalEntry.transactionType).toBe("DEPOSIT");
-      });
-
-      it("returns newBalance as formatted string", async () => {
-        setAuthSession(carrierSession);
-        const req = createRequest(
-          "POST",
-          "http://localhost:3000/api/financial/wallet",
-          {
-            body: validDeposit,
-          }
-        );
-        const res = await deposit(req);
-        const data = await parseResponse(res);
-        expect(data.newBalance).toBeDefined();
-        expect(typeof data.newBalance).toBe("string");
-        // Should contain decimal point (formatted with .toFixed(2))
-        expect(data.newBalance).toMatch(/\d+\.\d{2}/);
-      });
-    });
-  });
+  // POST /api/financial/wallet — DELETED (2026-04-06)
+  // The endpoint was unused dead code with an inverted journal sign bug.
+  // The blueprint §8 deposit flow uses /api/wallet/deposit (request) →
+  // /api/admin/users/[id]/wallet/topup (admin approval). See the
+  // financial-atomicity tests for that flow's coverage.
 });

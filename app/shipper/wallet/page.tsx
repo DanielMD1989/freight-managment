@@ -71,61 +71,74 @@ export default async function WalletPage() {
     _count: true,
   });
 
-  // Get financial summary from journal entries
-  const [totalDeposits, totalServiceFees, totalWithdrawals] = await Promise.all(
-    [
-      // Total deposits
-      db.journalLine.aggregate({
-        where: {
-          account: {
-            organizationId: session.organizationId,
-            accountType: "SHIPPER_WALLET",
-          },
-          isDebit: false, // Credits to wallet = deposits
-          journalEntry: {
-            transactionType: "DEPOSIT",
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
+  // ─── Financial summary from journal entries ───────────────────────────────
+  // Single source of truth: ALL journal lines for this wallet, grouped by
+  // transactionType + isDebit. This guarantees:
+  //   totalDeposited (all credits) − totalSpent (all debits) === wallet.balance
+  // (modulo seed-time drift, surfaced as integrity warning below)
+  //
+  // Categories shown in UI:
+  //   - totalDeposited:  DEPOSIT credits (real money in)
+  //   - totalRefunded:   SERVICE_FEE_REFUND + REFUND credits (money returned)
+  //   - serviceFeesPaid: SERVICE_FEE_DEDUCT debits
+  //   - totalWithdrawn:  WITHDRAWAL debits
+  //   - totalSpent:      serviceFeesPaid + totalWithdrawn (existing card label)
+  //
+  // Math invariant (always true if ledger is consistent):
+  //   balance === (totalDeposited + totalRefunded) − (serviceFeesPaid + totalWithdrawn)
+  if (!walletAccount) {
+    redirect("/shipper?error=no-wallet");
+  }
 
-      // Total service fees paid (debits from wallet for service fees)
-      db.journalLine.aggregate({
-        where: {
-          account: {
-            organizationId: session.organizationId,
-            accountType: "SHIPPER_WALLET",
-          },
-          isDebit: true, // Debits from wallet = payments
-          journalEntry: {
-            transactionType: "SERVICE_FEE_DEDUCT",
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
+  const journalGroups = await db.journalLine.groupBy({
+    by: ["isDebit"],
+    where: {
+      accountId: walletAccount.id,
+    },
+    _sum: { amount: true },
+  });
 
-      // Total withdrawals (debits from wallet for withdrawals)
-      db.journalLine.aggregate({
-        where: {
-          account: {
-            organizationId: session.organizationId,
-            accountType: "SHIPPER_WALLET",
-          },
-          isDebit: true,
-          journalEntry: {
-            transactionType: "WITHDRAWAL",
-          },
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
-    ]
+  const totalCredits = Number(
+    journalGroups.find((g) => g.isDebit === false)?._sum.amount ?? 0
   );
+  const totalDebits = Number(
+    journalGroups.find((g) => g.isDebit === true)?._sum.amount ?? 0
+  );
+
+  // Per-type breakdown for the labelled cards
+  const journalByType = await db.journalLine.findMany({
+    where: { accountId: walletAccount.id },
+    select: {
+      amount: true,
+      isDebit: true,
+      journalEntry: { select: { transactionType: true } },
+    },
+  });
+
+  const sumByCategory = (types: string[], debit: boolean): number =>
+    journalByType
+      .filter(
+        (l) =>
+          l.isDebit === debit && types.includes(l.journalEntry.transactionType)
+      )
+      .reduce((sum, l) => sum + Number(l.amount), 0);
+
+  const totalDeposited = sumByCategory(["DEPOSIT"], false);
+  const totalRefunded = sumByCategory(["SERVICE_FEE_REFUND", "REFUND"], false);
+  const serviceFeesPaid = sumByCategory(["SERVICE_FEE_DEDUCT"], true);
+  const totalWithdrawn = sumByCategory(["WITHDRAWAL"], true);
+
+  // Ledger integrity check: stored balance should equal computed balance
+  // (totalCredits − totalDebits). Drift indicates a data integrity issue
+  // (most often a seed bug). Surface to logs so devs notice.
+  const computedBalance = totalCredits - totalDebits;
+  const storedBalance = Number(walletAccount.balance);
+  const ledgerDrift = storedBalance - computedBalance;
+  if (Math.abs(ledgerDrift) > 0.01) {
+    console.warn(
+      `[wallet integrity] Shipper wallet ${walletAccount.id} drift: stored=${storedBalance}, computed=${computedBalance}, drift=${ledgerDrift}`
+    );
+  }
 
   // Get recent transactions with details
   const recentTransactions = await db.journalLine.findMany({
@@ -175,18 +188,23 @@ export default async function WalletPage() {
   }));
 
   const walletData = {
-    balance: Number(walletAccount?.balance || 0),
-    currency: walletAccount?.currency || "ETB",
+    balance: storedBalance,
+    currency: walletAccount.currency || "ETB",
     availableBalance:
-      Number(walletAccount?.balance || 0) -
-      Number(pendingTrips._sum.shipperServiceFee || 0),
+      storedBalance - Number(pendingTrips._sum.shipperServiceFee || 0),
     pendingAmount: Number(pendingTrips._sum.shipperServiceFee || 0),
     pendingTripsCount: pendingTrips._count,
-    totalDeposited: Number(totalDeposits._sum.amount || 0),
-    totalSpent:
-      Number(totalServiceFees._sum.amount || 0) +
-      Number(totalWithdrawals._sum.amount || 0),
-    minimumBalance: Number(walletAccount?.minimumBalance || 0),
+    // Per-category totals (derived from journal — single source of truth)
+    totalDeposited,
+    totalRefunded,
+    serviceFeesPaid,
+    totalWithdrawn,
+    // totalSpent kept for backward-compat with existing UI card label
+    totalSpent: serviceFeesPaid + totalWithdrawn,
+    minimumBalance: Number(walletAccount.minimumBalance || 0),
+    // Ledger integrity metadata
+    ledgerDrift,
+    isLedgerInSync: Math.abs(ledgerDrift) <= 0.01,
     transactions,
   };
 

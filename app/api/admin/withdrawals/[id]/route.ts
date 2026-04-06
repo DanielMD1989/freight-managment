@@ -123,13 +123,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           }
 
           if (wallet) {
-            // Decrement wallet balance
-            await tx.financialAccount.update({
-              where: { id: wallet.id },
-              data: { balance: { decrement: existing.amount } },
-            });
-
-            // Create WITHDRAWAL journal entry
+            // Journal-first ordering (matches topup + serviceFeeManagement
+            // pattern). Both ops are inside the same $transaction so they
+            // are atomic — but the order makes the journal the
+            // logical "source of truth" written first.
             await tx.journalEntry.create({
               data: {
                 transactionType: "WITHDRAWAL",
@@ -145,6 +142,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                   ],
                 },
               },
+            });
+
+            // Decrement wallet balance (atomic with journal above)
+            await tx.financialAccount.update({
+              where: { id: wallet.id },
+              data: { balance: { decrement: existing.amount } },
             });
           }
         }
@@ -166,10 +169,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             },
           });
           if (wallet) {
-            await tx.financialAccount.update({
-              where: { id: wallet.id },
-              data: { balance: { increment: existing.amount } },
-            });
+            // Journal-first ordering (consistent with all other writers)
             await tx.journalEntry.create({
               data: {
                 transactionType: "REFUND",
@@ -185,6 +185,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                   ],
                 },
               },
+            });
+            await tx.financialAccount.update({
+              where: { id: wallet.id },
+              data: { balance: { increment: existing.amount } },
             });
           }
         }

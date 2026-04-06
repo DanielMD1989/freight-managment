@@ -46,11 +46,19 @@ interface ApiTransaction {
 interface WalletData {
   balance: number;
   currency: string;
+  // Per-category totals (single source of truth from journal)
+  totalDeposited: number;
+  totalRefunded: number;
+  serviceFeesPaid: number;
+  totalWithdrawn: number;
+  // Legacy / aggregated labels
   totalEarnings: number;
   totalWithdrawals: number;
   pendingTripsCount: number;
   completedTripsCount: number;
   minimumBalance: number;
+  ledgerDrift: number;
+  isLedgerInSync: boolean;
   transactions: Transaction[];
 }
 
@@ -372,8 +380,43 @@ export default function CarrierWalletClient({
           </div>
         )}
 
+      {/* Ledger Integrity Warning (only shown if drift detected) */}
+      {!walletData.isLedgerInSync && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-900/20">
+          <div className="flex items-start gap-3">
+            <svg
+              className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Wallet ledger drift detected
+              </p>
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                Stored balance differs from journal sum by{" "}
+                {formatCurrency(
+                  Math.abs(walletData.ledgerDrift),
+                  walletData.currency
+                )}
+                . Please contact support — your transactions will reconcile.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Financial Summary Cards */}
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Deposited */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
@@ -387,21 +430,64 @@ export default function CarrierWalletClient({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M7 11l5-5m0 0l5 5m-5-5v12"
+                  d="M12 4v16m8-8H4"
                 />
               </svg>
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Total Earnings
+                Total Deposited
               </p>
               <p className="text-xl font-bold text-slate-800 dark:text-white">
-                {formatCurrency(walletData.totalEarnings, walletData.currency)}
+                {formatCurrency(walletData.totalDeposited, walletData.currency)}
+              </p>
+              {walletData.totalRefunded > 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  +{" "}
+                  {formatCurrency(
+                    walletData.totalRefunded,
+                    walletData.currency
+                  )}{" "}
+                  refunded
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Service Fees Paid */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+              <svg
+                className="h-5 w-5 text-red-600 dark:text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Service Fees Paid
+              </p>
+              <p className="text-xl font-bold text-slate-800 dark:text-white">
+                {formatCurrency(
+                  walletData.serviceFeesPaid,
+                  walletData.currency
+                )}
               </p>
             </div>
           </div>
         </div>
 
+        {/* Total Withdrawn */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
@@ -424,15 +510,13 @@ export default function CarrierWalletClient({
                 Total Withdrawn
               </p>
               <p className="text-xl font-bold text-slate-800 dark:text-white">
-                {formatCurrency(
-                  walletData.totalWithdrawals,
-                  walletData.currency
-                )}
+                {formatCurrency(walletData.totalWithdrawn, walletData.currency)}
               </p>
             </div>
           </div>
         </div>
 
+        {/* Completed Trips */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">

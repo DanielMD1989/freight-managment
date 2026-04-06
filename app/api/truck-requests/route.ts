@@ -29,6 +29,7 @@ import {
 } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 import { CacheInvalidation } from "@/lib/cache";
+import { checkWalletGate } from "@/lib/walletGate";
 
 // Validation schema for truck request
 // Note: No offeredRate field - price negotiation happens outside platform
@@ -61,46 +62,15 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    // A4: Block truck request if shipper is below minimum balance
-    if (session.role === "SHIPPER" && session.organizationId) {
-      const walletAccount = await db.financialAccount.findFirst({
-        where: { organizationId: session.organizationId, isActive: true },
-        select: { balance: true, minimumBalance: true },
-      });
-      if (
-        walletAccount &&
-        walletAccount.balance < walletAccount.minimumBalance
-      ) {
-        const oneDayAgo = new Date(Date.now() - 86_400_000);
-        db.notification
-          .findFirst({
-            where: {
-              userId: session.userId,
-              type: NotificationType.LOW_BALANCE_WARNING,
-              createdAt: { gte: oneDayAgo },
-            },
-          })
-          .then((existing) => {
-            if (!existing) {
-              createNotification({
-                userId: session.userId,
-                type: NotificationType.LOW_BALANCE_WARNING,
-                title: "Insufficient Wallet Balance",
-                message: `Your wallet balance is below the required minimum (${Number(walletAccount.minimumBalance).toLocaleString()} ETB). Top up to restore marketplace access.`,
-                metadata: {
-                  currentBalance: Number(walletAccount.balance),
-                  minimumBalance: Number(walletAccount.minimumBalance),
-                },
-              }).catch((err) => console.error("low-balance notify err", err));
-            }
-          })
-          .catch((err) => console.warn("Notification failed:", err?.message));
-        return NextResponse.json(
-          { error: "Insufficient wallet balance for marketplace access" },
-          { status: 402 }
-        );
-      }
-    }
+    // A4: Block truck request if shipper is below minimum balance (Blueprint §8)
+    // Centralized via checkWalletGate() — also fires LOW_BALANCE_WARNING
+    // notification at most once per 24h.
+    const gateError = await checkWalletGate({
+      userId: session.userId,
+      role: session.role,
+      organizationId: session.organizationId,
+    });
+    if (gateError) return gateError;
 
     const body = await request.json();
 

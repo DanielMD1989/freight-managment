@@ -137,13 +137,21 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Total spent: sum of shipperServiceFee where fee was deducted
-      db.load.aggregate({
+      // Total spent: sum of SERVICE_FEE_DEDUCT debits from journal entries.
+      // SOURCE OF TRUTH: journal lines, NOT Load.shipperServiceFee — this
+      // ensures dashboard agrees with /shipper/wallet (which derives totals
+      // from the journal too). Previously these used different sources and
+      // could diverge.
+      db.journalLine.aggregate({
         where: {
-          shipperId: session.organizationId,
-          shipperFeeStatus: "DEDUCTED",
+          account: {
+            organizationId: session.organizationId,
+            accountType: "SHIPPER_WALLET",
+          },
+          isDebit: true,
+          journalEntry: { transactionType: "SERVICE_FEE_DEDUCT" },
         },
-        _sum: { shipperServiceFee: true },
+        _sum: { amount: true },
       }),
 
       // Pending payments: sum of shipperServiceFee for reserved (in-progress) loads
@@ -184,21 +192,26 @@ export async function GET(request: NextRequest) {
         ORDER BY date ASC
       `,
 
-      // Spending over time (for chart)
+      // Spending over time (for chart) — derived from journal entries
+      // (single source of truth, matches /shipper/wallet aggregation)
       db.$queryRaw<{ date: Date; amount: number }[]>`
-        SELECT DATE_TRUNC('day', "serviceFeeDeductedAt") as date,
-               COALESCE(SUM("shipperServiceFee"), 0) as amount
-        FROM loads
-        WHERE "shipperId" = ${session.organizationId}
-          AND "shipperFeeStatus" = 'DEDUCTED'
-          AND "serviceFeeDeductedAt" >= ${chartStart}
-          AND "serviceFeeDeductedAt" <= ${chartEnd}
-        GROUP BY DATE_TRUNC('day', "serviceFeeDeductedAt")
+        SELECT DATE_TRUNC('day', je."createdAt") as date,
+               COALESCE(SUM(jl."amount"), 0) as amount
+        FROM journal_lines jl
+        JOIN journal_entries je ON jl."journalEntryId" = je.id
+        JOIN financial_accounts fa ON jl."accountId" = fa.id
+        WHERE fa."organizationId" = ${session.organizationId}
+          AND fa."accountType" = 'SHIPPER_WALLET'
+          AND jl."isDebit" = true
+          AND je."transactionType" = 'SERVICE_FEE_DEDUCT'
+          AND je."createdAt" >= ${chartStart}
+          AND je."createdAt" <= ${chartEnd}
+        GROUP BY DATE_TRUNC('day', je."createdAt")
         ORDER BY date ASC
       `,
     ]);
 
-    const totalSpent = Number(totalSpentResult._sum?.shipperServiceFee || 0);
+    const totalSpent = Number(totalSpentResult._sum?.amount || 0);
     const pendingPayments = Number(
       pendingPaymentsResult._sum?.shipperServiceFee || 0
     );

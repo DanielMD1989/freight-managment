@@ -3,18 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
-import { validateCSRFWithMobile } from "@/lib/csrf";
-import { z } from "zod";
-
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
-
-const depositSchema = z.object({
-  // Fix 41: Cap deposit at 10M to prevent unreasonably large deposits
-  amount: z.number().positive().max(10_000_000),
-  paymentMethod: z.string(),
-  externalTransactionId: z.string().optional(),
-});
 
 // GET /api/financial/wallet - Get wallet balance
 export async function GET(request: NextRequest) {
@@ -103,86 +93,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/financial/wallet - Deposit funds
-export async function POST(request: NextRequest) {
-  try {
-    // H4 FIX: Add CSRF protection; M32 FIX: Use requireActiveUser
-    const csrfError = await validateCSRFWithMobile(request);
-    if (csrfError) return csrfError;
-
-    const session = await requireActiveUser();
-    await requirePermission(Permission.DEPOSIT_FUNDS);
-
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true },
-    });
-
-    if (!user?.organizationId) {
-      return NextResponse.json(
-        { error: "User does not belong to an organization" },
-        { status: 400 }
-      );
-    }
-
-    const body = await request.json();
-    const { amount, paymentMethod, externalTransactionId } =
-      depositSchema.parse(body);
-
-    // Get wallet
-    const wallet = await db.financialAccount.findFirst({
-      where: {
-        organizationId: user.organizationId,
-        accountType: {
-          in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
-        },
-      },
-    });
-
-    if (!wallet) {
-      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-    }
-
-    // B4 FIX: Wrap journal entry + balance update in transaction for atomicity
-    const { journalEntry, updatedWallet } = await db.$transaction(
-      async (tx) => {
-        const journalEntry = await tx.journalEntry.create({
-          data: {
-            transactionType: "DEPOSIT",
-            description: `Deposit via ${paymentMethod}`,
-            reference: externalTransactionId,
-            lines: {
-              create: [
-                {
-                  accountId: wallet.id,
-                  amount,
-                  isDebit: true,
-                },
-                // Credit would be to an external liability account (simplified for MVP)
-              ],
-            },
-          },
-        });
-
-        const updatedWallet = await tx.financialAccount.update({
-          where: { id: wallet.id },
-          data: {
-            balance: {
-              increment: amount,
-            },
-          },
-        });
-
-        return { journalEntry, updatedWallet };
-      }
-    );
-
-    return NextResponse.json({
-      message: "Deposit successful",
-      journalEntry,
-      newBalance: parseFloat(updatedWallet.balance.toString()).toFixed(2),
-    });
-  } catch (error) {
-    return handleApiError(error, "Deposit error");
-  }
-}
+// POST /api/financial/wallet — REMOVED (2026-04-06)
+//
+// Reason: This endpoint was unused (zero callers across app/, components/,
+// mobile/) AND contained a sign bug — it created a JournalLine with
+// `isDebit: true` while incrementing the balance, which would corrupt the
+// double-entry ledger if any client wired up to it.
+//
+// The blueprint §8 deposit flow is:
+//   1. POST /api/wallet/deposit       (creates pending WalletDeposit request)
+//   2. Admin approves request
+//   3. POST /api/admin/users/[id]/wallet/topup (creates atomic
+//      JournalEntry with isDebit: false + balance increment)
+//
+// Any future direct-deposit feature should be added to that flow, not here.

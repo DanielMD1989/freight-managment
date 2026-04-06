@@ -71,10 +71,8 @@ mockAssignmentConflicts();
 mockServiceFeeCalculation();
 
 // Route handlers AFTER mocks
-const {
-  GET: getWallet,
-  POST: depositWallet,
-} = require("@/app/api/financial/wallet/route");
+const { GET: getWallet } = require("@/app/api/financial/wallet/route");
+// POST handler removed (2026-04-06) — see app/api/financial/wallet/route.ts
 const {
   GET: getWalletTransactions,
 } = require("@/app/api/wallet/transactions/route");
@@ -318,35 +316,7 @@ describe("Shipper Wallet — GET /api/wallet/transactions", () => {
   });
 });
 
-describe("Shipper Wallet — POST /api/financial/wallet (deposit)", () => {
-  beforeAll(async () => {
-    await seedTestData();
-  });
-
-  afterAll(() => {
-    clearAllStores();
-  });
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    setAuthSession(shipperSession);
-  });
-
-  // W-7: Shipper deposit → 200, balance updated
-  it("W-7: shipper POST deposit → 200 with newBalance", async () => {
-    const req = createRequest("POST", "http://localhost/api/financial/wallet", {
-      body: {
-        amount: 1000,
-        paymentMethod: "BANK_TRANSFER",
-        externalTransactionId: "ext-txn-001",
-      },
-    });
-    const res = await depositWallet(req);
-    const body = await parseResponse(res);
-
-    expect(res.status).toBe(200);
-    expect(body.message).toMatch(/deposit/i);
-    expect(body.newBalance).toBeDefined();
-    expect(parseFloat(body.newBalance)).toBeGreaterThan(0);
-  });
-});
+// POST /api/financial/wallet — DELETED (2026-04-06)
+// The endpoint was unused dead code with an inverted journal sign bug.
+// The blueprint §8 deposit flow uses /api/wallet/deposit (request) →
+// /api/admin/users/[id]/wallet/topup (admin approval).

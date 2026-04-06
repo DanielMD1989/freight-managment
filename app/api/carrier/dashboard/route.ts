@@ -161,18 +161,20 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Total service fees paid: sum of carrierServiceFee from completed loads (fees paid TO platform)
-      // Legacy fallback: old records have serviceFeeStatus=DEDUCTED but carrierFeeStatus=PENDING
-      db.load.aggregate({
+      // Total service fees paid: sum of SERVICE_FEE_DEDUCT debits from
+      // journal entries. SOURCE OF TRUTH: journal lines, NOT
+      // Load.carrierServiceFee — this ensures dashboard agrees with
+      // /carrier/wallet (which derives totals from the journal too).
+      db.journalLine.aggregate({
         where: {
-          assignedTruck: { carrierId: session.organizationId },
-          status: { in: ["DELIVERED", "COMPLETED"] },
-          OR: [
-            { carrierFeeStatus: "DEDUCTED" },
-            { carrierFeeStatus: "PENDING", serviceFeeStatus: "DEDUCTED" },
-          ],
+          account: {
+            organizationId: session.organizationId,
+            accountType: "CARRIER_WALLET",
+          },
+          isDebit: true,
+          journalEntry: { transactionType: "SERVICE_FEE_DEDUCT" },
         },
-        _sum: { carrierServiceFee: true, serviceFeeEtb: true },
+        _sum: { amount: true },
       }),
 
       // Wallet account
@@ -219,17 +221,21 @@ export async function GET(request: NextRequest) {
         ORDER BY date ASC
       `,
 
-      // Earnings over time (for chart)
+      // Service fees over time (for chart) — derived from journal entries
+      // (single source of truth, matches /carrier/wallet aggregation)
       db.$queryRaw<{ date: Date; amount: number }[]>`
-        SELECT DATE_TRUNC('day', l."serviceFeeDeductedAt") as date,
-               COALESCE(SUM(l."carrierServiceFee"), 0) as amount
-        FROM loads l
-        JOIN trucks t ON l."assignedTruckId" = t.id
-        WHERE t."carrierId" = ${session.organizationId}
-          AND (l."carrierFeeStatus" = 'DEDUCTED' OR (l."carrierFeeStatus" = 'PENDING' AND l."serviceFeeStatus" = 'DEDUCTED'))
-          AND l."serviceFeeDeductedAt" >= ${chartStart}
-          AND l."serviceFeeDeductedAt" <= ${chartEnd}
-        GROUP BY DATE_TRUNC('day', l."serviceFeeDeductedAt")
+        SELECT DATE_TRUNC('day', je."createdAt") as date,
+               COALESCE(SUM(jl."amount"), 0) as amount
+        FROM journal_lines jl
+        JOIN journal_entries je ON jl."journalEntryId" = je.id
+        JOIN financial_accounts fa ON jl."accountId" = fa.id
+        WHERE fa."organizationId" = ${session.organizationId}
+          AND fa."accountType" = 'CARRIER_WALLET'
+          AND jl."isDebit" = true
+          AND je."transactionType" = 'SERVICE_FEE_DEDUCT'
+          AND je."createdAt" >= ${chartStart}
+          AND je."createdAt" <= ${chartEnd}
+        GROUP BY DATE_TRUNC('day', je."createdAt")
         ORDER BY date ASC
       `,
     ]);
@@ -240,14 +246,9 @@ export async function GET(request: NextRequest) {
         tripStats._sum?.estimatedDistanceKm ||
         0
     );
-    // Preserve 2 decimal precision for financial values
-    // Use carrierServiceFee when available, fall back to legacy serviceFeeEtb for old records
-    const rawCarrierFees = revenueResult._sum?.carrierServiceFee;
-    const rawLegacyFees = revenueResult._sum?.serviceFeeEtb;
-    const carrierFeeTotal = rawCarrierFees ? Number(rawCarrierFees) : 0;
-    const legacyFallback = rawLegacyFees ? Number(rawLegacyFees) : 0;
+    // Total service fees paid (single source of truth = journal entries)
     const totalServiceFeesPaid = parseFloat(
-      Math.max(carrierFeeTotal, legacyFallback).toFixed(2)
+      Number(revenueResult._sum?.amount || 0).toFixed(2)
     );
 
     return NextResponse.json({

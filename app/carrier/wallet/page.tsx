@@ -56,6 +56,10 @@ export default async function CarrierWalletPage() {
     },
   });
 
+  if (!walletAccount) {
+    redirect("/carrier?error=no-wallet");
+  }
+
   // Pending earnings (trips in progress that will pay out)
   const pendingTrips = await db.load.aggregate({
     where: {
@@ -67,47 +71,71 @@ export default async function CarrierWalletPage() {
     _count: true,
   });
 
-  // Financial summary from journal entries
-  const [totalEarnings, totalWithdrawals, completedTripsCount] =
-    await Promise.all([
-      // Total credits to carrier wallet (settlements/earnings)
-      db.journalLine.aggregate({
-        where: {
-          account: {
-            organizationId: session.organizationId,
-            accountType: "CARRIER_WALLET",
-          },
-          isDebit: false, // Credits = earnings
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
+  // ─── Financial summary from journal entries ───────────────────────────────
+  // Per-category breakdown (matches shipper wallet pattern, single source of truth):
+  //   - totalDeposited:  DEPOSIT credits (admin top-ups, user deposits)
+  //   - totalRefunded:   SERVICE_FEE_REFUND + REFUND credits
+  //   - serviceFeesPaid: SERVICE_FEE_DEDUCT debits (carrier fees, NOT withdrawals)
+  //   - totalWithdrawn:  WITHDRAWAL debits
+  //
+  // Math invariant (always true if ledger is consistent):
+  //   balance === (totalDeposited + totalRefunded) − (serviceFeesPaid + totalWithdrawn)
+  //
+  // Previous version conflated SERVICE_FEE_REFUND with "earnings" and
+  // SERVICE_FEE_DEDUCT with "withdrawals" — fixed.
+  const journalGroups = await db.journalLine.groupBy({
+    by: ["isDebit"],
+    where: { accountId: walletAccount.id },
+    _sum: { amount: true },
+  });
 
-      // Total debits from carrier wallet (withdrawals)
-      db.journalLine.aggregate({
-        where: {
-          account: {
-            organizationId: session.organizationId,
-            accountType: "CARRIER_WALLET",
-          },
-          isDebit: true, // Debits = withdrawals
-        },
-        _sum: {
-          amount: true,
-        },
-      }),
+  const totalCredits = Number(
+    journalGroups.find((g) => g.isDebit === false)?._sum.amount ?? 0
+  );
+  const totalDebits = Number(
+    journalGroups.find((g) => g.isDebit === true)?._sum.amount ?? 0
+  );
 
-      // Completed deliveries
-      db.load.count({
-        where: {
-          status: "DELIVERED",
-          assignedTruck: {
-            is: { carrierId: session.organizationId },
-          },
-        },
-      }),
-    ]);
+  const journalByType = await db.journalLine.findMany({
+    where: { accountId: walletAccount.id },
+    select: {
+      amount: true,
+      isDebit: true,
+      journalEntry: { select: { transactionType: true } },
+    },
+  });
+
+  const sumByCategory = (types: string[], debit: boolean): number =>
+    journalByType
+      .filter(
+        (l) =>
+          l.isDebit === debit && types.includes(l.journalEntry.transactionType)
+      )
+      .reduce((sum, l) => sum + Number(l.amount), 0);
+
+  const totalDeposited = sumByCategory(["DEPOSIT"], false);
+  const totalRefunded = sumByCategory(["SERVICE_FEE_REFUND", "REFUND"], false);
+  const serviceFeesPaid = sumByCategory(["SERVICE_FEE_DEDUCT"], true);
+  const totalWithdrawn = sumByCategory(["WITHDRAWAL"], true);
+
+  // Ledger integrity check
+  const computedBalance = totalCredits - totalDebits;
+  const storedBalance = Number(walletAccount.balance);
+  const ledgerDrift = storedBalance - computedBalance;
+  if (Math.abs(ledgerDrift) > 0.01) {
+    console.warn(
+      `[wallet integrity] Carrier wallet ${walletAccount.id} drift: stored=${storedBalance}, computed=${computedBalance}, drift=${ledgerDrift}`
+    );
+  }
+
+  const completedTripsCount = await db.load.count({
+    where: {
+      status: "DELIVERED",
+      assignedTruck: {
+        is: { carrierId: session.organizationId },
+      },
+    },
+  });
 
   // Recent transactions
   const recentTransactions = await db.journalLine.findMany({
@@ -156,13 +184,23 @@ export default async function CarrierWalletPage() {
   }));
 
   const walletData = {
-    balance: Number(walletAccount?.balance || 0),
-    currency: walletAccount?.currency || "ETB",
-    totalEarnings: Number(totalEarnings._sum.amount || 0),
-    totalWithdrawals: Number(totalWithdrawals._sum.amount || 0),
+    balance: storedBalance,
+    currency: walletAccount.currency || "ETB",
+    // Per-category totals (derived from journal — single source of truth)
+    totalDeposited,
+    totalRefunded,
+    serviceFeesPaid,
+    totalWithdrawn,
+    // Legacy fields kept for backward compat with existing UI cards
+    // Carrier "earnings" historically meant deposits + refunds (real income)
+    totalEarnings: totalDeposited + totalRefunded,
+    totalWithdrawals: totalWithdrawn,
     pendingTripsCount: pendingTrips._count,
     completedTripsCount,
-    minimumBalance: Number(walletAccount?.minimumBalance || 0),
+    minimumBalance: Number(walletAccount.minimumBalance || 0),
+    // Ledger integrity metadata
+    ledgerDrift,
+    isLedgerInSync: Math.abs(ledgerDrift) <= 0.01,
     transactions,
   };
 

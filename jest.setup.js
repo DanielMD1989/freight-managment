@@ -27,6 +27,7 @@ jest.mock("@/lib/db", () => {
     corridors: new Map(),
     financialAccounts: new Map(),
     journalEntries: new Map(),
+    journalLines: new Map(),
     userMFAs: new Map(),
     trips: new Map(),
     loadRequests: new Map(),
@@ -62,6 +63,7 @@ jest.mock("@/lib/db", () => {
   let corridorIdCounter = 1;
   let financialAccountIdCounter = 1;
   let journalEntryIdCounter = 1;
+  let journalLineIdCounter = 1;
   let userMFAIdCounter = 1;
   let tripIdCounter = 1;
   let loadRequestIdCounter = 1;
@@ -894,6 +896,7 @@ jest.mock("@/lib/db", () => {
     corridor: { value: corridorIdCounter },
     financialAccount: { value: financialAccountIdCounter },
     journalEntry: { value: journalEntryIdCounter },
+    journalLine: { value: journalLineIdCounter },
     userMFA: { value: userMFAIdCounter },
     trip: { value: tripIdCounter },
     loadRequest: { value: loadRequestIdCounter },
@@ -950,11 +953,156 @@ jest.mock("@/lib/db", () => {
         "financialAccount",
         counters.financialAccount
       ),
-      journalEntry: createModelMethods(
-        stores.journalEntries,
-        "journalEntry",
-        counters.journalEntry
-      ),
+      journalEntry: (() => {
+        const base = createModelMethods(
+          stores.journalEntries,
+          "journalEntry",
+          counters.journalEntry
+        );
+        // Wrap create to persist nested `lines: { create: [...] }` into:
+        //   1. The journalLines store (so journalLine.aggregate/findMany work)
+        //   2. As a `lines` array on the entry record itself (so existing
+        //      code that does journalEntry.findMany({ select: { lines } })
+        //      keeps working without refactoring)
+        return {
+          ...base,
+          create: jest.fn(({ data, include }) => {
+            const { lines: nestedLines, ...entryData } = data;
+            // Accept both Prisma's nested-write form (`{ create: [...] }`)
+            // AND plain arrays (used by some test fixtures)
+            let linesArray = [];
+            if (Array.isArray(nestedLines)) {
+              linesArray = nestedLines;
+            } else if (nestedLines && Array.isArray(nestedLines.create)) {
+              linesArray = nestedLines.create;
+            }
+
+            return base
+              .create({ data: entryData, include })
+              .then((entry) => {
+                // Persist each line in the journalLines store
+                const persistedLines = linesArray.map((line) => {
+                  const lineId = `journalLine-${counters.journalLine.value++}`;
+                  const persisted = {
+                    id: lineId,
+                    journalEntryId: entry.id,
+                    accountId: line.accountId,
+                    creditAccountId: line.creditAccountId || null,
+                    amount: line.amount,
+                    isDebit: line.isDebit,
+                    createdAt: new Date(),
+                  };
+                  stores.journalLines.set(lineId, persisted);
+                  return persisted;
+                });
+                // Mirror onto the entry record so legacy queries that
+                // do journalEntry.findMany({ select: { lines } }) still work
+                entry.lines = persistedLines;
+                stores.journalEntries.set(entry.id, entry);
+                return entry;
+              });
+          }),
+        };
+      })(),
+      // JournalLine: lightweight model with only the methods our code uses
+      // (aggregate, findMany, groupBy). Filters by accountId and isDebit;
+      // resolves journalEntry relation by lookup.
+      journalLine: {
+        findMany: jest.fn(({ where = {}, select, include } = {}) => {
+          const lines = Array.from(stores.journalLines.values()).filter(
+            (line) => {
+              if (where.accountId && line.accountId !== where.accountId) {
+                return false;
+              }
+              if (where.isDebit !== undefined && line.isDebit !== where.isDebit) {
+                return false;
+              }
+              if (where.account) {
+                const acct = stores.financialAccounts.get(line.accountId);
+                if (!acct) return false;
+                if (
+                  where.account.organizationId &&
+                  acct.organizationId !== where.account.organizationId
+                ) {
+                  return false;
+                }
+                if (
+                  where.account.accountType &&
+                  acct.accountType !== where.account.accountType
+                ) {
+                  return false;
+                }
+              }
+              if (where.journalEntry) {
+                const entry = stores.journalEntries.get(line.journalEntryId);
+                if (!entry) return false;
+                if (
+                  where.journalEntry.transactionType &&
+                  entry.transactionType !== where.journalEntry.transactionType
+                ) {
+                  return false;
+                }
+              }
+              return true;
+            }
+          );
+          // Resolve nested journalEntry select
+          const enriched = lines.map((line) => {
+            if (select?.journalEntry || include?.journalEntry) {
+              const entry = stores.journalEntries.get(line.journalEntryId);
+              return { ...line, journalEntry: entry };
+            }
+            return line;
+          });
+          return Promise.resolve(enriched);
+        }),
+        aggregate: jest.fn(({ where = {}, _sum } = {}) => {
+          // Reuse findMany filter logic by calling it
+          return result.db.journalLine
+            .findMany({ where })
+            .then((lines) => {
+              const sum = {};
+              if (_sum) {
+                for (const field of Object.keys(_sum)) {
+                  sum[field] = lines.reduce(
+                    (acc, l) => acc + Number(l[field] || 0),
+                    0
+                  );
+                }
+              }
+              return { _sum: sum };
+            });
+        }),
+        groupBy: jest.fn(({ by, where = {}, _sum } = {}) => {
+          return result.db.journalLine
+            .findMany({ where })
+            .then((lines) => {
+              const groups = new Map();
+              for (const line of lines) {
+                const key = by.map((f) => String(line[f])).join("|");
+                if (!groups.has(key)) {
+                  const grp = {};
+                  for (const f of by) grp[f] = line[f];
+                  if (_sum) grp._sum = {};
+                  groups.set(key, grp);
+                }
+                const grp = groups.get(key);
+                if (_sum) {
+                  for (const field of Object.keys(_sum)) {
+                    grp._sum[field] =
+                      (grp._sum[field] || 0) + Number(line[field] || 0);
+                  }
+                }
+              }
+              return Array.from(groups.values());
+            });
+        }),
+        count: jest.fn(({ where = {} } = {}) => {
+          return result.db.journalLine
+            .findMany({ where })
+            .then((lines) => lines.length);
+        }),
+      },
       userMFA: {
         ...createModelMethods(stores.userMFAs, "userMFA", counters.userMFA),
         // UserMFA has unique constraint on userId, so findUnique/update use userId

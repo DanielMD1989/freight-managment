@@ -10,7 +10,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { findLoadsWithMinimalDHO } from "@/lib/deadheadOptimization";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import { checkWalletGate } from "@/lib/walletGate";
 
 // GET /api/trucks/[id]/nearby-loads - Find loads with minimal DH-O
 export async function GET(
@@ -20,47 +20,13 @@ export async function GET(
   try {
     const session = await requireActiveUser();
 
-    // A4: Block marketplace search if wallet below minimum threshold
-    if (session.organizationId) {
-      const walletAccount = await db.financialAccount.findFirst({
-        where: { organizationId: session.organizationId, isActive: true },
-        select: { balance: true, minimumBalance: true },
-      });
-      if (
-        walletAccount &&
-        walletAccount.balance < walletAccount.minimumBalance
-      ) {
-        // G-W-N4-6: Fire LOW_BALANCE_WARNING at most once per 24h per user
-        const oneDayAgo = new Date(Date.now() - 86_400_000);
-        db.notification
-          .findFirst({
-            where: {
-              userId: session.userId,
-              type: NotificationType.LOW_BALANCE_WARNING,
-              createdAt: { gte: oneDayAgo },
-            },
-          })
-          .then((existing) => {
-            if (!existing) {
-              createNotification({
-                userId: session.userId,
-                type: NotificationType.LOW_BALANCE_WARNING,
-                title: "Insufficient Wallet Balance",
-                message: `Your wallet balance is below the required minimum (${Number(walletAccount.minimumBalance).toLocaleString()} ETB). Top up to restore marketplace access.`,
-                metadata: {
-                  currentBalance: Number(walletAccount.balance),
-                  minimumBalance: Number(walletAccount.minimumBalance),
-                },
-              }).catch((err) => console.error("low-balance notify err", err));
-            }
-          })
-          .catch((err) => console.warn("Notification failed:", err?.message));
-        return NextResponse.json(
-          { error: "Insufficient wallet balance for marketplace access" },
-          { status: 402 }
-        );
-      }
-    }
+    // A4: Block marketplace search if wallet below minimum (Blueprint §8)
+    const gateError = await checkWalletGate({
+      userId: session.userId,
+      role: session.role,
+      organizationId: session.organizationId,
+    });
+    if (gateError) return gateError;
 
     // M10 FIX: Rate limit nearby-loads queries
     const ip = request.headers.get("x-forwarded-for") || "unknown";

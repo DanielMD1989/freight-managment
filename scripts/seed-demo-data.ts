@@ -46,6 +46,101 @@ async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
 
+/**
+ * Idempotent wallet seeding with full ledger integrity.
+ *
+ * Mirrors `seedWalletWithJournal` in seed-test-data.ts. After this function
+ * returns, the wallet's stored balance equals `initialBalance` AND there is
+ * exactly one matching DEPOSIT journal entry. Re-seeding wipes prior journal
+ * lines for this wallet so the ledger stays in sync.
+ */
+async function seedWalletWithJournal(
+  organizationId: string,
+  accountType: "SHIPPER_WALLET" | "CARRIER_WALLET",
+  initialBalance: number,
+  description = "Initial seed funding"
+): Promise<{ walletId: string }> {
+  let wallet = await prisma.financialAccount.findFirst({
+    where: { organizationId, accountType },
+  });
+
+  if (wallet) {
+    // Wipe prior journal lines + orphaned entries for this wallet
+    const linesToDelete = await prisma.journalLine.findMany({
+      where: { accountId: wallet.id },
+      select: { journalEntryId: true },
+    });
+    const affectedEntryIds = Array.from(
+      new Set(linesToDelete.map((l) => l.journalEntryId))
+    );
+
+    if (linesToDelete.length > 0) {
+      await prisma.journalLine.deleteMany({
+        where: { accountId: wallet.id },
+      });
+    }
+
+    for (const entryId of affectedEntryIds) {
+      const remaining = await prisma.journalLine.count({
+        where: { journalEntryId: entryId },
+      });
+      if (remaining === 0) {
+        await prisma.journalEntry
+          .delete({ where: { id: entryId } })
+          .catch(() => {});
+      }
+    }
+
+    // Reset balance to 0 — about to create the seed deposit entry
+    await prisma.financialAccount.update({
+      where: { id: wallet.id },
+      data: { balance: 0, isActive: true },
+    });
+  } else {
+    wallet = await prisma.financialAccount.create({
+      data: {
+        organizationId,
+        accountType,
+        balance: 0,
+        currency: "ETB",
+        isActive: true,
+      },
+    });
+  }
+
+  if (initialBalance > 0) {
+    await prisma.$transaction(async (tx) => {
+      await tx.journalEntry.create({
+        data: {
+          transactionType: "DEPOSIT",
+          description,
+          reference: `seed-${organizationId}`,
+          metadata: {
+            seedFunding: true,
+            seededAt: new Date().toISOString(),
+          },
+          lines: {
+            create: [
+              {
+                accountId: wallet!.id,
+                amount: initialBalance,
+                isDebit: false,
+              },
+            ],
+          },
+        },
+      });
+
+      await tx.financialAccount.update({
+        where: { id: wallet!.id },
+        data: { balance: { increment: initialBalance } },
+      });
+    });
+  }
+
+  return { walletId: wallet.id };
+}
+
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
@@ -1337,66 +1432,30 @@ async function main() {
 
   for (let i = 0; i < shipperOrgs.length; i++) {
     const org = shipperOrgs[i];
-    let wallet = await prisma.financialAccount.findFirst({
-      where: { organizationId: org.id, accountType: "SHIPPER_WALLET" },
-    });
-
-    if (!wallet) {
-      wallet = await prisma.financialAccount.create({
-        data: {
-          organizationId: org.id,
-          accountType: "SHIPPER_WALLET",
-          balance: shipperBalances[i],
-          currency: "ETB",
-          isActive: true,
-        },
-      });
-      counts.walletsCreated++;
-      console.log(
-        `   [+] Created shipper wallet: ${org.name} (${shipperBalances[i].toLocaleString()} ETB)`
-      );
-    } else {
-      await prisma.financialAccount.update({
-        where: { id: wallet.id },
-        data: { balance: shipperBalances[i], isActive: true },
-      });
-      counts.walletsUpdated++;
-      console.log(
-        `   [=] Shipper wallet exists: ${org.name} (updated to ${shipperBalances[i].toLocaleString()} ETB)`
-      );
-    }
+    await seedWalletWithJournal(
+      org.id,
+      "SHIPPER_WALLET",
+      shipperBalances[i],
+      `Demo shipper initial funding (${org.name})`
+    );
+    counts.walletsCreated++;
+    console.log(
+      `   [+] Shipper wallet seeded: ${org.name} (${shipperBalances[i].toLocaleString()} ETB)`
+    );
   }
 
   for (let i = 0; i < carrierOrgs.length; i++) {
     const org = carrierOrgs[i];
-    let wallet = await prisma.financialAccount.findFirst({
-      where: { organizationId: org.id, accountType: "CARRIER_WALLET" },
-    });
-
-    if (!wallet) {
-      wallet = await prisma.financialAccount.create({
-        data: {
-          organizationId: org.id,
-          accountType: "CARRIER_WALLET",
-          balance: carrierBalances[i],
-          currency: "ETB",
-          isActive: true,
-        },
-      });
-      counts.walletsCreated++;
-      console.log(
-        `   [+] Created carrier wallet: ${org.name} (${carrierBalances[i].toLocaleString()} ETB)`
-      );
-    } else {
-      await prisma.financialAccount.update({
-        where: { id: wallet.id },
-        data: { balance: carrierBalances[i], isActive: true },
-      });
-      counts.walletsUpdated++;
-      console.log(
-        `   [=] Carrier wallet exists: ${org.name} (updated to ${carrierBalances[i].toLocaleString()} ETB)`
-      );
-    }
+    await seedWalletWithJournal(
+      org.id,
+      "CARRIER_WALLET",
+      carrierBalances[i],
+      `Demo carrier initial funding (${org.name})`
+    );
+    counts.walletsCreated++;
+    console.log(
+      `   [+] Carrier wallet seeded: ${org.name} (${carrierBalances[i].toLocaleString()} ETB)`
+    );
   }
 
   // Platform revenue account

@@ -274,18 +274,15 @@ describe("Admin Wallet Topup → WALLET_TOPUP_CONFIRMED Notification (G-W-N4-1)"
     expect(je).toBeDefined();
     expect(je!.transactionType).toBe("DEPOSIT");
 
-    // Verify the nested lines data has isDebit: false
-    // Mock stores lines as { create: [...] } from the route's Prisma call
-    const linesData = je!.lines;
-    // Lines may be stored as the create array or as a nested object
-    const linesList = Array.isArray(linesData)
-      ? linesData
-      : linesData?.create
-        ? Array.isArray(linesData.create)
-          ? linesData.create
-          : [linesData.create]
-        : [];
-    const walletLine = linesList.find((l: any) => l.accountId === walletId);
+    // Verify the JournalLine row for the wallet has isDebit: false (G-M31-C1)
+    // Lines are now first-class records in the journalLine store (mock
+    // intercepts nested journalEntry.create writes).
+    const lines = await db.journalLine.findMany({
+      where: { accountId: walletId },
+    });
+    const walletLine = lines.find(
+      (l: { journalEntryId: string }) => l.journalEntryId === data.transactionId
+    );
     expect(walletLine).toBeDefined();
     expect(walletLine!.isDebit).toBe(false);
   });
