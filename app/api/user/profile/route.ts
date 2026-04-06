@@ -21,18 +21,31 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { phoneSchema } from "@/lib/validation";
 import { handleApiError } from "@/lib/apiErrors";
 
-// Request body schema for profile update
+// Request body schema for profile update.
+// G12-1: trim before validation so a whitespace-only "  " name is rejected
+// at the schema layer with a clear error, instead of slipping past min(1)
+// then getting saved as an empty string.
 const updateProfileSchema = z
   .object({
     firstName: z
       .string()
-      .min(1, "First name cannot be empty")
-      .max(100, "First name is too long")
+      .transform((s) => s.trim())
+      .pipe(
+        z
+          .string()
+          .min(1, "First name cannot be empty")
+          .max(100, "First name is too long")
+      )
       .optional(),
     lastName: z
       .string()
-      .min(1, "Last name cannot be empty")
-      .max(100, "Last name is too long")
+      .transform((s) => s.trim())
+      .pipe(
+        z
+          .string()
+          .min(1, "Last name cannot be empty")
+          .max(100, "Last name is too long")
+      )
       .optional(),
     phone: z.union([phoneSchema, z.null()]).optional(),
     avatarUrl: z.union([z.string().url(), z.null()]).optional(),
