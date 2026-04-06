@@ -11,49 +11,43 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
 
-const PROPOSALS_PAGE_SIZE = 50;
+const PROPOSALS_PAGE_SIZE = 20;
 
-async function getShipperProposals(organizationId: string) {
-  const proposals = await db.matchProposal.findMany({
-    where: {
-      load: { shipperId: organizationId },
-    },
-    include: {
-      load: {
-        select: {
-          id: true,
-          pickupCity: true,
-          deliveryCity: true,
-          pickupDate: true,
-          weight: true,
-          truckType: true,
-          status: true,
+async function getShipperProposals(organizationId: string, page: number) {
+  const where = { load: { shipperId: organizationId } };
+  const [proposals, total] = await Promise.all([
+    db.matchProposal.findMany({
+      where,
+      include: {
+        load: {
+          select: {
+            id: true,
+            pickupCity: true,
+            deliveryCity: true,
+            pickupDate: true,
+            weight: true,
+            truckType: true,
+            status: true,
+          },
         },
-      },
-      truck: {
-        select: {
-          licensePlate: true,
-          truckType: true,
-          capacity: true,
+        truck: {
+          select: {
+            licensePlate: true,
+            truckType: true,
+            capacity: true,
+          },
         },
+        carrier: { select: { name: true } },
+        proposedBy: { select: { firstName: true, lastName: true } },
       },
-      carrier: {
-        select: {
-          name: true,
-        },
-      },
-      proposedBy: {
-        select: {
-          firstName: true,
-          lastName: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: PROPOSALS_PAGE_SIZE,
-  });
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PROPOSALS_PAGE_SIZE,
+      take: PROPOSALS_PAGE_SIZE,
+    }),
+    db.matchProposal.count({ where }),
+  ]);
 
-  return proposals;
+  return { proposals, total };
 }
 
 const statusColors: Record<string, string> = {
@@ -78,7 +72,11 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-export default async function ShipperProposalsPage() {
+export default async function ShipperProposalsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session");
 
@@ -101,7 +99,13 @@ export default async function ShipperProposalsPage() {
     redirect("/shipper?error=no-organization");
   }
 
-  const proposals = await getShipperProposals(session.organizationId);
+  const sp = (await searchParams) ?? {};
+  const page = Math.max(1, parseInt(sp.page || "1", 10) || 1);
+  const { proposals, total } = await getShipperProposals(
+    session.organizationId,
+    page
+  );
+  const totalPages = Math.max(1, Math.ceil(total / PROPOSALS_PAGE_SIZE));
 
   const pendingCount = proposals.filter((p) => p.status === "PENDING").length;
   const acceptedCount = proposals.filter((p) => p.status === "ACCEPTED").length;
@@ -275,6 +279,33 @@ export default async function ShipperProposalsPage() {
               )}
             </div>
           ))}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
+              <p className="text-sm text-slate-600">
+                Page {page} of {totalPages} — {total} proposals
+              </p>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Link
+                    href={`/shipper/proposals?page=${page - 1}`}
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    ← Previous
+                  </Link>
+                )}
+                {page < totalPages && (
+                  <Link
+                    href={`/shipper/proposals?page=${page + 1}`}
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Next →
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

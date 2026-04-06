@@ -55,16 +55,23 @@ export default function ShipperDisputesPage() {
   const [createError, setCreateError] = useState("");
   // M4 FIX: Add fetch error state
   const [fetchError, setFetchError] = useState<string | null>(null);
+  // §22 — Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const PAGE_SIZE = 20;
 
   const loadDisputes = useCallback(async () => {
     try {
       setFetchError(null);
       const params = new URLSearchParams();
       if (filterStatus) params.set("status", filterStatus);
+      params.set("page", String(page));
+      params.set("limit", String(PAGE_SIZE));
       const res = await fetch(`/api/disputes?${params}`);
       if (!res.ok) throw new Error("Failed to fetch disputes");
       const data = await res.json();
       setDisputes(data.disputes || []);
+      setTotalPages(Math.max(1, data.pagination?.totalPages ?? 1));
     } catch (err) {
       // M4 FIX: Surface error instead of silently swallowing
       setFetchError(
@@ -73,7 +80,7 @@ export default function ShipperDisputesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, page]);
 
   useEffect(() => {
     loadDisputes();
@@ -291,6 +298,33 @@ export default function ShipperDisputesPage() {
               </div>
             </Link>
           ))
+        )}
+
+        {/* §22 — Pagination footer */}
+        {!loading && !fetchError && totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between rounded-lg bg-white p-3 shadow dark:bg-slate-800">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Page {page} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-slate-700"
+              >
+                ← Previous
+              </button>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-slate-700"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
