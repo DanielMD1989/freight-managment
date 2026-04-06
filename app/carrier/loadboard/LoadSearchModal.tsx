@@ -37,6 +37,8 @@ export default function LoadSearchModal({
     minRate: 0,
     pickupDate: "",
     showVerifiedOnly: false,
+    // G10-2 (Item 10): allow user to enable email/push alerts on new matching loads
+    alertsEnabled: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -94,6 +96,7 @@ export default function LoadSearchModal({
           name: formData.name,
           type: "LOADS",
           criteria,
+          alertsEnabled: formData.alertsEnabled,
         }),
       });
 
@@ -373,6 +376,31 @@ export default function LoadSearchModal({
                   className="ml-2 text-sm text-[#064d51]/80"
                 >
                   Show verified companies only
+                </label>
+              </div>
+
+              {/* G10-2: Alerts toggle — wires to backend alertsEnabled */}
+              <div className="mt-3 flex items-start">
+                <input
+                  type="checkbox"
+                  id="alertsEnabled"
+                  checked={formData.alertsEnabled}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      alertsEnabled: e.target.checked,
+                    })
+                  }
+                  className="mt-1 h-4 w-4 rounded border-[#064d51]/20 text-[#1e9c99]"
+                />
+                <label
+                  htmlFor="alertsEnabled"
+                  className="ml-2 text-sm text-[#064d51]/80"
+                >
+                  Notify me when new matching loads are posted
+                  <span className="block text-xs text-[#064d51]/60">
+                    Sends a notification when a new load matches these criteria.
+                  </span>
                 </label>
               </div>
             </div>

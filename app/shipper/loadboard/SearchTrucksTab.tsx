@@ -272,7 +272,11 @@ export default function SearchTrucksTab({
    */
   const handleSaveEditedSearch = async (
     id: string,
-    updates: { name?: string; criteria?: SavedSearchCriteria }
+    updates: {
+      name?: string;
+      criteria?: SavedSearchCriteria;
+      alertsEnabled?: boolean;
+    }
   ) => {
     try {
       const csrfToken = await getCSRFToken();
