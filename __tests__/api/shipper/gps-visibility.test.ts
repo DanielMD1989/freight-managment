@@ -236,14 +236,18 @@ describe("Shipper GPS Visibility (A19 — Blueprint v1.2)", () => {
       expect(res.status).toBe(200);
     });
 
-    it("GV-5: Shipper gets 403 for route history when load is DELIVERED (not COMPLETED)", async () => {
+    it("GV-5: Shipper gets 200 for route history when load is DELIVERED", async () => {
+      // Updated 2026-04-06: Route history is now available from DELIVERED
+      // onward (the trip route has already been driven by then). Previously
+      // gated until COMPLETED, which blocked shippers from reviewing the
+      // route while still in the confirm-delivery window.
       setAuthSession(shipperSession);
       const req = createRequest(
         "GET",
         `http://localhost:3000/api/gps/history?loadId=${LOAD_DELIVERED}`
       );
       const res = await getHistory(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
     });
 
     it("GV-6: Shipper gets 404 for route history on another shipper's load (resource cloaking)", async () => {

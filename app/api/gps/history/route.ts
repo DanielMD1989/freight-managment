@@ -88,10 +88,17 @@ async function getHandler(request: NextRequest) {
         if (load.shipperId !== user?.organizationId) {
           return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
-        // A19-2: Shipper can only access route history after trip completion (blueprint v1.2)
-        if (load.status !== "COMPLETED") {
+        // Shipper can access route history after delivery (DELIVERED) and
+        // after full completion (COMPLETED). The full route has already
+        // been traveled by the time DELIVERED is set; blocking until
+        // COMPLETED was an unnecessary gate that prevented shippers from
+        // reviewing the route while still in the confirm-delivery window.
+        if (load.status !== "DELIVERED" && load.status !== "COMPLETED") {
           return NextResponse.json(
-            { error: "Route history only available after trip completion" },
+            {
+              error:
+                "Route history only available after the trip has been delivered",
+            },
             { status: 403 }
           );
         }

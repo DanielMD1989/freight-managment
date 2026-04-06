@@ -19,6 +19,9 @@ import { Prisma } from "@prisma/client";
 const updateSavedSearchSchema = z.object({
   name: z.string().min(1).optional(),
   criteria: z.record(z.string(), z.any()).optional(),
+  // Allow toggling alerts on/off after creation. Was missing — only way
+  // to disable alerts was to delete and recreate the search.
+  alertsEnabled: z.boolean().optional(),
 });
 
 /**

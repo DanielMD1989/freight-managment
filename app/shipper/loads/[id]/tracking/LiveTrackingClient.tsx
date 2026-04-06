@@ -4,9 +4,14 @@
  * Live Tracking Client Component
  *
  * Polls GET /api/gps/live?loadId= every 30s to show real-time truck position.
- * Blueprint v1.2: active trip GPS visibility for Shipper.
+ * Blueprint §11: active trip GPS visibility for Shipper.
+ *
+ * Stops polling and shows a "trip ended" message when the API returns 403
+ * (which happens when the trip transitions to DELIVERED/COMPLETED/CANCELLED
+ * mid-view). Without this, polling would continue forever after status change.
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 interface GpsPosition {
@@ -34,15 +39,27 @@ export default function LiveTrackingClient({
 }: LiveTrackingClientProps) {
   const [data, setData] = useState<LiveTrackingData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tripEnded, setTripEnded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     async function fetchPosition() {
       try {
         const res = await fetch(`/api/gps/live?loadId=${loadId}`);
         if (cancelled) return;
+        // 403 indicates trip is no longer in IN_TRANSIT — stop polling and
+        // surface a clean "trip ended" state instead of a generic error.
+        if (res.status === 403) {
+          setTripEnded(true);
+          if (interval) {
+            clearInterval(interval);
+            interval = null;
+          }
+          return;
+        }
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           setError(
@@ -60,12 +77,30 @@ export default function LiveTrackingClient({
     }
 
     fetchPosition();
-    const interval = setInterval(fetchPosition, POLL_INTERVAL_MS);
+    interval = setInterval(fetchPosition, POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
   }, [loadId]);
+
+  if (tripEnded) {
+    return (
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center">
+        <p className="font-medium text-emerald-800">Trip ended</p>
+        <p className="mt-1 text-sm text-emerald-700">
+          Live tracking is no longer available — the trip is no longer in
+          transit.
+        </p>
+        <Link
+          href={`/shipper/loads/${loadId}`}
+          className="mt-3 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          View load details
+        </Link>
+      </div>
+    );
+  }
 
   if (error) {
     return (

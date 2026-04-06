@@ -16,10 +16,23 @@ import { Prisma } from "@prisma/client";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 import { CacheInvalidation } from "@/lib/cache";
+import {
+  createNotificationForRole,
+  notifyOrganization,
+  NotificationType,
+} from "@/lib/notifications";
 
 const createDisputeSchema = z.object({
   loadId: z.string().max(50),
-  type: z.enum(["PAYMENT_ISSUE", "DAMAGE", "LATE_DELIVERY", "OTHER"]),
+  // Match the Prisma DisputeType enum exactly. Was missing QUALITY_ISSUE
+  // even though schema, web UI, and mobile UI all use it.
+  type: z.enum([
+    "PAYMENT_ISSUE",
+    "DAMAGE",
+    "LATE_DELIVERY",
+    "QUALITY_ISSUE",
+    "OTHER",
+  ]),
   description: z
     .string()
     .min(10, "Description must be at least 10 characters")
@@ -157,6 +170,45 @@ export async function POST(request: NextRequest) {
 
     // Invalidate load cache after dispute creation
     await CacheInvalidation.load(validatedData.loadId);
+
+    // Notify admins (so they can review/triage) and the disputed party
+    // (so they can respond). Fire-and-forget — failure must not block the
+    // dispute from being recorded.
+    const route =
+      load.pickupCity && load.deliveryCity
+        ? `${load.pickupCity} → ${load.deliveryCity}`
+        : "your load";
+    const filerRole =
+      session.organizationId === load.shipperId ? "Shipper" : "Carrier";
+
+    createNotificationForRole({
+      role: "ADMIN",
+      type: NotificationType.DISPUTE_FILED,
+      title: "New dispute filed",
+      message: `${filerRole} filed a ${validatedData.type.replace(/_/g, " ").toLowerCase()} dispute for ${route}.`,
+      metadata: {
+        disputeId: dispute.id,
+        loadId: validatedData.loadId,
+        type: validatedData.type,
+        filerRole,
+      },
+    }).catch((err) =>
+      console.warn("Dispute admin notification failed:", err?.message)
+    );
+
+    notifyOrganization({
+      organizationId: disputedOrgId,
+      type: NotificationType.DISPUTE_FILED,
+      title: "Dispute filed against you",
+      message: `${filerRole} filed a ${validatedData.type.replace(/_/g, " ").toLowerCase()} dispute about ${route}. Admin will review.`,
+      metadata: {
+        disputeId: dispute.id,
+        loadId: validatedData.loadId,
+        type: validatedData.type,
+      },
+    }).catch((err) =>
+      console.warn("Dispute counterparty notification failed:", err?.message)
+    );
 
     return NextResponse.json({
       message: "Dispute created successfully",

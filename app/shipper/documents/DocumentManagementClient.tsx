@@ -305,10 +305,20 @@ export default function DocumentManagementClient({
                   {resubmitError}
                 </p>
               )}
+              {documents.length === 0 && (
+                <p className="mt-2 text-xs text-red-700">
+                  Upload at least one document above before resubmitting.
+                </p>
+              )}
               <button
                 onClick={handleResubmit}
                 disabled={resubmitting || documents.length === 0}
                 className="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                title={
+                  documents.length === 0
+                    ? "Upload documents first"
+                    : "Resubmit your documents for admin review"
+                }
               >
                 {resubmitting ? "Submitting..." : "Submit for Review"}
               </button>

@@ -79,8 +79,11 @@ export default async function ShipperRouteHistoryPage({
     redirect("/unauthorized");
   }
 
-  // Route history only available after trip completion
-  if (load.status !== "COMPLETED") {
+  // Route history available after delivery (DELIVERED state, awaiting
+  // shipper confirmation) and after full completion (COMPLETED).
+  // The actual route was already traveled by the time the trip is DELIVERED;
+  // blocking access until COMPLETED was an unnecessary gate.
+  if (load.status !== "DELIVERED" && load.status !== "COMPLETED") {
     redirect(`/shipper/loads/${id}`);
   }
 

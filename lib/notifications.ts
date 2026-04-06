@@ -113,6 +113,11 @@ export const NotificationType = {
 
   // Load Alerts (saved search match)
   SAVED_SEARCH_MATCH: "SAVED_SEARCH_MATCH",
+
+  // Disputes
+  DISPUTE_FILED: "DISPUTE_FILED",
+  DISPUTE_STATUS_CHANGED: "DISPUTE_STATUS_CHANGED",
+  DISPUTE_RESOLVED: "DISPUTE_RESOLVED",
 } as const;
 
 /**

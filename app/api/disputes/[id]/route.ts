@@ -13,6 +13,11 @@ import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
+import {
+  notifyOrganization,
+  createNotification,
+  NotificationType,
+} from "@/lib/notifications";
 
 const updateDisputeSchema = z.object({
   status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "CLOSED"]).optional(),
@@ -174,6 +179,59 @@ export async function PATCH(
         },
       },
     });
+
+    // Notify both parties (creator + disputed org) when status actually
+    // changed. Fire-and-forget. The creator gets a personal notification;
+    // the disputed org gets an org-wide notification.
+    if (validatedData.status && validatedData.status !== dispute.status) {
+      const route =
+        updatedDispute.load?.pickupCity && updatedDispute.load?.deliveryCity
+          ? `${updatedDispute.load.pickupCity} → ${updatedDispute.load.deliveryCity}`
+          : "your load";
+      const isResolved =
+        validatedData.status === "RESOLVED" ||
+        validatedData.status === "CLOSED";
+      const notifType = isResolved
+        ? NotificationType.DISPUTE_RESOLVED
+        : NotificationType.DISPUTE_STATUS_CHANGED;
+      const title = isResolved
+        ? `Dispute ${validatedData.status.toLowerCase()}`
+        : `Dispute updated`;
+      const baseMessage = isResolved
+        ? `Admin marked your dispute about ${route} as ${validatedData.status.toLowerCase()}.`
+        : `Admin moved your dispute about ${route} to ${validatedData.status.toLowerCase().replace(/_/g, " ")}.`;
+
+      // Notify the creator (personal)
+      createNotification({
+        userId: updatedDispute.createdById,
+        type: notifType,
+        title,
+        message: baseMessage,
+        metadata: {
+          disputeId: updatedDispute.id,
+          loadId: updatedDispute.loadId,
+          status: validatedData.status,
+          resolution: validatedData.resolution || null,
+        },
+      }).catch((err) =>
+        console.warn("Dispute creator notification failed:", err?.message)
+      );
+
+      // Notify the disputed org
+      notifyOrganization({
+        organizationId: updatedDispute.disputedOrgId,
+        type: notifType,
+        title,
+        message: baseMessage,
+        metadata: {
+          disputeId: updatedDispute.id,
+          loadId: updatedDispute.loadId,
+          status: validatedData.status,
+        },
+      }).catch((err) =>
+        console.warn("Dispute respondent notification failed:", err?.message)
+      );
+    }
 
     return NextResponse.json({
       message: "Dispute updated successfully",
