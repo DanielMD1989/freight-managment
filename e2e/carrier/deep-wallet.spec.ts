@@ -57,12 +57,15 @@ test.describe("Deep: Carrier Wallet Page", () => {
   });
 
   test("financial summary cards render", async ({ page }) => {
+    // Updated 2026-04-07 — labels were renamed in commit 9b0ea64
+    // (wallet financial integrity rewrite). The cards are now:
+    //   Total Deposited / Service Fees Paid / Total Withdrawn
     const main = page.getByRole("main");
-    await expect(main.getByText(/Total Earnings/i).first()).toBeVisible({
+    await expect(main.getByText(/Total Deposited/i).first()).toBeVisible({
       timeout: 10000,
     });
+    await expect(main.getByText(/Service Fees Paid/i).first()).toBeVisible();
     await expect(main.getByText(/Total Withdrawn/i).first()).toBeVisible();
-    await expect(main.getByText(/Completed Trips/i).first()).toBeVisible();
   });
 
   test("transaction history section renders", async ({ page }) => {
