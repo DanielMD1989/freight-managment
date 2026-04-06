@@ -416,6 +416,9 @@ export async function POST(request: NextRequest) {
         status: user.status,
         organizationId: user.organizationId,
       },
+      // Return CSRF token so client can populate JS cache immediately,
+      // preventing stale-token race condition on first mutation after login
+      csrfToken,
       limitedAccess: isLimitedAccess,
       ...(isLimitedAccess && {
         allowedActions: [
