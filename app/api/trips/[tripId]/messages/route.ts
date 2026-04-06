@@ -19,13 +19,32 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 
-// §13: Text 1-2000 chars required, optional attachment URL
+// §13: Text 1-2000 chars required, optional image attachment.
+// Blueprint: "Optional image attachment (JPG/PNG, max 10MB)".
+//
+// File size enforcement happens at the upload service (Cloudinary/S3) before
+// the URL is sent here — server cannot re-verify a remote file's bytes
+// without downloading it. We DO enforce:
+//   - https:// only (no plaintext)
+//   - extension is .jpg / .jpeg / .png (case-insensitive, ignoring query/hash)
+//   - URL length capped at 1000 chars (defensive)
+const ATTACHMENT_EXT_RE = /\.(jpe?g|png)(?:[?#]|$)/i;
 const sendMessageSchema = z.object({
   content: z
     .string()
     .min(1, "Message cannot be empty")
     .max(2000, "Message cannot exceed 2000 characters"),
-  attachmentUrl: z.string().url().optional(),
+  attachmentUrl: z
+    .string()
+    .url()
+    .max(1000, "Attachment URL too long")
+    .refine((url) => url.startsWith("https://"), {
+      message: "Attachment URL must use HTTPS",
+    })
+    .refine((url) => ATTACHMENT_EXT_RE.test(url), {
+      message: "Attachment must be a JPG or PNG image",
+    })
+    .optional(),
 });
 
 // Chat is active during these trip statuses (ASSIGNED through DELIVERED)

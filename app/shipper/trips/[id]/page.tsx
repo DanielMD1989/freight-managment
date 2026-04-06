@@ -431,7 +431,11 @@ export default async function ShipperTripDetailPage({
   return (
     <div className="p-6">
       <Suspense fallback={<TripDetailSkeleton />}>
-        <ShipperTripDetailClient trip={trip} userId={session.userId} />
+        <ShipperTripDetailClient
+          trip={trip}
+          userId={session.userId}
+          isAdmin={session.role === "ADMIN" || session.role === "SUPER_ADMIN"}
+        />
       </Suspense>
     </div>
   );

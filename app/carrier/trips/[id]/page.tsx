@@ -338,7 +338,11 @@ export default async function TripDetailPage({
   return (
     <div className="p-6">
       <Suspense fallback={<TripDetailSkeleton />}>
-        <TripDetailClient trip={trip} userId={session.userId} />
+        <TripDetailClient
+          trip={trip}
+          userId={session.userId}
+          isAdmin={session.role === "ADMIN" || session.role === "SUPER_ADMIN"}
+        />
       </Suspense>
     </div>
   );

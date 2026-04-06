@@ -30,6 +30,7 @@ import {
 import { handleApiError } from "@/lib/apiErrors";
 import { CacheInvalidation } from "@/lib/cache";
 import { checkWalletGate } from "@/lib/walletGate";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // Validation schema for truck request
 // Note: No offeredRate field - price negotiation happens outside platform
@@ -61,6 +62,25 @@ export async function POST(request: NextRequest) {
     // Fix 2d: Consolidated CSRF with mobile bypass
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
+
+    // Rate limiting: prevent shipper from flooding carrier with requests
+    // (Blueprint §3 — same protection as POST /api/loads + messaging)
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.marketplace.endpoint,
+      ip,
+      RPS_CONFIGS.marketplace.rps,
+      RPS_CONFIGS.marketplace.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
 
     // A4: Block truck request if shipper is below minimum balance (Blueprint §8)
     // Centralized via checkWalletGate() — also fires LOW_BALANCE_WARNING

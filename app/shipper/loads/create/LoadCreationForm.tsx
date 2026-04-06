@@ -126,8 +126,9 @@ export default function LoadCreationForm() {
         setError("Pickup and delivery dates are required");
         return false;
       }
-      if (new Date(formData.deliveryDate) <= new Date(formData.pickupDate)) {
-        setError("Delivery date must be after pickup date");
+      // Allow same-day delivery (matches API which uses pickup <= delivery)
+      if (new Date(formData.deliveryDate) < new Date(formData.pickupDate)) {
+        setError("Delivery date must be on or after pickup date");
         return false;
       }
     } else if (step === 2) {
@@ -215,9 +216,14 @@ export default function LoadCreationForm() {
       const submitData = {
         ...formData,
         weight: parseFloat(formData.weight),
-        insuranceCoverageAmount: formData.insuranceCoverageAmount
-          ? parseFloat(formData.insuranceCoverageAmount)
-          : undefined,
+        // Send only if user entered a positive value. Empty, "0", and
+        // negative inputs all fall through to undefined (API rejects 0
+        // because schema requires .positive()).
+        insuranceCoverageAmount:
+          formData.insuranceCoverageAmount &&
+          parseFloat(formData.insuranceCoverageAmount) > 0
+            ? parseFloat(formData.insuranceCoverageAmount)
+            : undefined,
         // No rate field - price negotiation happens outside platform
         status: isDraft ? "DRAFT" : "POSTED",
         tripKm,

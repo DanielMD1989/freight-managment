@@ -24,6 +24,7 @@ import { useAuthStore } from "../../../src/stores/auth";
 import {
   useTripMessages,
   useSendMessage,
+  useMarkMessageRead,
 } from "../../../src/hooks/useMessages";
 import type { Message } from "../../../src/services/messaging";
 
@@ -37,6 +38,7 @@ export default function ChatScreen() {
     refetchInterval: 5000,
   });
   const sendMessage = useSendMessage();
+  const markRead = useMarkMessageRead();
 
   const messages = data?.messages ?? [];
   const readOnly = data?.readOnly ?? false;
@@ -52,6 +54,24 @@ export default function ChatScreen() {
     }
     prevCount.current = messages.length;
   }, [messages.length]);
+
+  // Mark unread messages from the OTHER party as read.
+  // (Web TripChat does this on mount and on every poll cycle. Mobile was
+  // missing this, leading to perpetually stuck unread badges.)
+  const markedIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!tripId || !user?.id || readOnly) return;
+    for (const msg of messages) {
+      if (
+        msg.senderId !== user.id &&
+        !msg.readAt &&
+        !markedIdsRef.current.has(msg.id)
+      ) {
+        markedIdsRef.current.add(msg.id);
+        markRead.mutate({ tripId, messageId: msg.id });
+      }
+    }
+  }, [messages, tripId, user?.id, readOnly, markRead]);
 
   const handleSend = useCallback(() => {
     const content = text.trim();

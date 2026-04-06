@@ -81,9 +81,15 @@ interface Trip {
 interface Props {
   trip: Trip;
   userId: string;
+  /** True when viewer is an admin/super-admin (read-only chat access) */
+  isAdmin?: boolean;
 }
 
-export default function TripDetailClient({ trip: initialTrip, userId }: Props) {
+export default function TripDetailClient({
+  trip: initialTrip,
+  userId,
+  isAdmin = false,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [trip, setTrip] = useState(initialTrip);
@@ -1136,7 +1142,12 @@ export default function TripDetailClient({ trip: initialTrip, userId }: Props) {
       </div>
 
       {/* §13 In-App Messaging */}
-      <TripChat tripId={trip.id} currentUserId={userId} isShipper={false} />
+      <TripChat
+        tripId={trip.id}
+        currentUserId={userId}
+        isShipper={false}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

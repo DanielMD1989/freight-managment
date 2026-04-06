@@ -101,6 +101,8 @@ interface Trip {
 interface Props {
   trip: Trip;
   userId: string;
+  /** True when viewer is an admin/super-admin (read-only chat access) */
+  isAdmin?: boolean;
 }
 
 const STATUS_CONFIG: Record<
@@ -154,6 +156,7 @@ const EVENT_ICONS: Record<string, string> = {
 export default function ShipperTripDetailClient({
   trip: initialTrip,
   userId,
+  isAdmin = false,
 }: Props) {
   const router = useRouter();
   const [trip, setTrip] = useState(initialTrip);
@@ -1172,7 +1175,12 @@ export default function ShipperTripDetailClient({
       )}
 
       {/* §13 In-App Messaging */}
-      <TripChat tripId={trip.id} currentUserId={userId} isShipper={true} />
+      <TripChat
+        tripId={trip.id}
+        currentUserId={userId}
+        isShipper={true}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }
