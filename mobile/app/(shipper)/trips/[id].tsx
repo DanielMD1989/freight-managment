@@ -22,6 +22,8 @@ import {
   useTripPods,
   useConfirmDelivery,
 } from "../../../src/hooks/useTrips";
+import { useTripRatings } from "../../../src/hooks/useRatings";
+import RatingModal from "../../../src/components/RatingModal";
 import { Card } from "../../../src/components/Card";
 import { Button } from "../../../src/components/Button";
 import { StatusBadge } from "../../../src/components/StatusBadge";
@@ -47,6 +49,11 @@ export default function ShipperTripDetailsScreen() {
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmNotes, setConfirmNotes] = useState("");
+  const [showRatingModal, setShowRatingModal] = useState(false);
+
+  // §12: load existing trip ratings to know whether the shipper has already rated
+  const { data: ratingsData } = useTripRatings(id);
+  const myRating = ratingsData?.myRating ?? null;
 
   if (isLoading || !trip) return <LoadingSpinner fullScreen />;
 
@@ -98,6 +105,45 @@ export default function ShipperTripDetailsScreen() {
           )}
         </View>
       )}
+
+      {/* Rate Carrier CTA — Blueprint §12: shipper rates carrier after delivery */}
+      {(trip.status === "DELIVERED" || trip.status === "COMPLETED") && (
+        <Card style={styles.card}>
+          {myRating ? (
+            <View>
+              <Text style={styles.sectionTitle}>Your Rating</Text>
+              <View style={styles.ratingRow}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Ionicons
+                    key={s}
+                    name={s <= myRating.stars ? "star" : "star-outline"}
+                    size={20}
+                    color="#F59E0B"
+                  />
+                ))}
+              </View>
+              {myRating.comment && (
+                <Text style={styles.ratingComment}>{myRating.comment}</Text>
+              )}
+            </View>
+          ) : (
+            <Button
+              title="Rate Carrier"
+              variant="primary"
+              onPress={() => setShowRatingModal(true)}
+              icon={<Ionicons name="star-outline" size={18} color="#fff" />}
+            />
+          )}
+        </Card>
+      )}
+
+      <RatingModal
+        visible={showRatingModal}
+        tripId={id!}
+        ratedOrgName={trip.carrier?.name ?? "Carrier"}
+        raterLabel="Rate Carrier"
+        onClose={() => setShowRatingModal(false)}
+      />
 
       {/* Exception Banner */}
       {trip.status === "EXCEPTION" && (
@@ -568,6 +614,16 @@ const styles = StyleSheet.create({
     ...typography.titleMedium,
     color: colors.textPrimary,
     marginBottom: spacing.md,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    gap: 4,
+    marginBottom: spacing.sm,
+  },
+  ratingComment: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    fontStyle: "italic",
   },
   detailRow: {
     flexDirection: "row",
