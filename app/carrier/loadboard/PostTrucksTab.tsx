@@ -1219,10 +1219,24 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         return;
       }
 
+      // Convert date-only inputs (from <input type="date">) to ISO datetimes.
+      // The PATCH /api/truck-postings/[id] schema requires z.string().datetime()
+      // which mandates full ISO 8601 with a time component. Sending the bare
+      // "YYYY-MM-DD" string fails Zod validation → 400 → "Failed to update
+      // truck posting" toast. (Mirror of the shipper loadboard fix.)
+      const toIsoDateTime = (
+        dateOnly: string | undefined
+      ): string | undefined => {
+        if (!dateOnly) return undefined;
+        // already an ISO datetime?
+        if (dateOnly.includes("T")) return dateOnly;
+        return new Date(`${dateOnly}T00:00:00`).toISOString();
+      };
+
       // Build update payload
       const updatePayload: TruckPostingUpdatePayload = {
-        availableFrom: editForm.availableFrom || undefined,
-        availableTo: editForm.availableTo || undefined,
+        availableFrom: toIsoDateTime(editForm.availableFrom),
+        availableTo: toIsoDateTime(editForm.availableTo),
         originCityId: editForm.origin || undefined,
         destinationCityId: editForm.destination || undefined,
         fullPartial: editForm.fullPartial || undefined,
@@ -1258,7 +1272,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         body: JSON.stringify(updatePayload),
       });
 
-      if (!response.ok) throw new Error("Failed to update truck posting");
+      if (!response.ok) {
+        // Surface the actual API error so the user sees what failed
+        const body = await response.json().catch(() => ({}));
+        const message =
+          body.error ||
+          (body.details && JSON.stringify(body.details)) ||
+          "Failed to update truck posting";
+        throw new Error(message);
+      }
 
       toast.success(
         wasUnposted
