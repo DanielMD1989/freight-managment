@@ -220,7 +220,7 @@ describe("Dispatcher Load Status Update — Round U1", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/loads/${seed.load.id}/status`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", reason: "Test cancellation" } }
     );
 
     const res = await callHandler(updateStatus, req, { id: seed.load.id });

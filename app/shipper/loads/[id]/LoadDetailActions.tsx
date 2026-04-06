@@ -91,6 +91,10 @@ export default function LoadDetailActions({
   };
 
   const handleCancelLoad = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
     setCancelling(true);
     try {
       const response = await csrfFetch(`/api/loads/${loadId}/status`, {
@@ -98,7 +102,7 @@ export default function LoadDetailActions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "CANCELLED",
-          reason: cancelReason || undefined,
+          reason: cancelReason.trim(),
         }),
       });
 
@@ -294,7 +298,7 @@ export default function LoadDetailActions({
             <textarea
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Reason for cancellation (optional)"
+              placeholder="Reason for cancellation (required)"
               rows={2}
               className="mb-3 w-full rounded-lg border border-red-200 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
             />

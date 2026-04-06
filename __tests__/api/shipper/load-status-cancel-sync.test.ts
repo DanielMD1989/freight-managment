@@ -287,7 +287,7 @@ describe("Load Status Cancel → Trip Sync (G-M24-1)", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/loads/${loadId}/status`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", reason: "Test cancellation" } }
     );
     const res = await callHandler(updateStatus, req, { id: loadId });
     expect(res.status).toBe(200);
@@ -303,7 +303,7 @@ describe("Load Status Cancel → Trip Sync (G-M24-1)", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/loads/${loadId}/status`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", reason: "Test cancellation" } }
     );
     const res = await callHandler(updateStatus, req, { id: loadId });
     expect(res.status).toBe(200);
@@ -320,7 +320,7 @@ describe("Load Status Cancel → Trip Sync (G-M24-1)", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/loads/${loadId}/status`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", reason: "Test cancellation" } }
     );
     const res = await callHandler(updateStatus, req, { id: loadId });
     expect(res.status).toBe(200);
@@ -380,7 +380,7 @@ describe("Load Status Cancel → Trip Sync (G-M24-1)", () => {
     const req = createRequest(
       "PATCH",
       `http://localhost:3000/api/loads/${loadId}/status`,
-      { body: { status: "CANCELLED" } }
+      { body: { status: "CANCELLED", reason: "Test cancellation" } }
     );
     const res = await callHandler(updateStatus, req, { id: loadId });
     expect(res.status).toBe(200);
@@ -391,6 +391,36 @@ describe("Load Status Cancel → Trip Sync (G-M24-1)", () => {
   });
 
   // ─── cancelReason recorded on trip ─────────────────────────────────────────
+
+  // ─── Blueprint §6: Cancellation reason is required ─────────────────────────
+
+  it("cancel without reason → 400 (blueprint §6 enforcement)", async () => {
+    const { loadId } = await createAssignedLoadWithTrip();
+
+    const req = createRequest(
+      "PATCH",
+      `http://localhost:3000/api/loads/${loadId}/status`,
+      { body: { status: "CANCELLED" } } // no reason
+    );
+    const res = await callHandler(updateStatus, req, { id: loadId });
+    expect(res.status).toBe(400);
+
+    // Load should still be ASSIGNED (cancellation rejected)
+    const load = await db.load.findUnique({ where: { id: loadId } });
+    expect(load.status).toBe("ASSIGNED");
+  });
+
+  it("cancel with empty reason → 400 (blueprint §6)", async () => {
+    const { loadId } = await createAssignedLoadWithTrip();
+
+    const req = createRequest(
+      "PATCH",
+      `http://localhost:3000/api/loads/${loadId}/status`,
+      { body: { status: "CANCELLED", reason: "   " } } // whitespace only
+    );
+    const res = await callHandler(updateStatus, req, { id: loadId });
+    expect(res.status).toBe(400);
+  });
 
   it("cancel reason propagated to trip.cancelReason", async () => {
     const { loadId, tripId } = await createAssignedLoadWithTrip();

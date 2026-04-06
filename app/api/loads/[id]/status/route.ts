@@ -35,25 +35,40 @@ import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 
-const updateStatusSchema = z.object({
-  status: z.enum([
-    "DRAFT",
-    "POSTED",
-    "SEARCHING",
-    "OFFERED",
-    "ASSIGNED",
-    "PICKUP_PENDING",
-    "IN_TRANSIT",
-    "DELIVERED",
-    "COMPLETED",
-    "EXCEPTION",
-    "CANCELLED",
-    "EXPIRED",
-    "UNPOSTED",
-  ]),
-  reason: z.string().optional(), // Optional reason for status change
-  notes: z.string().optional(), // Optional notes
-});
+const updateStatusSchema = z
+  .object({
+    status: z.enum([
+      "DRAFT",
+      "POSTED",
+      "SEARCHING",
+      "OFFERED",
+      "ASSIGNED",
+      "PICKUP_PENDING",
+      "IN_TRANSIT",
+      "DELIVERED",
+      "COMPLETED",
+      "EXCEPTION",
+      "CANCELLED",
+      "EXPIRED",
+      "UNPOSTED",
+    ]),
+    reason: z.string().max(500).optional(),
+    notes: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // Blueprint §6: Cancellation requires a user-provided reason (1-500 chars).
+      // Other status transitions do not require a reason.
+      if (data.status === "CANCELLED") {
+        return !!data.reason && data.reason.trim().length >= 1;
+      }
+      return true;
+    },
+    {
+      message: "Cancellation reason is required",
+      path: ["reason"],
+    }
+  );
 
 // PATCH /api/loads/[id]/status - Update load status
 export async function PATCH(
@@ -325,7 +340,7 @@ export async function PATCH(
                 loadId: null as string | null,
                 trackingEnabled: false,
                 cancelledBy: session.userId,
-                cancelReason: reason || "Cancelled via load status change",
+                cancelReason: reason,
               }
             : {};
 

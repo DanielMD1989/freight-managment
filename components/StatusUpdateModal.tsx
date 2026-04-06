@@ -58,12 +58,19 @@ export default function StatusUpdateModal({
   onUpdateSuccess,
 }: StatusUpdateModalProps) {
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
+  const [cancelReason, setCancelReason] = useState("");
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleUpdate = async () => {
     if (selectedStatus === currentStatus) {
       setError("Please select a different status");
+      return;
+    }
+
+    // Blueprint §6: Cancellation requires a user-provided reason
+    if (selectedStatus === "CANCELLED" && !cancelReason.trim()) {
+      setError("Please provide a reason for cancellation");
       return;
     }
 
@@ -80,6 +87,9 @@ export default function StatusUpdateModal({
         },
         body: JSON.stringify({
           status: selectedStatus,
+          ...(selectedStatus === "CANCELLED" && {
+            reason: cancelReason.trim(),
+          }),
         }),
       });
 
@@ -215,14 +225,30 @@ export default function StatusUpdateModal({
               </div>
             </div>
 
-            {/* Warning for certain status changes */}
+            {/* Warning + Reason input for cancellation */}
             {selectedStatus === "CANCELLED" &&
               currentStatus !== "CANCELLED" && (
-                <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Warning:</strong> Cancelling this load may affect
-                    completion rates and trust scores.
-                  </p>
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Warning:</strong> Cancelling this load may affect
+                      completion rates and trust scores.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                      Reason for cancellation{" "}
+                      <span className="text-red-600">*</span>
+                    </label>
+                    <textarea
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder="Required: explain why this load is being cancelled"
+                      rows={2}
+                      maxLength={500}
+                      className="w-full rounded-md border border-[#064d51]/20 px-3 py-2 text-sm focus:border-[#1e9c99] focus:outline-none"
+                    />
+                  </div>
                 </div>
               )}
           </div>

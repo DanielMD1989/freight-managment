@@ -70,6 +70,17 @@ export default function AdminLoadDetailClient({ load }: { load: LoadDetail }) {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const handleStatusChange = async (newStatus: string) => {
+    // Blueprint §6: Cancellation requires a user-provided reason
+    let reason: string | undefined;
+    if (newStatus === "CANCELLED") {
+      const input = window.prompt("Reason for cancellation (required):");
+      if (!input || !input.trim()) {
+        setActionError("Cancellation reason is required");
+        return;
+      }
+      reason = input.trim();
+    }
+
     setActing(newStatus);
     setActionError(null);
 
@@ -81,7 +92,7 @@ export default function AdminLoadDetailClient({ load }: { load: LoadDetail }) {
           "Content-Type": "application/json",
           ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...(reason && { reason }) }),
       });
 
       if (response.ok) {
