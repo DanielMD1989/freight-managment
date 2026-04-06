@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/apiErrors";
+import { reconcileWallet } from "@/lib/walletReconcile";
 
 /**
  * GET /api/wallet/balance
@@ -85,18 +86,60 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Per-category breakdown for each wallet (Mobile parity with web)
+    // Reuses the reconcileWallet utility to derive categories from journal
+    // entries — single source of truth, matches the web wallet pages.
+    const reconciliations = await Promise.all(
+      walletAccounts.map((acct) => reconcileWallet(acct.id))
+    );
+
+    // Sum the per-wallet category totals into single org-level numbers
+    let totalDeposited = 0;
+    let totalRefunded = 0;
+    let serviceFeesPaid = 0;
+    let totalWithdrawn = 0;
+    let aggregateDrift = 0;
+
+    for (const r of reconciliations) {
+      const dep = r.byType.DEPOSIT?.credits ?? 0;
+      const refSvc = r.byType.SERVICE_FEE_REFUND?.credits ?? 0;
+      const refWith = r.byType.REFUND?.credits ?? 0;
+      const fee = r.byType.SERVICE_FEE_DEDUCT?.debits ?? 0;
+      const withd = r.byType.WITHDRAWAL?.debits ?? 0;
+
+      totalDeposited += dep;
+      totalRefunded += refSvc + refWith;
+      serviceFeesPaid += fee;
+      totalWithdrawn += withd;
+      aggregateDrift += r.drift;
+    }
+
     return NextResponse.json({
-      wallets: walletAccounts.map((account) => ({
+      wallets: walletAccounts.map((account, i) => ({
         id: account.id,
         type: account.accountType,
         balance: Number(account.balance),
         currency: account.currency,
         minimumBalance: Number(account.minimumBalance ?? 0),
         updatedAt: account.updatedAt,
+        // Per-wallet ledger metadata (drift indicator for admin tools)
+        ledgerDrift: reconciliations[i].drift,
+        isLedgerInSync: reconciliations[i].isInSync,
       })),
       totalBalance,
       currency: walletAccounts[0]?.currency || "ETB",
       recentTransactionsCount: recentTransactions,
+      // Per-category totals (NEW — used by mobile + future admin views)
+      // The math invariant always holds:
+      //   totalBalance ≈ totalDeposited + totalRefunded
+      //                  − serviceFeesPaid − totalWithdrawn
+      // (modulo any drift, which is surfaced via isLedgerInSync below)
+      totalDeposited,
+      totalRefunded,
+      serviceFeesPaid,
+      totalWithdrawn,
+      ledgerDrift: aggregateDrift,
+      isLedgerInSync: Math.abs(aggregateDrift) <= 0.01,
     });
   } catch (error) {
     return handleApiError(error, "Get wallet balance error");

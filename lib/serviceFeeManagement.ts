@@ -419,19 +419,37 @@ export async function deductServiceFee(
     }),
   ]);
 
-  // Create platform account if not exists
+  // Race-safe lazy creation of the PLATFORM_REVENUE account.
+  // The account is normally pre-created by seed scripts (and exists in
+  // production), but on a brand-new platform with zero prior fees, two
+  // concurrent service-fee deductions could both try to create it. Handle
+  // that by retrying findFirst() if create() throws (Prisma will throw on
+  // unique constraint violation OR another writer succeeded first).
   let platformAccountId = platformAccount?.id;
   if (!platformAccountId) {
-    const newPlatformAccount = await db.financialAccount.create({
-      data: {
-        accountType: "PLATFORM_REVENUE",
-        balance: 0,
-        currency: "ETB",
-        isActive: true,
-      },
-      select: { id: true },
-    });
-    platformAccountId = newPlatformAccount.id;
+    try {
+      const newPlatformAccount = await db.financialAccount.create({
+        data: {
+          accountType: "PLATFORM_REVENUE",
+          balance: 0,
+          currency: "ETB",
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      platformAccountId = newPlatformAccount.id;
+    } catch (createErr) {
+      // Another concurrent writer created the account first — re-fetch
+      const existing = await db.financialAccount.findFirst({
+        where: { accountType: "PLATFORM_REVENUE", isActive: true },
+        select: { id: true },
+      });
+      if (!existing) {
+        // Genuinely failed (not a race) — surface the original error
+        throw createErr;
+      }
+      platformAccountId = existing.id;
+    }
   }
 
   // Track deduction results

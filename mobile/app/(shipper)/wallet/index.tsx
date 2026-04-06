@@ -86,6 +86,14 @@ export default function WalletScreen() {
   const currency = balanceData?.currency ?? "ETB";
   const transactions = txData?.transactions ?? [];
 
+  // Per-category totals (added in B1 — single source of truth from journal)
+  const totalDeposited = balanceData?.totalDeposited ?? 0;
+  const totalRefunded = balanceData?.totalRefunded ?? 0;
+  const serviceFeesPaid = balanceData?.serviceFeesPaid ?? 0;
+  const totalWithdrawn = balanceData?.totalWithdrawn ?? 0;
+  const isLedgerInSync = balanceData?.isLedgerInSync ?? true;
+  const ledgerDrift = balanceData?.ledgerDrift ?? 0;
+
   return (
     <ScrollView
       style={styles.container}
@@ -103,6 +111,57 @@ export default function WalletScreen() {
           {balanceData?.recentTransactionsCount ?? 0} recent transactions
         </Text>
       </Card>
+
+      {/* Ledger integrity warning (only shown if drift detected) */}
+      {!isLedgerInSync && (
+        <Card style={styles.driftWarning} padding="md">
+          <View style={styles.driftRow}>
+            <Ionicons name="warning-outline" size={20} color={colors.warning} />
+            <View style={{ flex: 1, marginLeft: spacing.sm }}>
+              <Text style={styles.driftTitle}>
+                Wallet ledger drift detected
+              </Text>
+              <Text style={styles.driftBody}>
+                Stored balance differs from journal sum by{" "}
+                {formatCurrency(Math.abs(ledgerDrift), currency)}. Please
+                contact support — your transactions will reconcile.
+              </Text>
+            </View>
+          </View>
+        </Card>
+      )}
+
+      {/* Per-category Summary Cards (parity with web wallet page) */}
+      <View style={styles.summaryGrid}>
+        <Card style={styles.summaryCard} padding="md">
+          <Ionicons name="arrow-down-circle" size={22} color={colors.success} />
+          <Text style={styles.summaryLabel}>Total Deposited</Text>
+          <Text style={styles.summaryAmount}>
+            {formatCurrency(totalDeposited, currency)}
+          </Text>
+        </Card>
+        <Card style={styles.summaryCard} padding="md">
+          <Ionicons name="card-outline" size={22} color={colors.error} />
+          <Text style={styles.summaryLabel}>Service Fees Paid</Text>
+          <Text style={styles.summaryAmount}>
+            {formatCurrency(serviceFeesPaid, currency)}
+          </Text>
+        </Card>
+        <Card style={styles.summaryCard} padding="md">
+          <Ionicons name="refresh-circle" size={22} color={colors.primary500} />
+          <Text style={styles.summaryLabel}>Refunds Received</Text>
+          <Text style={styles.summaryAmount}>
+            {formatCurrency(totalRefunded, currency)}
+          </Text>
+        </Card>
+        <Card style={styles.summaryCard} padding="md">
+          <Ionicons name="arrow-up-circle" size={22} color={colors.warning} />
+          <Text style={styles.summaryLabel}>Withdrawn</Text>
+          <Text style={styles.summaryAmount}>
+            {formatCurrency(totalWithdrawn, currency)}
+          </Text>
+        </Card>
+      </View>
 
       {/* Wallet Accounts */}
       {balanceData?.wallets && balanceData.wallets.length > 0 && (
@@ -222,6 +281,48 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.primary200,
     marginTop: spacing.xs,
+  },
+  driftWarning: {
+    marginHorizontal: spacing["2xl"],
+    marginTop: spacing.lg,
+    backgroundColor: colors.warningLight,
+    borderColor: colors.warning,
+    borderWidth: 1,
+  },
+  driftRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  driftTitle: {
+    ...typography.titleSmall,
+    color: colors.warningDark,
+  },
+  driftBody: {
+    ...typography.bodySmall,
+    color: colors.warningDark,
+    marginTop: 2,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginHorizontal: spacing["2xl"],
+    marginTop: spacing.lg,
+  },
+  summaryCard: {
+    flexBasis: "47%",
+    flexGrow: 1,
+    minWidth: 140,
+  },
+  summaryLabel: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  summaryAmount: {
+    ...typography.titleSmall,
+    color: colors.textPrimary,
+    marginTop: 2,
   },
   walletsRow: {
     flexDirection: "row",

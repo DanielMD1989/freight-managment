@@ -9,11 +9,25 @@ export interface WalletBalanceResponse {
     type: string;
     balance: number;
     currency: string;
+    minimumBalance?: number;
     updatedAt: string;
+    ledgerDrift?: number;
+    isLedgerInSync?: boolean;
   }>;
   totalBalance: number;
   currency: string;
   recentTransactionsCount: number;
+  // Per-category totals derived from journal entries (single source of truth).
+  // The math invariant always holds:
+  //   totalBalance ≈ totalDeposited + totalRefunded
+  //                  − serviceFeesPaid − totalWithdrawn
+  // Drift surfaces in `isLedgerInSync` if the cache and journal disagree.
+  totalDeposited: number;
+  totalRefunded: number;
+  serviceFeesPaid: number;
+  totalWithdrawn: number;
+  ledgerDrift: number;
+  isLedgerInSync: boolean;
 }
 
 export interface WalletTransaction {
