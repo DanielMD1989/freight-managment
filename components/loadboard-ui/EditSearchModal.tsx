@@ -20,12 +20,7 @@ interface EditSearchModalProps {
   onClose: () => void;
   onSave: (
     id: string,
-    // G10-3 (Item 10): allow toggling alertsEnabled post-creation
-    updates: {
-      name?: string;
-      criteria?: SavedSearchCriteria;
-      alertsEnabled?: boolean;
-    }
+    updates: { name?: string; criteria?: SavedSearchCriteria }
   ) => Promise<void>;
   cities?: { name: string; region?: string }[];
   type: SavedSearchType;
@@ -52,8 +47,6 @@ export default function EditSearchModal({
 }: EditSearchModalProps) {
   const [name, setName] = useState("");
   const [criteria, setCriteria] = useState<SavedSearchCriteria>({});
-  // G10-3: track current alertsEnabled state (read from existing record)
-  const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,9 +55,6 @@ export default function EditSearchModal({
     if (search) {
       setName(search.name);
       setCriteria(search.criteria || {});
-      setAlertsEnabled(
-        Boolean((search as { alertsEnabled?: boolean }).alertsEnabled)
-      );
       setError(null);
     }
   }, [search]);
@@ -81,7 +71,7 @@ export default function EditSearchModal({
     setError(null);
 
     try {
-      await onSave(search.id, { name: name.trim(), criteria, alertsEnabled });
+      await onSave(search.id, { name: name.trim(), criteria });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save changes");
@@ -393,29 +383,6 @@ export default function EditSearchModal({
                   min="0"
                 />
               </div>
-            </div>
-
-            {/* G10-3: Alerts toggle — wires to backend alertsEnabled */}
-            <div className="mt-6 flex items-start border-t border-[#064d51]/10 pt-6">
-              <input
-                type="checkbox"
-                id="edit-alertsEnabled"
-                checked={alertsEnabled}
-                onChange={(e) => setAlertsEnabled(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-[#064d51]/20 text-[#1e9c99]"
-              />
-              <label
-                htmlFor="edit-alertsEnabled"
-                className="ml-2 text-sm text-[#064d51]/80"
-              >
-                Notify me when new matching{" "}
-                {type === "LOADS" ? "loads" : "trucks"} are posted
-                <span className="block text-xs text-[#064d51]/60">
-                  Sends a notification when a new{" "}
-                  {type === "LOADS" ? "load" : "truck posting"} matches these
-                  criteria.
-                </span>
-              </label>
             </div>
           </div>
         </div>

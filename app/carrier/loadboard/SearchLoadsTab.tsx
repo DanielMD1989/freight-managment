@@ -266,11 +266,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
    */
   const handleSaveEditedSearch = async (
     id: string,
-    updates: {
-      name?: string;
-      criteria?: SavedSearchCriteria;
-      alertsEnabled?: boolean;
-    }
+    updates: { name?: string; criteria?: SavedSearchCriteria }
   ) => {
     await updateSavedSearch(id, updates);
   };
@@ -280,11 +276,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
    */
   const updateSavedSearch = async (
     searchId: string,
-    updates: {
-      name?: string;
-      criteria?: SavedSearchCriteria;
-      alertsEnabled?: boolean;
-    }
+    updates: { name?: string; criteria?: SavedSearchCriteria }
   ) => {
     try {
       const csrfToken = await getCSRFToken();

@@ -42,8 +42,6 @@ export default function TruckSearchModal({
     availableFrom: "",
     availableTo: "",
     showVerifiedOnly: false,
-    // G10-1 (Item 10): allow user to enable email alerts on new matching trucks
-    alertsEnabled: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -106,7 +104,6 @@ export default function TruckSearchModal({
           name: formData.name,
           type: "TRUCKS",
           criteria,
-          alertsEnabled: formData.alertsEnabled,
         }),
       });
 
@@ -490,32 +487,6 @@ export default function TruckSearchModal({
                   className="ml-2 text-sm text-slate-700 dark:text-slate-200/80"
                 >
                   Show verified companies only
-                </label>
-              </div>
-
-              {/* G10-1: Alerts toggle — wires to backend alertsEnabled */}
-              <div className="mt-3 flex items-start">
-                <input
-                  type="checkbox"
-                  id="alertsEnabled"
-                  checked={formData.alertsEnabled}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      alertsEnabled: e.target.checked,
-                    })
-                  }
-                  className="mt-1 h-4 w-4 rounded border-slate-200 text-teal-600 dark:border-slate-600"
-                />
-                <label
-                  htmlFor="alertsEnabled"
-                  className="ml-2 text-sm text-slate-700 dark:text-slate-200/80"
-                >
-                  Notify me when new matching trucks are posted
-                  <span className="block text-xs text-slate-500 dark:text-slate-400">
-                    Sends a notification when a new posting matches these
-                    criteria.
-                  </span>
                 </label>
               </div>
             </div>
