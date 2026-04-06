@@ -123,6 +123,17 @@ export default function ShipperWalletClient({
   const [filterType, setFilterType] = useState<TransactionType>("ALL");
   const [page, setPage] = useState(1);
   const [showDepositInfo, setShowDepositInfo] = useState(false);
+  // Phase 5 — Blueprint §8 self-service deposit form state
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositMethod, setDepositMethod] = useState<
+    "BANK_TRANSFER_SLIP" | "TELEBIRR" | "MPESA"
+  >("BANK_TRANSFER_SLIP");
+  const [depositSlipUrl, setDepositSlipUrl] = useState("");
+  const [depositReference, setDepositReference] = useState("");
+  const [depositNotes, setDepositNotes] = useState("");
+  const [depositSubmitting, setDepositSubmitting] = useState(false);
+  const [depositError, setDepositError] = useState<string | null>(null);
+  const [depositSuccess, setDepositSuccess] = useState<string | null>(null);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawBankName, setWithdrawBankName] = useState("");
@@ -132,6 +143,73 @@ export default function ShipperWalletClient({
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
   const pageSize = 10;
+
+  // Phase 5 — Blueprint §8: submit a self-service deposit request.
+  // Admin approves via /api/admin/wallet-deposits/[id]; balance only changes on approve.
+  const handleSubmitDeposit = async () => {
+    setDepositError(null);
+    setDepositSuccess(null);
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setDepositError("Please enter a valid amount");
+      return;
+    }
+    if (depositMethod === "BANK_TRANSFER_SLIP" && !depositSlipUrl.trim()) {
+      setDepositError(
+        "Bank transfer requires a slip file URL (upload your slip and paste the link)"
+      );
+      return;
+    }
+    if (
+      (depositMethod === "TELEBIRR" || depositMethod === "MPESA") &&
+      !depositReference.trim()
+    ) {
+      setDepositError(
+        "Telebirr/M-Pesa deposits require a transaction reference"
+      );
+      return;
+    }
+
+    setDepositSubmitting(true);
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch("/api/wallet/deposit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        body: JSON.stringify({
+          amount,
+          paymentMethod: depositMethod,
+          slipFileUrl:
+            depositMethod === "BANK_TRANSFER_SLIP" ? depositSlipUrl : undefined,
+          externalReference:
+            depositMethod !== "BANK_TRANSFER_SLIP"
+              ? depositReference
+              : undefined,
+          notes: depositNotes || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to submit deposit request");
+      }
+      setDepositSuccess(
+        "Deposit request submitted. Admin will review and approve within 1-2 business days."
+      );
+      setDepositAmount("");
+      setDepositSlipUrl("");
+      setDepositReference("");
+      setDepositNotes("");
+    } catch (err) {
+      setDepositError(
+        err instanceof Error ? err.message : "Failed to submit deposit request"
+      );
+    } finally {
+      setDepositSubmitting(false);
+    }
+  };
 
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
@@ -693,48 +771,150 @@ export default function ShipperWalletClient({
         )}
       </div>
 
-      {/* Deposit Info Modal */}
+      {/* Deposit Request Modal — Blueprint §8 self-service deposit form */}
       {showDepositInfo && (
         <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              How to Deposit Funds
+            <h2 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">
+              Deposit Funds
             </h2>
-            <div className="space-y-3 text-sm text-gray-700 dark:text-slate-300">
-              <p>To add funds to your wallet:</p>
-              <ol className="list-inside list-decimal space-y-2">
-                <li>
-                  Transfer funds to our bank account:
-                  <div className="mt-1 ml-4 rounded bg-gray-50 p-2 text-xs dark:bg-slate-700">
-                    <p>
-                      <strong>Bank:</strong> Commercial Bank of Ethiopia
-                    </p>
-                    <p>
-                      <strong>Account:</strong> 1000-XXXX-XXXX
-                    </p>
-                    <p>
-                      <strong>Reference:</strong> Your email address
+            <p className="mb-4 text-xs text-gray-500 dark:text-slate-400">
+              Submit a deposit request. Admin verifies and credits your wallet
+              within 1–2 business days.
+            </p>
+
+            {depositSuccess ? (
+              <div className="space-y-4">
+                <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                  {depositSuccess}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDepositInfo(false);
+                    setDepositSuccess(null);
+                  }}
+                  className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {depositError && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                    {depositError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-slate-300">
+                    Amount (ETB) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000000"
+                    step="1"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    placeholder="e.g. 5000"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-slate-300">
+                    Payment Method <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={depositMethod}
+                    onChange={(e) =>
+                      setDepositMethod(
+                        e.target.value as
+                          | "BANK_TRANSFER_SLIP"
+                          | "TELEBIRR"
+                          | "MPESA"
+                      )
+                    }
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                  >
+                    <option value="BANK_TRANSFER_SLIP">
+                      Bank Transfer Slip
+                    </option>
+                    <option value="TELEBIRR">Telebirr</option>
+                    <option value="MPESA">M-Pesa</option>
+                  </select>
+                </div>
+
+                {depositMethod === "BANK_TRANSFER_SLIP" ? (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-slate-300">
+                      Slip File URL <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={depositSlipUrl}
+                      onChange={(e) => setDepositSlipUrl(e.target.value)}
+                      placeholder="https://… link to your transfer slip"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    />
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-400">
+                      Upload the bank slip image to a file host and paste the
+                      link here. Admin reviews the slip before approving.
                     </p>
                   </div>
-                </li>
-                <li>
-                  Send your transfer receipt to:{" "}
-                  <strong>support@freightflow.app</strong>
-                </li>
-                <li>
-                  Admin will verify and credit your wallet within 1-2 business
-                  days.
-                </li>
-              </ol>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowDepositInfo(false)}
-                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-              >
-                Close
-              </button>
-            </div>
+                ) : (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-slate-300">
+                      Transaction Reference{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={depositReference}
+                      onChange={(e) => setDepositReference(e.target.value)}
+                      placeholder="e.g. CT123456789"
+                      maxLength={200}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-slate-300">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={depositNotes}
+                    onChange={(e) => setDepositNotes(e.target.value)}
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Anything Admin should know about this deposit"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowDepositInfo(false);
+                      setDepositError(null);
+                    }}
+                    disabled={depositSubmitting}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitDeposit}
+                    disabled={depositSubmitting}
+                    className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {depositSubmitting ? "Submitting…" : "Submit Request"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
