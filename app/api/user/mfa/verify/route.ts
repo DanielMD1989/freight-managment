@@ -119,8 +119,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify OTP
-    const isValid = await verifyPassword(otp, metadata.otpHash);
+    // Verify OTP. Test-only bypass: if MFA_TEST_BYPASS_OTP is set
+    // (only in dev/test environments — never in production) AND the
+    // submitted OTP equals the bypass value, accept it. This lets
+    // Playwright e2e tests drive the 2FA enable/disable flow without
+    // a real SMS gateway. Triple safety check:
+    //   1. NODE_ENV must NOT be "production"
+    //   2. The bypass env var must be set (defaults to undefined)
+    //   3. The submitted OTP must exactly match
+    const isTestBypass =
+      process.env.NODE_ENV !== "production" &&
+      process.env.MFA_TEST_BYPASS_OTP &&
+      otp === process.env.MFA_TEST_BYPASS_OTP;
+    const isValid =
+      isTestBypass || (await verifyPassword(otp, metadata.otpHash));
 
     if (!isValid) {
       // Increment attempts

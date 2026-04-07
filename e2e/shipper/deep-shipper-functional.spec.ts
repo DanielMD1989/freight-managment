@@ -1312,7 +1312,10 @@ test.describe.serial("Web Shipper FUNCTIONAL: document upload", () => {
     // Login as the fresh shipper to get a session cookie
     const loginRes = await fetch("http://localhost:3000/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
       body: JSON.stringify({ email, password: "Test123!" }),
     });
     test.skip(!loginRes.ok, "login failed");
@@ -1404,5 +1407,277 @@ test.describe.serial("Web Shipper FUNCTIONAL: document upload", () => {
     );
     const orgBody = await orgRes.json();
     expect(orgBody.organization?.documentsLockedAt ?? null).toBeNull();
+  });
+});
+
+// ─── SF-17: Enable 2FA via /settings/security → mfaEnabled=true
+//   Uses a freshly-registered user to avoid the per-user 3-attempts/hour
+//   rate limit on /api/user/mfa/enable that would otherwise block re-runs.
+//   The verify route accepts MFA_TEST_BYPASS_OTP="999999" in non-prod env.
+test.describe.serial("Web Shipper FUNCTIONAL: 2FA enable", () => {
+  test("SF-17 — Enable + phone + verify with bypass OTP → mfaEnabled=true", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(120000);
+
+    // Register a fresh shipper so the rate limit + cleanup don't bleed
+    // into other tests
+    const tag = `sf17-${Date.now()}`;
+    const email = `${tag}@test.com`;
+    const reg = await fetch("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({
+        email,
+        password: "Test123!",
+        firstName: "SF17",
+        lastName: "Tester",
+        role: "SHIPPER",
+        companyName: `SF17 ${tag}`,
+      }),
+    });
+    test.skip(![200, 201].includes(reg.status), `register ${reg.status}`);
+    const userId = (await reg.json()).user?.id;
+    test.skip(!userId, "no userId");
+
+    // Promote to ACTIVE so settings page loads normally
+    // Promote to ACTIVE BEFORE login so the JWT carries the right status
+    const adminToken = await getToken("admin@test.com");
+    await apiCall("PATCH", `/api/admin/users/${userId}`, adminToken, {
+      status: "ACTIVE",
+    });
+
+    const loginRes = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({ email, password: "Test123!" }),
+    });
+    test.skip(!loginRes.ok, "login failed");
+    const setCookie = loginRes.headers.get("set-cookie") ?? "";
+    const sessionMatch = setCookie.match(/session=([^;]+)/);
+    test.skip(!sessionMatch, "no session cookie");
+    const freshToken = (await loginRes.json()).sessionToken as string;
+
+    await context.clearCookies();
+    await context.addCookies([
+      {
+        name: "session",
+        value: sessionMatch![1],
+        domain: "localhost",
+        path: "/",
+        httpOnly: true,
+      },
+    ]);
+
+    await page.goto("/settings/security", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+
+    // Click Password tab if there's a tab nav
+    const passwordTab = page
+      .getByRole("button", { name: /^Password$/i })
+      .first();
+    if (await passwordTab.isVisible().catch(() => false)) {
+      await passwordTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Click Enable button (only visible when MFA not enabled)
+    const enableBtn = page.getByRole("button", { name: /^Enable$/i }).first();
+    if (!(await enableBtn.isVisible().catch(() => false))) {
+      test.skip(true, "MFA already enabled or Enable button not visible");
+      return;
+    }
+    await enableBtn.click();
+    await page.waitForTimeout(500);
+
+    // Step 1: Fill phone
+    await page
+      .getByPlaceholder(/09XXXXXXXX|\+251/)
+      .first()
+      .fill("+251911234567");
+    await page
+      .getByRole("button", { name: /^Send Code$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    // Step 2: Fill OTP using the bypass value
+    await page.getByPlaceholder("000000").first().fill("999999");
+    await page
+      .getByRole("button", { name: /^Verify$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    // Verify two ways:
+    //   1. The UI's success toast appeared (DOM-level proof)
+    //   2. Re-login → returns mfaRequired:true (API-level proof that
+    //      DB has UserMFA.enabled=true)
+    await expect(
+      page.getByText(/Two-factor authentication enabled/i)
+    ).toBeVisible({ timeout: 5000 });
+
+    const reLogin = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({ email, password: "Test123!" }),
+    });
+    const reBody = await reLogin.json();
+    console.log(
+      `SF-17 re-login: mfaRequired=${reBody.mfaRequired} sessionToken=${!!reBody.sessionToken}`
+    );
+    expect(reBody.mfaRequired).toBe(true);
+    expect(reBody.sessionToken).toBeFalsy();
+  });
+});
+
+// ─── SF-18: Disable 2FA via /settings/security → mfaEnabled=false
+test.describe.serial("Web Shipper FUNCTIONAL: 2FA disable", () => {
+  test("SF-18 — Disable button + password → mfaEnabled=false", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(120000);
+
+    // Same fresh-user pattern as SF-17 to dodge the rate limit
+    const tag = `sf18-${Date.now()}`;
+    const email = `${tag}@test.com`;
+    const reg = await fetch("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({
+        email,
+        password: "Test123!",
+        firstName: "SF18",
+        lastName: "Tester",
+        role: "SHIPPER",
+        companyName: `SF18 ${tag}`,
+      }),
+    });
+    test.skip(![200, 201].includes(reg.status), `register ${reg.status}`);
+    const userId = (await reg.json()).user?.id;
+    test.skip(!userId, "no userId");
+
+    // Promote to ACTIVE BEFORE login so the JWT carries the right status
+    const adminToken = await getToken("admin@test.com");
+    const patchRes = await fetch(
+      `http://localhost:3000/api/admin/users/${userId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+          "x-client-type": "mobile",
+        },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      }
+    );
+    void patchRes;
+
+    const loginRes = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({ email, password: "Test123!" }),
+    });
+    test.skip(!loginRes.ok, "login failed");
+    const setCookie = loginRes.headers.get("set-cookie") ?? "";
+    const sessionMatch = setCookie.match(/session=([^;]+)/);
+    test.skip(!sessionMatch, "no session cookie");
+    const freshToken = (await loginRes.json()).sessionToken as string;
+
+    await context.clearCookies();
+    await context.addCookies([
+      {
+        name: "session",
+        value: sessionMatch![1],
+        domain: "localhost",
+        path: "/",
+        httpOnly: true,
+      },
+    ]);
+
+    // Pre-enable MFA via API so the disable form is visible
+    const enableRes = await fetch("http://localhost:3000/api/user/mfa/enable", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${freshToken}`,
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({ phone: "+251911234567" }),
+    });
+    void enableRes;
+    const verifyRes = await fetch("http://localhost:3000/api/user/mfa/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${freshToken}`,
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({ otp: "999999" }),
+    });
+    void verifyRes;
+
+    await page.goto("/settings/security", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+
+    const passwordTab = page
+      .getByRole("button", { name: /^Password$/i })
+      .first();
+    if (await passwordTab.isVisible().catch(() => false)) {
+      await passwordTab.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Fill the disable password input using pressSequentially so React 19's
+    // controlled component sees the change (fill() doesn't propagate
+    // reliably in this admin shell).
+    const passwordInput = page.getByPlaceholder(/Current password/i).first();
+    if (!(await passwordInput.isVisible().catch(() => false))) {
+      test.skip(true, "MFA not enabled — disable form not visible");
+      return;
+    }
+    await passwordInput.click();
+    await passwordInput.pressSequentially("Test123!", { delay: 10 });
+    await page.waitForTimeout(300);
+
+    await page
+      .getByRole("button", { name: /Disable Two-Factor/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    // Verify: re-login should now return a sessionToken directly (no
+    // mfaRequired) because MFA was just disabled.
+    const reLogin = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({ email, password: "Test123!" }),
+    });
+    const reBody = await reLogin.json();
+    console.log(
+      `SF-18 re-login: mfaRequired=${reBody.mfaRequired} sessionToken=${!!reBody.sessionToken}`
+    );
+    expect(reBody.sessionToken).toBeTruthy();
+    expect(reBody.mfaRequired).toBeFalsy();
   });
 });

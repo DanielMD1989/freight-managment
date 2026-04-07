@@ -1129,7 +1129,10 @@ test.describe.serial("Web Carrier FUNCTIONAL: document upload", () => {
 
     const loginRes = await fetch("http://localhost:3000/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
       body: JSON.stringify({ email, password: "Test123!" }),
     });
     test.skip(!loginRes.ok, "login failed");
