@@ -116,3 +116,106 @@ test.describe
     }).catch(() => {});
   });
 });
+
+// ─── DF-3: Dispatcher proposes a match via /dispatcher/proposals UI
+//   Blueprint v1.6 §5: dispatcher can propose matches between POSTED
+//   loads and ACTIVE truck postings. The carrier then accepts/rejects.
+import { apiCall as carrierApiCall } from "../carrier/test-utils";
+test.describe.serial("Web Dispatcher FUNCTIONAL: propose match", () => {
+  test("DF-3 — fill New Proposal form → POST /api/match-proposals → row PENDING", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    // Snapshot: count of dispatcher's PENDING proposals before
+    const beforeRes = await apiCall<{
+      proposals?: Array<{ id: string }>;
+    }>("GET", "/api/match-proposals?status=PENDING&limit=100", token);
+    const beforeIds = new Set(
+      (beforeRes.data.proposals ?? []).map((p) => p.id)
+    );
+
+    await page.goto("/dispatcher/proposals");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Click + New Proposal
+    await page
+      .getByRole("button", { name: /New Proposal/i })
+      .first()
+      .click();
+    await page.waitForTimeout(1500);
+
+    // Pick the first POSTED load + first ACTIVE truck posting from the
+    // dropdowns
+    const loadSelect = page
+      .locator("select")
+      .filter({ hasText: /Select a POSTED load/i })
+      .first();
+    await expect(loadSelect).toBeVisible({ timeout: 5000 });
+    const loadOpts = await loadSelect.locator("option").all();
+    let loadId = "";
+    for (const opt of loadOpts) {
+      const v = await opt.getAttribute("value");
+      if (v) {
+        loadId = v;
+        break;
+      }
+    }
+    test.skip(!loadId, "no POSTED loads available");
+    await loadSelect.selectOption(loadId);
+    await page.waitForTimeout(300);
+
+    const truckSelect = page
+      .locator("select")
+      .filter({ hasText: /Select an ACTIVE truck posting/i })
+      .first();
+    await expect(truckSelect).toBeVisible();
+    const truckOpts = await truckSelect.locator("option").all();
+    let truckId = "";
+    for (const opt of truckOpts) {
+      const v = await opt.getAttribute("value");
+      if (v) {
+        truckId = v;
+        break;
+      }
+    }
+    test.skip(!truckId, "no ACTIVE truck postings available");
+    await truckSelect.selectOption(truckId);
+    await page.waitForTimeout(300);
+
+    // Optional notes
+    const notes = page.locator("textarea").first();
+    if (await notes.count()) {
+      await notes.fill(`DF-3 e2e proposal ${Date.now()}`);
+    }
+
+    // Submit
+    await page
+      .getByRole("button", { name: /^Create Proposal$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(3000);
+
+    // Verify a new proposal row exists
+    const afterRes = await apiCall<{
+      proposals?: Array<{ id: string; loadId: string; truckId: string }>;
+    }>("GET", "/api/match-proposals?status=PENDING&limit=100", token);
+    const newOnes = (afterRes.data.proposals ?? []).filter(
+      (p) => !beforeIds.has(p.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    expect(newOnes[0].loadId).toBe(loadId);
+    expect(newOnes[0].truckId).toBe(truckId);
+    console.log(`DF-3 created proposal ${newOnes[0].id}`);
+
+    // Cleanup: cancel the proposal so subsequent runs aren't blocked
+    // by partial-unique constraint on (loadId, truckId, PENDING)
+    await carrierApiCall(
+      "DELETE",
+      `/api/match-proposals/${newOnes[0].id}`,
+      await getDispatcherToken()
+    ).catch(() => {});
+  });
+});

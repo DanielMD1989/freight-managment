@@ -7,8 +7,30 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getCSRFToken } from "@/lib/csrfFetch";
+
+interface PostedLoad {
+  id: string;
+  pickupCity: string;
+  deliveryCity: string;
+  truckType: string;
+  weight: number;
+}
+
+interface ActiveTruckPosting {
+  id: string;
+  truckId: string;
+  truck: {
+    id: string;
+    licensePlate: string;
+    truckType: string;
+    capacity: number;
+    carrier: { name: string };
+  };
+}
 
 interface MatchProposal {
   id: string;
@@ -53,8 +75,91 @@ type StatusFilter =
 export default function ProposalsClient({
   proposals: initialProposals,
 }: Props) {
+  const router = useRouter();
   const [proposals] = useState<MatchProposal[]>(initialProposals);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  // ─── Blueprint v1.6 §5: Dispatcher Create Proposal Form ────────────
+  const [showCreate, setShowCreate] = useState(false);
+  const [postedLoads, setPostedLoads] = useState<PostedLoad[]>([]);
+  const [activePostings, setActivePostings] = useState<ActiveTruckPosting[]>(
+    []
+  );
+  const [formLoadId, setFormLoadId] = useState("");
+  const [formTruckId, setFormTruckId] = useState("");
+  const [formNotes, setFormNotes] = useState("");
+  const [formExpiryHours, setFormExpiryHours] = useState("24");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+
+  const fetchFormOptions = useCallback(async () => {
+    try {
+      const [loadsRes, postingsRes] = await Promise.all([
+        fetch("/api/loads?status=POSTED&limit=50", {
+          credentials: "include",
+        }),
+        fetch("/api/truck-postings?status=ACTIVE&limit=50", {
+          credentials: "include",
+        }),
+      ]);
+      if (loadsRes.ok) {
+        const data = await loadsRes.json();
+        setPostedLoads(data.loads ?? []);
+      }
+      if (postingsRes.ok) {
+        const data = await postingsRes.json();
+        setActivePostings(data.postings ?? []);
+      }
+    } catch (err) {
+      console.error("Failed to load form options:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showCreate) {
+      fetchFormOptions();
+    }
+  }, [showCreate, fetchFormOptions]);
+
+  const handleCreateProposal = async () => {
+    setFormError(null);
+    if (!formLoadId || !formTruckId) {
+      setFormError("Load and truck are required");
+      return;
+    }
+    setFormSubmitting(true);
+    try {
+      const csrfToken = await getCSRFToken();
+      const res = await fetch("/api/match-proposals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          loadId: formLoadId,
+          truckId: formTruckId,
+          notes: formNotes || undefined,
+          expiresInHours: parseInt(formExpiryHours, 10) || 24,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create proposal");
+      }
+      // Reset form and refresh
+      setFormLoadId("");
+      setFormTruckId("");
+      setFormNotes("");
+      setShowCreate(false);
+      router.refresh();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
 
   const filteredProposals =
     statusFilter === "all"
@@ -111,6 +216,116 @@ export default function ProposalsClient({
 
   return (
     <div className="space-y-6">
+      {/* Create Match Proposal — Blueprint v1.6 §5 */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-slate-800">
+          Match Proposals
+        </h2>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+        >
+          {showCreate ? "Cancel" : "+ New Proposal"}
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="space-y-4 rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-slate-800">
+            Create Match Proposal
+          </h3>
+          {formError && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+              {formError}
+            </div>
+          )}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Load *
+            </label>
+            <select
+              value={formLoadId}
+              onChange={(e) => setFormLoadId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">-- Select a POSTED load --</option>
+              {postedLoads.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.pickupCity} → {l.deliveryCity} ({l.truckType}, {l.weight}
+                  kg)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Truck *
+            </label>
+            <select
+              value={formTruckId}
+              onChange={(e) => setFormTruckId(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="">-- Select an ACTIVE truck posting --</option>
+              {activePostings.map((p) => (
+                <option key={p.id} value={p.truck.id}>
+                  {p.truck.licensePlate} - {p.truck.truckType} (
+                  {p.truck.capacity}kg) - {p.truck.carrier?.name ?? "Carrier"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Expires in (hours)
+            </label>
+            <select
+              value={formExpiryHours}
+              onChange={(e) => setFormExpiryHours(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="6">6 hours</option>
+              <option value="12">12 hours</option>
+              <option value="24">24 hours</option>
+              <option value="48">48 hours</option>
+              <option value="72">72 hours</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Notes (optional)
+            </label>
+            <textarea
+              value={formNotes}
+              onChange={(e) => setFormNotes(e.target.value)}
+              rows={3}
+              placeholder="Notes for the carrier..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setShowCreate(false)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateProposal}
+              disabled={formSubmitting || !formLoadId || !formTruckId}
+              className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            >
+              {formSubmitting ? "Creating..." : "Create Proposal"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {(
