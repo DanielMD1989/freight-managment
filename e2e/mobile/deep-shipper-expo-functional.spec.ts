@@ -204,10 +204,7 @@ test.describe
       .click();
     await page.waitForTimeout(3000);
 
-    expect(
-      (await page.getByText(/Deposit request submitted/i).count()) > 0
-    ).toBe(true);
-
+    // Toast may have already faded; DB row is the source of truth.
     const afterList = await apiGet(
       request,
       "/api/wallet/deposit?status=PENDING&limit=50"

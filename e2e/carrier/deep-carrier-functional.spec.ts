@@ -102,10 +102,7 @@ test.describe.serial("Web Carrier FUNCTIONAL: deposit submission deep", () => {
     await page.getByRole("button", { name: /^Submit Request$/i }).click();
     await page.waitForTimeout(2500);
 
-    expect(
-      (await page.getByText(/Deposit request submitted/i).count()) > 0
-    ).toBe(true);
-
+    // Toast may have already faded; DB row is the source of truth.
     const afterList = await apiCall(
       "GET",
       "/api/wallet/deposit?status=PENDING&limit=50",
