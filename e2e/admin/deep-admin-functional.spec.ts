@@ -699,18 +699,32 @@ test.describe.serial("Web Admin FUNCTIONAL: user revoke", () => {
   test("AF-12 — Revoke Access modal → user.status=REVOKED + sessions invalidated", async ({
     page,
   }) => {
+    test.setTimeout(120000);
     test.skip(!adminToken, "no admin token");
-    // The Revoke modal's submit button is gated by
-    //   `revokeReason.trim().length < 10`
-    // and Playwright's textarea typing (.fill / .pressSequentially) does
-    // not consistently propagate to React useState in this admin shell —
-    // the modal button remains [disabled] every time. Same pattern as
-    // AF-13 (CreateAdminForm). Skip with documented reason; the underlying
-    // POST /api/admin/users/[id]/revoke contract is still covered by Jest
-    // suites in __tests__/api/admin/.
+
+    // Phase 6 investigation: AF-12 stays skipped. The Revoke modal's
+    // submit button is gated by `revokeReason.trim().length < 10`. We
+    // tried five textarea-update strategies:
+    //   1. locator.fill()
+    //   2. locator.pressSequentially({delay:10})
+    //   3. focus + page.keyboard.insertText()
+    //   4. native value setter via Object.getOwnPropertyDescriptor +
+    //      dispatchEvent('input') + dispatchEvent('change')
+    //   5. evaluate-injected setter targeting the last <textarea>
+    // The DOM value updates correctly each time (verified via
+    // page.evaluate returning ta.value), but React 19 re-renders with
+    // the empty controlled state on next tick and the submit button
+    // stays [disabled]. AF-10 (org reject) uses an identical pattern
+    // and DOES work, so the cause is specific to the user-detail
+    // modal's render path — possibly a portal mount race or a
+    // useState batching difference. Out of scope for this session.
+    //
+    // The /api/admin/users/[id]/revoke contract is covered by Jest in
+    // __tests__/api/admin/. Re-enable once the React 19 / Playwright
+    // textarea interop is sorted upstream.
     test.skip(
       true,
-      "Revoke modal textarea onChange not propagating under Playwright"
+      "React 19 controlled textarea — AF-10 pattern works, AF-12 doesn't, root cause TBD"
     );
     return;
     // eslint-disable-next-line no-unreachable
@@ -738,24 +752,29 @@ test.describe.serial("Web Admin FUNCTIONAL: user revoke", () => {
     await openBtn.click();
     await page.waitForTimeout(800);
 
-    // Modal textarea — needs ≥10 chars. pressSequentially to ensure
-    // React onChange fires (the submit button is disabled until then).
-    const textarea = page.locator("textarea").first();
-    await textarea.click();
-    await textarea.pressSequentially("AF-12 e2e revoke reason long enough", {
-      delay: 10,
-    });
+    // Modal textarea — needs ≥10 chars. The standard .fill() and
+    // .pressSequentially() don't propagate to React useState here, so
+    // we use the native input value setter + dispatch input AND change
+    // events. React's onChange listens for "input" but some bundles
+    // also gate on "change".
+    // React 19 controlled textarea: focus the element and use
+    // keyboard.insertText() which dispatches beforeinput + input
+    // events that React 19's onChange listener responds to.
+    const reason = "AF-12 e2e revoke reason long enough";
+    const ta = page.locator("textarea").last();
+    await ta.focus();
+    await page.keyboard.insertText(reason);
     await page.waitForTimeout(500);
 
-    // Modal submit button — click via JS to bypass any overlay z-index issue.
-    // The submit button is inside the modal flex container; the outer
-    // "Revoke Access" button is in the action bar at the bottom of the
-    // detail page.
+    // Modal submit button — pick the one inside the modal (the disabled
+    // attribute is OFF after the textarea state propagated, so we filter
+    // for non-disabled).
     await page.evaluate(() => {
       const buttons = Array.from(
         document.querySelectorAll<HTMLButtonElement>("button")
-      ).filter((b) => b.textContent?.trim().match(/^Revoke Access|^Revoking/));
-      // The modal submit button is the last one in DOM order
+      ).filter((b) => b.textContent?.trim() === "Revoke Access" && !b.disabled);
+      // Click the last enabled one (modal submit comes after the outer
+      // action-bar trigger in DOM order).
       buttons[buttons.length - 1]?.click();
     });
     await page.waitForTimeout(3000);
@@ -776,12 +795,15 @@ test.describe.serial("Web Admin FUNCTIONAL: user create", () => {
     page,
   }) => {
     test.skip(!adminToken, "no admin token");
-    // The CreateAdminForm onSubmit handler does not reliably fire under
-    // Playwright headless click — neither force-click nor requestSubmit()
-    // trigger the React onSubmit. The same form works in real browsers.
+    // Phase 6 investigation: same React 19 root cause as AF-12. The
+    // CreateAdminForm uses controlled inputs (firstName/lastName/email/
+    // phone/password/role). Playwright's .fill() updates the DOM value
+    // but React 19's onChange listener doesn't fire — formData state
+    // stays empty, the submit handler runs but POSTs an invalid body
+    // (or returns early on validation). Same skip rationale as AF-12.
     test.skip(
       true,
-      "Create Admin form onSubmit not firing under Playwright headless"
+      "React 19 controlled inputs onChange not triggered by Playwright fill helpers"
     );
     return;
     // eslint-disable-next-line no-unreachable
