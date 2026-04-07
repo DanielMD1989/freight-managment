@@ -421,3 +421,133 @@ test.describe.serial("Web Carrier FUNCTIONAL: truck posting create", () => {
     }
   });
 });
+
+// ─── CF-8: Carrier requests a POSTED load via UI → LoadRequest row ──────
+//   Setup: shipper-side seed already has POSTED loads. Carrier needs at
+//   least one APPROVED truck with an ACTIVE posting (LoadRequestModal
+//   only lists trucks that have active postings).
+test.describe.serial("Web Carrier FUNCTIONAL: load request via UI", () => {
+  test("CF-8 — open Request modal on a POSTED load → POST /api/load-requests", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    // Find a POSTED load that this carrier hasn't already requested
+    const loadsRes = await apiCall<{
+      loads?: Array<{ id: string; status: string }>;
+    }>("GET", "/api/loads?status=POSTED&limit=20", token);
+    const candidates = (loadsRes.data.loads ?? []).filter(
+      (l) => l.status === "POSTED"
+    );
+    test.skip(candidates.length === 0, "no POSTED loads to request");
+
+    // Carrier needs an active truck-posting → ensure one exists
+    const postingsRes = await apiCall<{
+      postings?: Array<{ id: string; truckId: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=5",
+      token
+    );
+    let havePosting = (postingsRes.data.postings ?? []).length > 0;
+    if (!havePosting) {
+      // Create one fresh via API using the first approved truck
+      const trucksRes = await apiCall<{
+        trucks?: Array<{ id: string; approvalStatus: string }>;
+      }>(
+        "GET",
+        "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=5",
+        token
+      );
+      const approved = (trucksRes.data.trucks ?? []).filter(
+        (t) => t.approvalStatus === "APPROVED"
+      );
+      if (approved.length > 0) {
+        const tomorrow = new Date(Date.now() + 86400000).toISOString();
+        await apiCall("POST", "/api/truck-postings", token, {
+          truckId: approved[0].id,
+          originCityId: 1, // Addis Ababa in seed
+          availableFrom: tomorrow,
+          fullPartial: "FULL",
+          contactPhone: "+251911234567",
+        });
+        havePosting = true;
+      }
+    }
+    test.skip(!havePosting, "carrier has no active truck-posting");
+
+    const beforeRes = await apiCall<{
+      loadRequests?: Array<{ id: string }>;
+    }>("GET", "/api/load-requests?status=PENDING&limit=100", token);
+    const beforeIds = new Set(
+      (beforeRes.data.loadRequests ?? []).map((r) => r.id)
+    );
+
+    await page.goto("/carrier/loadboard");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Switch to Search Loads tab via UI button
+    await page.locator("button", { hasText: "Search Loads" }).first().click();
+    await page.waitForTimeout(1500);
+
+    // The tab does not auto-fetch loads — open the search form, then Search.
+    const newSearchBtn = page
+      .locator("button", { hasText: /New Load Search/i })
+      .first();
+    if (await newSearchBtn.isVisible().catch(() => false)) {
+      await newSearchBtn.click();
+      await page.waitForTimeout(500);
+    }
+    const searchBtn = page.locator("button", { hasText: /^Search$/ }).last();
+    if (await searchBtn.isVisible().catch(() => false)) {
+      await searchBtn.click();
+      await page.waitForTimeout(2500);
+    }
+
+    // Click first visible Request button on the loadboard table
+    const requestBtn = page.getByRole("button", { name: /^Request$/i }).first();
+    if (!(await requestBtn.isVisible().catch(() => false))) {
+      const all = (await page.getByRole("button").allTextContents()).slice(
+        0,
+        30
+      );
+      console.log(`buttons on page: ${all.join("|")}`);
+      test.skip(true, "no Request button visible");
+      return;
+    }
+    await requestBtn.click();
+    await page.waitForTimeout(1500);
+
+    // Modal: select first truck option
+    const truckSelect = page
+      .locator("select")
+      .filter({ hasText: /Select a truck/i })
+      .first();
+    await expect(truckSelect).toBeVisible({ timeout: 5000 });
+    const opts = await truckSelect.locator("option").all();
+    let pickedId = "";
+    for (const o of opts) {
+      const v = await o.getAttribute("value");
+      if (v) {
+        pickedId = v;
+        break;
+      }
+    }
+    test.skip(!pickedId, "no truck options in modal — no active postings");
+    await truckSelect.selectOption(pickedId);
+    await page.waitForTimeout(300);
+
+    await page.getByRole("button", { name: /Send Request/i }).click();
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      loadRequests?: Array<{ id: string }>;
+    }>("GET", "/api/load-requests?status=PENDING&limit=100", token);
+    const newOnes = (afterRes.data.loadRequests ?? []).filter(
+      (r) => !beforeIds.has(r.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    console.log(`new load-requests: ${newOnes.length}`);
+  });
+});

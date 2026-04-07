@@ -483,3 +483,273 @@ test.describe.serial("Web Shipper FUNCTIONAL: load edit", () => {
     }).catch(() => {});
   });
 });
+
+// ─── SF-9: Shipper accepts a pending LoadRequest via UI → status APPROVED ─
+//   Setup: create a fresh LoadRequest as carrier@test.com (need a separate
+//   token since we're a shipper here). Visit /shipper/requests, click Accept,
+//   verify status flipped via /api/load-requests.
+test.describe.serial("Web Shipper FUNCTIONAL: accept load-request", () => {
+  test("SF-9 — Accept button on /shipper/requests → request APPROVED", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    const carrierToken = await getToken("carrier@test.com", "Test123!");
+    test.skip(!carrierToken, "carrier login failed");
+
+    // Find a POSTED load owned by this shipper that has no pending request
+    const myLoads = await apiCall<{
+      loads?: Array<{ id: string; status: string }>;
+    }>("GET", "/api/loads?status=POSTED&limit=20", token);
+    const candidateLoads = (myLoads.data.loads ?? []).filter(
+      (l) => l.status === "POSTED"
+    );
+    test.skip(candidateLoads.length === 0, "no POSTED loads");
+
+    // The truck must already have an ACTIVE posting (API enforces this).
+    const postingsRes = await apiCall<{
+      postings?: Array<{ truckId: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=5",
+      carrierToken!
+    );
+    const truck = (postingsRes.data.postings ?? [])[0]
+      ? { id: postingsRes.data.postings![0].truckId }
+      : undefined;
+    test.skip(!truck, "no carrier truck with active posting");
+
+    // Create the LoadRequest. Try each candidate load until one accepts —
+    // some loads may already have a request from this carrier.
+    let createdRequestId: string | undefined;
+    for (const l of candidateLoads) {
+      const r = await apiCall<{ loadRequest?: { id: string }; id?: string }>(
+        "POST",
+        "/api/load-requests",
+        carrierToken!,
+        { loadId: l.id, truckId: truck!.id, expiryHours: 24 }
+      );
+      if (r.status === 200 || r.status === 201) {
+        createdRequestId =
+          r.data.loadRequest?.id ?? (r.data as { id?: string }).id;
+        if (createdRequestId) break;
+      }
+    }
+    test.skip(!createdRequestId, "could not create LoadRequest");
+    console.log(`created LoadRequest ${createdRequestId} for SF-9`);
+
+    await page.goto("/shipper/requests");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2500);
+
+    // Click the first Accept button
+    const acceptBtn = page.getByRole("button", { name: /^Accept$/ }).first();
+    await expect(acceptBtn).toBeVisible({ timeout: 10000 });
+    await acceptBtn.click();
+    await page.waitForTimeout(2500);
+
+    // Verify the request flipped status (route returns object directly)
+    const after = await apiCall<{ status?: string }>(
+      "GET",
+      `/api/load-requests/${createdRequestId}`,
+      token
+    );
+    const status = after.data.status;
+    console.log(`LoadRequest ${createdRequestId} status after: ${status}`);
+    expect(["APPROVED", "ACCEPTED", "SHIPPER_APPROVED"]).toContain(status);
+  });
+});
+
+// ─── SF-10: Shipper rejects a pending LoadRequest via UI → status REJECTED ─
+test.describe.serial("Web Shipper FUNCTIONAL: reject load-request", () => {
+  test("SF-10 — Reject button on /shipper/requests → request REJECTED", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    const carrierToken = await getToken("carrier@test.com");
+    test.skip(!carrierToken, "carrier login failed");
+
+    const myLoads = await apiCall<{
+      loads?: Array<{ id: string; status: string }>;
+    }>("GET", "/api/loads?status=POSTED&limit=20", token);
+    const candidateLoads = (myLoads.data.loads ?? []).filter(
+      (l) => l.status === "POSTED"
+    );
+    test.skip(candidateLoads.length === 0, "no POSTED loads");
+
+    const postingsRes = await apiCall<{
+      postings?: Array<{ truckId: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=5",
+      carrierToken!
+    );
+    const truck = (postingsRes.data.postings ?? [])[0]
+      ? { id: postingsRes.data.postings![0].truckId }
+      : undefined;
+    test.skip(!truck, "no carrier truck with active posting");
+
+    let createdId: string | undefined;
+    let lastErr = "";
+    for (const l of candidateLoads) {
+      const r = await apiCall<{ loadRequest?: { id: string }; id?: string }>(
+        "POST",
+        "/api/load-requests",
+        carrierToken!,
+        { loadId: l.id, truckId: truck!.id, expiryHours: 24 }
+      );
+      if (r.status === 200 || r.status === 201) {
+        createdId = r.data.loadRequest?.id ?? r.data.id;
+        if (createdId) break;
+      } else {
+        lastErr = `${r.status} ${JSON.stringify(r.data).slice(0, 100)}`;
+      }
+    }
+    if (!createdId) console.log(`SF-10 createId failed: ${lastErr}`);
+    test.skip(!createdId, "could not create LoadRequest");
+
+    await page.goto("/shipper/requests");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2500);
+
+    const rejectBtn = page.getByRole("button", { name: /^Reject$/ }).first();
+    await expect(rejectBtn).toBeVisible({ timeout: 10000 });
+    await rejectBtn.click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{ status?: string }>(
+      "GET",
+      `/api/load-requests/${createdId}`,
+      token
+    );
+    expect(after.data.status).toBe("REJECTED");
+  });
+});
+
+// ─── SF-11: Shipper requests a truck via Book modal → POST /api/truck-requests
+test.describe.serial("Web Shipper FUNCTIONAL: truck request via UI", () => {
+  test("SF-11 — Book a posted truck → TruckRequest row PENDING", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    // Setup: ensure we have a fresh DRAFT/POSTED load whose pickupCity
+    // matches an active truck-posting's originCity (TruckBookingModal
+    // filters loads by truck's origin city, so otherwise the modal will
+    // refuse with "no posted loads").
+    const postingsRes = await apiCall<{
+      postings?: Array<{
+        id: string;
+        truck?: { id: string };
+        originCity?: { name: string };
+      }>;
+    }>("GET", "/api/truck-postings?status=ACTIVE&limit=20", token);
+    const targetPosting = (postingsRes.data.postings ?? []).find(
+      (p) => p.originCity?.name
+    );
+    test.skip(!targetPosting, "no truck-posting with originCity");
+    const targetCity = targetPosting!.originCity!.name;
+    console.log(`SF-11 target city: ${targetCity}`);
+
+    const tomorrow = new Date(Date.now() + 86400000).toISOString();
+    const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString();
+    await apiCall("POST", "/api/loads", token, {
+      pickupCity: targetCity,
+      deliveryCity: "Addis Ababa",
+      pickupDate: tomorrow,
+      deliveryDate: dayAfter,
+      truckType: "DRY_VAN",
+      weight: 1000,
+      cargoDescription: `SF-11 setup load ${Date.now()}`,
+      fullPartial: "FULL",
+      shipperContactName: "SF11",
+      shipperContactPhone: "+251911234567",
+    });
+
+    const beforeRes = await apiCall<{
+      requests?: Array<{ id: string }>;
+    }>("GET", "/api/truck-requests?status=PENDING&limit=100", token);
+    const beforeIds = new Set((beforeRes.data.requests ?? []).map((r) => r.id));
+
+    await page.goto("/shipper/loadboard");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Switch to Search Trucks tab
+    await page
+      .locator("button", { hasText: /Search Trucks/i })
+      .first()
+      .click();
+    await page.waitForTimeout(1500);
+
+    // Open the search form if not already open and click Search to populate
+    const searchBtn = page.locator("button", { hasText: /^Search$/ }).last();
+    if (await searchBtn.isVisible().catch(() => false)) {
+      await searchBtn.click();
+      await page.waitForTimeout(2500);
+    }
+
+    // Iterate Book buttons until one opens a modal with selectable loads.
+    const bookBtns = page.getByRole("button", { name: /^Book$/ });
+    const total = await bookBtns.count();
+    if (total === 0) {
+      test.skip(true, "no Book button visible");
+      return;
+    }
+    let loadSelect: import("@playwright/test").Locator | null = null;
+    for (let i = 0; i < Math.min(total, 8); i++) {
+      await bookBtns.nth(i).click();
+      await page.waitForTimeout(1200);
+      const candidate = page
+        .locator("select")
+        .filter({ hasText: /Select a load/i })
+        .first();
+      if (await candidate.isVisible().catch(() => false)) {
+        const opts = await candidate.locator("option").all();
+        const valued = await Promise.all(
+          opts.map((o) => o.getAttribute("value"))
+        );
+        if (valued.some((v) => v && v.length > 0)) {
+          loadSelect = candidate;
+          break;
+        }
+      }
+      // No matching load → close the modal and try the next row
+      await page
+        .getByRole("button", { name: /^Cancel$/ })
+        .last()
+        .click()
+        .catch(() => {});
+      await page.waitForTimeout(400);
+    }
+    if (!loadSelect) {
+      test.skip(true, "no truck row had a load matching its origin city");
+      return;
+    }
+    const opts = await loadSelect.locator("option").all();
+    let pickedId = "";
+    for (const o of opts) {
+      const v = await o.getAttribute("value");
+      if (v) {
+        pickedId = v;
+        break;
+      }
+    }
+    test.skip(!pickedId, "no load options to select");
+    await loadSelect.selectOption(pickedId);
+    await page.waitForTimeout(300);
+
+    await page.getByRole("button", { name: /Send Request/i }).click();
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      requests?: Array<{ id: string }>;
+    }>("GET", "/api/truck-requests?status=PENDING&limit=100", token);
+    const newOnes = (afterRes.data.requests ?? []).filter(
+      (r) => !beforeIds.has(r.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    console.log(`new truck-requests: ${newOnes.length}`);
+  });
+});
