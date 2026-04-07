@@ -324,13 +324,19 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VERIFY_DOCUMENTS,
     Permission.VERIFY_ORGANIZATIONS,
 
-    // Load & truck visibility
+    // Load & truck visibility + management
     Permission.VIEW_LOADS,
     Permission.VIEW_ALL_LOADS,
     Permission.MANAGE_ALL_LOADS,
     Permission.VIEW_TRUCKS,
     Permission.VIEW_ALL_TRUCKS,
     Permission.MANAGE_ALL_TRUCKS,
+    // Blueprint §5: "Manage trucks (edit, delete): Carrier-only or Admin".
+    // Admin already has DELETE_TRUCKS but was missing EDIT_TRUCKS, so the
+    // PATCH /api/trucks/[id] permission gate (line 158 of that route)
+    // returned 403 to admin even though the downstream canUpdate check
+    // would have allowed it. Caught by AD-6 in deep-cross-domain-parity.
+    Permission.EDIT_TRUCKS,
     Permission.DELETE_TRUCKS,
 
     // Wallet management
