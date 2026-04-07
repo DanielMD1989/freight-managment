@@ -16,8 +16,17 @@ const updateOrganizationSchema = z.object({
   contactPhone: z.string().min(10).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
-  licenseNumber: z.string().optional(),
-  taxId: z.string().optional(),
+  // licenseNumber + taxId are @unique in Prisma. Empty string from form
+  // inputs would collide with other rows that also have "" → P2002 500.
+  // Coerce empty → undefined so the field is simply skipped on update.
+  licenseNumber: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+  taxId: z
+    .string()
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
   allowNameDisplay: z.boolean().optional(), // Phase 2: Privacy setting
 });
 
