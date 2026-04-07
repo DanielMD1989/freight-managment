@@ -1,4 +1,9 @@
-import { getSession, requireActiveUser, SessionPayload } from "@/lib/auth";
+import {
+  getSession,
+  getSessionAny,
+  requireActiveUser,
+  SessionPayload,
+} from "@/lib/auth";
 import {
   Permission,
   type Role,
@@ -34,7 +39,11 @@ export class ForbiddenError extends Error {
 }
 
 export async function getCurrentUserRole(): Promise<Role | null> {
-  const session = await getSession();
+  // BUG #8 fix: support BOTH cookies (web) and Bearer tokens (mobile).
+  // Previously this used cookie-only getSession() which silently
+  // returned null for mobile clients, breaking hasRole/hasPermission
+  // and any downstream auth check that flowed through this helper.
+  const session = await getSessionAny();
   return session ? (session.role as Role) : null;
 }
 
@@ -148,7 +157,11 @@ export async function isSuperAdmin(): Promise<boolean> {
 export async function canManageOrganization(
   organizationId: string
 ): Promise<boolean> {
-  const session = await getSession();
+  // BUG #8 fix: use getSessionAny() so mobile Bearer tokens are recognized.
+  // The cookie-only getSession() returned null for mobile clients, which
+  // made carrier+shipper unable to update their own organization on
+  // mobile (PATCH /api/organizations/[id] returned 403 every time).
+  const session = await getSessionAny();
   if (!session) return false;
 
   // Admin or Super Admin can manage any organization

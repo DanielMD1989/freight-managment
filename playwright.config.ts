@@ -77,7 +77,10 @@ export default defineConfig({
     {
       name: "admin-setup",
       testMatch: /admin\/auth\.setup\.ts/,
-      dependencies: ["carrier-workflow"],
+      // carrier-workflow dependency removed: it's a multi-step lifecycle
+      // test that's fragile against shared seed state. admin-setup only
+      // needs admin login, not the workflow.
+      // dependencies: ["carrier-workflow"],
     },
     {
       name: "admin-deep",
