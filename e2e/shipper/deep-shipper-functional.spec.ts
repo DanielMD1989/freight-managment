@@ -18,19 +18,77 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { apiCall, getToken } from "./test-utils";
+import { apiCall, getToken, ensureTrip } from "./test-utils";
 
 const EMAIL = "shipper@test.com";
 
 let token: string;
 
+// Walk every non-terminal carrier trip through to a terminal status so
+// the truck pool is free for ensureTrip(). See deep-carrier-functional.spec.ts
+// for the same helper — duplicated here so the shipper spec doesn't have
+// a cross-spec dependency.
+async function freeUpCarrierTrips() {
+  let carrierToken = "";
+  let adminToken = "";
+  let shipperToken = "";
+  try {
+    carrierToken = await getToken("carrier@test.com");
+    adminToken = await getToken("admin@test.com");
+    shipperToken = await getToken(EMAIL);
+  } catch {
+    return;
+  }
+  const list = await apiCall<{
+    trips?: Array<{ id: string; status: string }>;
+  }>("GET", "/api/trips?limit=50", carrierToken);
+  for (const trip of list.data.trips ?? []) {
+    if (trip.status === "COMPLETED" || trip.status === "CANCELLED") continue;
+    if (trip.status === "EXCEPTION") {
+      await apiCall("PATCH", `/api/trips/${trip.id}`, adminToken, {
+        status: "CANCELLED",
+        cancelReason: "phase3 cleanup",
+      }).catch(() => {});
+      continue;
+    }
+    if (
+      trip.status === "ASSIGNED" ||
+      trip.status === "PICKUP_PENDING" ||
+      trip.status === "IN_TRANSIT"
+    ) {
+      if (trip.status === "ASSIGNED") {
+        await apiCall("PATCH", `/api/trips/${trip.id}`, carrierToken, {
+          status: "PICKUP_PENDING",
+        }).catch(() => {});
+      }
+      if (trip.status === "ASSIGNED" || trip.status === "PICKUP_PENDING") {
+        await apiCall("PATCH", `/api/trips/${trip.id}`, carrierToken, {
+          status: "IN_TRANSIT",
+        }).catch(() => {});
+      }
+      await apiCall("PATCH", `/api/trips/${trip.id}`, carrierToken, {
+        status: "DELIVERED",
+        receiverName: "cleanup",
+        receiverPhone: "+251911111111",
+      }).catch(() => {});
+    }
+    await apiCall(
+      "POST",
+      `/api/trips/${trip.id}/confirm`,
+      shipperToken,
+      {}
+    ).catch(() => {});
+  }
+}
+
 test.beforeAll(async () => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   try {
     token = await getToken(EMAIL);
   } catch {
     /* tests will skip */
   }
+  await freeUpCarrierTrips().catch(() => {});
 });
 
 // Helper: get a fresh draft load created via API for tests that need
@@ -751,5 +809,69 @@ test.describe.serial("Web Shipper FUNCTIONAL: truck request via UI", () => {
     );
     expect(newOnes.length).toBeGreaterThanOrEqual(1);
     console.log(`new truck-requests: ${newOnes.length}`);
+  });
+});
+
+// ─── SF-12: Shipper confirms delivery on a DELIVERED trip → COMPLETED ───
+//   Setup: seed a trip via ensureTrip(), drive it forward to DELIVERED
+//   via the carrier token, then drive the shipper UI to confirm.
+test.describe.serial("Web Shipper FUNCTIONAL: trip complete", () => {
+  test("SF-12 — Confirm Delivery on DELIVERED trip → status COMPLETED", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+    const carrierToken = await getToken("carrier@test.com");
+    const adminToken = await getToken("admin@test.com");
+    test.skip(!carrierToken || !adminToken, "no aux tokens");
+
+    let tripId: string | undefined;
+    try {
+      const seeded = await ensureTrip(token, carrierToken, adminToken);
+      tripId = seeded.tripId;
+      await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
+        status: "PICKUP_PENDING",
+      });
+      await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
+        status: "IN_TRANSIT",
+      });
+      await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
+        status: "DELIVERED",
+        receiverName: "SF-12 Receiver",
+        receiverPhone: "+251911234567",
+      });
+    } catch (e) {
+      console.log(`SF-12 seed failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    test.skip(!tripId, "could not seed trip");
+
+    await page.goto(`/shipper/trips/${tripId}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // First Confirm Delivery button opens the modal
+    const openBtn = page
+      .getByRole("button", { name: /^Confirm Delivery$/ })
+      .first();
+    await expect(openBtn).toBeVisible({ timeout: 10000 });
+    await openBtn.click();
+    await page.waitForTimeout(800);
+
+    // Modal: click the "Confirm & Complete" submit button
+    await page
+      .getByRole("button", { name: /Confirm & Complete/i })
+      .first()
+      .click();
+    await page.waitForTimeout(3000);
+
+    const after = await apiCall<{ trip?: { status: string } }>(
+      "GET",
+      `/api/trips/${tripId}`,
+      token
+    );
+    const status =
+      after.data.trip?.status ?? (after.data as { status?: string }).status;
+    console.log(`trip ${tripId} status after SF-12: ${status}`);
+    expect(status).toBe("COMPLETED");
   });
 });

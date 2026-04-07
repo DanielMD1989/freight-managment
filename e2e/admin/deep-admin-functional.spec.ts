@@ -181,3 +181,145 @@ test.describe.serial("Web Admin FUNCTIONAL: notification preferences", () => {
     }).catch(() => {});
   });
 });
+
+// ─── AF-4: Admin resolves an EXCEPTION trip via /admin/trips/[id] ───────
+//   Setup: shipper+carrier seed a trip, carrier walks it to IN_TRANSIT,
+//   carrier raises EXCEPTION via PATCH; admin opens UI and clicks Cancel
+//   Trip → status CANCELLED.
+test.describe.serial("Web Admin FUNCTIONAL: exception resolve", () => {
+  test("AF-4 — Cancel Trip on EXCEPTION → trip status CANCELLED", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!adminToken || !shipperToken, "no aux tokens");
+    const carrierToken = await getToken("carrier@test.com");
+    test.skip(!carrierToken, "no carrier token");
+
+    // Free up any stale trips so ensureTrip can succeed
+    const list = await apiCall<{
+      trips?: Array<{ id: string; status: string }>;
+    }>("GET", "/api/trips?limit=50", carrierToken);
+    for (const t of list.data.trips ?? []) {
+      if (t.status === "COMPLETED" || t.status === "CANCELLED") continue;
+      if (t.status === "EXCEPTION") {
+        await apiCall("PATCH", `/api/trips/${t.id}`, adminToken, {
+          status: "CANCELLED",
+          cancelReason: "AF-4 cleanup",
+        }).catch(() => {});
+        continue;
+      }
+      if (t.status === "ASSIGNED") {
+        await apiCall("PATCH", `/api/trips/${t.id}`, carrierToken, {
+          status: "PICKUP_PENDING",
+        }).catch(() => {});
+      }
+      if (t.status === "ASSIGNED" || t.status === "PICKUP_PENDING") {
+        await apiCall("PATCH", `/api/trips/${t.id}`, carrierToken, {
+          status: "IN_TRANSIT",
+        }).catch(() => {});
+      }
+      await apiCall("PATCH", `/api/trips/${t.id}`, carrierToken, {
+        status: "DELIVERED",
+        receiverName: "x",
+        receiverPhone: "+251911111111",
+      }).catch(() => {});
+      await apiCall(
+        "POST",
+        `/api/trips/${t.id}/confirm`,
+        shipperToken,
+        {}
+      ).catch(() => {});
+    }
+
+    // Seed a fresh trip via the same flow used by the carrier spec
+    const tomorrow = new Date(Date.now() + 86400000).toISOString();
+    const dayAfter = new Date(Date.now() + 5 * 86400000).toISOString();
+    const loadRes = await apiCall<{ load?: { id: string } }>(
+      "POST",
+      "/api/loads",
+      shipperToken,
+      {
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Dire Dawa",
+        pickupDate: tomorrow,
+        deliveryDate: dayAfter,
+        truckType: "FLATBED",
+        weight: 5000,
+        cargoDescription: "AF-4 test cargo",
+        shipperContactName: "AF4",
+        shipperContactPhone: "+251911111111",
+        status: "POSTED",
+      }
+    );
+    const loadId = loadRes.data.load?.id;
+    test.skip(!loadId, "load create failed");
+
+    const postingsRes = await apiCall<{
+      postings?: Array<{ truckId: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=5",
+      carrierToken
+    );
+    const truckId = (postingsRes.data.postings ?? [])[0]?.truckId;
+    test.skip(!truckId, "no posting");
+
+    const reqRes = await apiCall<{ loadRequest?: { id: string } }>(
+      "POST",
+      "/api/load-requests",
+      carrierToken,
+      { loadId, truckId, expiryHours: 24 }
+    );
+    const reqId = reqRes.data.loadRequest?.id;
+    test.skip(!reqId, "request failed");
+
+    await apiCall("POST", `/api/load-requests/${reqId}/respond`, shipperToken, {
+      action: "APPROVE",
+    });
+    const conf = await apiCall<{ trip?: { id: string } }>(
+      "POST",
+      `/api/load-requests/${reqId}/confirm`,
+      carrierToken,
+      { action: "CONFIRM" }
+    );
+    const tripId = conf.data.trip?.id;
+    test.skip(!tripId, "confirm failed");
+
+    // Walk to IN_TRANSIT then EXCEPTION
+    await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
+      status: "PICKUP_PENDING",
+    });
+    await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
+      status: "IN_TRANSIT",
+    });
+    await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
+      status: "EXCEPTION",
+      exceptionReason: "AF-4 test exception reason",
+    });
+
+    // The admin cancel handler now prompts for a reason — auto-accept it.
+    page.on("dialog", (d) => d.accept("AF-4 admin cancel"));
+
+    // Admin opens trip detail and resolves via Cancel Trip button
+    await page.goto(`/admin/trips/${tripId}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    const cancelBtn = page
+      .getByRole("button", { name: /Cancel Trip → CANCELLED/i })
+      .first();
+    await expect(cancelBtn).toBeVisible({ timeout: 10000 });
+    await cancelBtn.click();
+    await page.waitForTimeout(3000);
+
+    const after = await apiCall<{ trip?: { status: string } }>(
+      "GET",
+      `/api/trips/${tripId}`,
+      adminToken
+    );
+    const status =
+      after.data.trip?.status ?? (after.data as { status?: string }).status;
+    console.log(`trip ${tripId} status after AF-4: ${status}`);
+    expect(status).toBe("CANCELLED");
+  });
+});

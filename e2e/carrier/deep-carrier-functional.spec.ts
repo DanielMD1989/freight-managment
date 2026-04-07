@@ -11,16 +11,77 @@
 
 import { test, expect } from "@playwright/test";
 import { apiCall, getCarrierToken } from "./test-utils";
+import { ensureTrip, getToken as getSharedToken } from "../shipper/test-utils";
 
 let token: string;
 
+// Walk every non-terminal carrier trip through to a terminal status so
+// the truck pool is free for ensureTrip(). The confirm endpoint throws
+// TRUCK_BUSY_TRIP if any DELIVERED/IN_TRANSIT/EXCEPTION trip exists on
+// the truck — that turns into a 500 by the route's catch-all and breaks
+// every Phase 3 seed.
+async function freeUpCarrierTrips() {
+  if (!token) return;
+  let shipperToken = "";
+  let adminToken = "";
+  try {
+    shipperToken = await getSharedToken("shipper@test.com");
+    adminToken = await getSharedToken("admin@test.com");
+  } catch {
+    return;
+  }
+  const list = await apiCall<{
+    trips?: Array<{ id: string; status: string }>;
+  }>("GET", "/api/trips?limit=50", token);
+  for (const trip of list.data.trips ?? []) {
+    if (trip.status === "COMPLETED" || trip.status === "CANCELLED") continue;
+    if (trip.status === "EXCEPTION") {
+      await apiCall("PATCH", `/api/trips/${trip.id}`, adminToken, {
+        status: "CANCELLED",
+        cancelReason: "phase3 cleanup",
+      }).catch(() => {});
+      continue;
+    }
+    if (
+      trip.status === "ASSIGNED" ||
+      trip.status === "PICKUP_PENDING" ||
+      trip.status === "IN_TRANSIT"
+    ) {
+      // Walk forward to DELIVERED, then shipper /confirm to COMPLETED.
+      if (trip.status === "ASSIGNED") {
+        await apiCall("PATCH", `/api/trips/${trip.id}`, token, {
+          status: "PICKUP_PENDING",
+        }).catch(() => {});
+      }
+      if (trip.status === "ASSIGNED" || trip.status === "PICKUP_PENDING") {
+        await apiCall("PATCH", `/api/trips/${trip.id}`, token, {
+          status: "IN_TRANSIT",
+        }).catch(() => {});
+      }
+      await apiCall("PATCH", `/api/trips/${trip.id}`, token, {
+        status: "DELIVERED",
+        receiverName: "cleanup",
+        receiverPhone: "+251911111111",
+      }).catch(() => {});
+    }
+    // DELIVERED → shipper /confirm → COMPLETED
+    await apiCall(
+      "POST",
+      `/api/trips/${trip.id}/confirm`,
+      shipperToken,
+      {}
+    ).catch(() => {});
+  }
+}
+
 test.beforeAll(async () => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   try {
     token = await getCarrierToken();
   } catch {
     /* tests will skip */
   }
+  await freeUpCarrierTrips().catch(() => {});
 });
 
 // ─── CF-1: Edit profile firstName → DB updated ─────────────────────────────
@@ -549,5 +610,176 @@ test.describe.serial("Web Carrier FUNCTIONAL: load request via UI", () => {
     );
     expect(newOnes.length).toBeGreaterThanOrEqual(1);
     console.log(`new load-requests: ${newOnes.length}`);
+  });
+});
+
+// ─── CF-9: Carrier confirms pickup via /carrier/trips/[id] → IN_TRANSIT ──
+//   Setup: drive a Trip from ASSIGNED through PICKUP_PENDING via the UI:
+//     click "Start Trip" → "Confirm Pickup" → trip status = IN_TRANSIT.
+test.describe.serial("Web Carrier FUNCTIONAL: trip pickup", () => {
+  test("CF-9 — Start Trip + Confirm Pickup → status IN_TRANSIT", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    // Seed a fresh trip in ASSIGNED via the shared shipper helper.
+    let tripId: string | undefined;
+    try {
+      const shipperToken = await getSharedToken("shipper@test.com");
+      const adminToken = await getSharedToken("admin@test.com");
+      const seeded = await ensureTrip(shipperToken, token, adminToken);
+      tripId = seeded.tripId;
+    } catch (e) {
+      console.log(
+        `CF-9 ensureTrip failed: ${(e as Error).message.slice(0, 200)}`
+      );
+    }
+    test.skip(!tripId, "could not seed trip");
+
+    await page.goto(`/carrier/trips/${tripId}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Click Start Trip if visible
+    const startBtn = page.getByRole("button", { name: /^Start Trip$/ }).first();
+    if (await startBtn.isVisible().catch(() => false)) {
+      await startBtn.click();
+      await page.waitForTimeout(2000);
+    }
+    // Now click Confirm Pickup
+    const confirmBtn = page
+      .getByRole("button", { name: /^Confirm Pickup$/ })
+      .first();
+    await expect(confirmBtn).toBeVisible({ timeout: 5000 });
+    await confirmBtn.click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{ trip?: { status: string } }>(
+      "GET",
+      `/api/trips/${tripId}`,
+      token
+    );
+    const status =
+      after.data.trip?.status ?? (after.data as { status?: string }).status;
+    console.log(`trip ${tripId} status after CF-9: ${status}`);
+    expect(status).toBe("IN_TRANSIT");
+  });
+});
+
+// ─── CF-10: Carrier marks IN_TRANSIT trip Delivered → DELIVERED ─────────
+test.describe.serial("Web Carrier FUNCTIONAL: trip deliver", () => {
+  test("CF-10 — Mark Delivered button → trip status DELIVERED", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+    let tripId: string | undefined;
+    try {
+      const shipperToken = await getSharedToken("shipper@test.com");
+      const adminToken = await getSharedToken("admin@test.com");
+      const seeded = await ensureTrip(shipperToken, token, adminToken);
+      tripId = seeded.tripId;
+      // Walk forward to IN_TRANSIT via API
+      await apiCall("PATCH", `/api/trips/${tripId}`, token, {
+        status: "PICKUP_PENDING",
+      });
+      await apiCall("PATCH", `/api/trips/${tripId}`, token, {
+        status: "IN_TRANSIT",
+      });
+    } catch (e) {
+      console.log(`CF-10 seed failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    test.skip(!tripId, "could not seed trip");
+
+    await page.goto(`/carrier/trips/${tripId}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // First Mark Delivered button opens a modal; the modal has a second
+    // Mark Delivered button that actually submits.
+    const markBtn = page
+      .getByRole("button", { name: /^Mark Delivered$/ })
+      .first();
+    await expect(markBtn).toBeVisible({ timeout: 5000 });
+    await markBtn.click();
+    await page.waitForTimeout(800);
+    await page
+      .getByRole("button", { name: /^Mark Delivered$/ })
+      .last()
+      .click();
+    await page.waitForTimeout(3000);
+
+    const after = await apiCall<{ trip?: { status: string } }>(
+      "GET",
+      `/api/trips/${tripId}`,
+      token
+    );
+    const status =
+      after.data.trip?.status ?? (after.data as { status?: string }).status;
+    console.log(`trip ${tripId} status after CF-10: ${status}`);
+    expect(["DELIVERED", "COMPLETED"]).toContain(status);
+  });
+});
+
+// ─── CF-11: Carrier raises EXCEPTION via Report modal → EXCEPTION ────────
+test.describe.serial("Web Carrier FUNCTIONAL: trip exception", () => {
+  test("CF-11 — Report Exception modal → trip status EXCEPTION", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+    let tripId: string | undefined;
+    try {
+      const shipperToken = await getSharedToken("shipper@test.com");
+      const adminToken = await getSharedToken("admin@test.com");
+      const seeded = await ensureTrip(shipperToken, token, adminToken);
+      tripId = seeded.tripId;
+      await apiCall("PATCH", `/api/trips/${tripId}`, token, {
+        status: "PICKUP_PENDING",
+      });
+      await apiCall("PATCH", `/api/trips/${tripId}`, token, {
+        status: "IN_TRANSIT",
+      });
+    } catch (e) {
+      console.log(`CF-11 seed failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    test.skip(!tripId, "could not seed trip");
+
+    await page.goto(`/carrier/trips/${tripId}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    await page
+      .getByRole("button", { name: /^Report Exception$/ })
+      .first()
+      .click();
+    await page.waitForTimeout(800);
+
+    // Fill the reason (min 10 chars per UI validation)
+    await page
+      .locator("textarea")
+      .first()
+      .fill(`CF-11 e2e exception reason ${Date.now()}`);
+    await page.waitForTimeout(300);
+
+    // The modal also has a "Report Exception" submit button — last() to pick the modal one
+    await page
+      .getByRole("button", { name: /^Report Exception$/ })
+      .last()
+      .click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{ trip?: { status: string } }>(
+      "GET",
+      `/api/trips/${tripId}`,
+      token
+    );
+    const status =
+      after.data.trip?.status ?? (after.data as { status?: string }).status;
+    console.log(`trip ${tripId} status after CF-11: ${status}`);
+    expect(status).toBe("EXCEPTION");
+
+    // Restore the trip back to IN_TRANSIT for downstream tests
+    await apiCall("PATCH", `/api/trips/${tripId}`, token, {
+      status: "IN_TRANSIT",
+    }).catch(() => {});
   });
 });

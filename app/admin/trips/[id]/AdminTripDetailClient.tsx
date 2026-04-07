@@ -59,6 +59,21 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
   const handleResolve = async (
     newStatus: "ASSIGNED" | "IN_TRANSIT" | "COMPLETED" | "CANCELLED"
   ) => {
+    // Bug #10: API requires cancelReason when transitioning to CANCELLED.
+    // Without it the EXCEPTION → CANCELLED resolution path silently 400'd
+    // and the trip stayed in EXCEPTION forever.
+    let cancelReason: string | undefined;
+    if (newStatus === "CANCELLED") {
+      const reason = window.prompt(
+        "Reason for cancelling this trip (required):",
+        "Resolved by admin from EXCEPTION"
+      );
+      if (!reason || !reason.trim()) {
+        return;
+      }
+      cancelReason = reason.trim();
+    }
+
     setResolving(newStatus);
     setResolveError(null);
 
@@ -70,7 +85,10 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
           "Content-Type": "application/json",
           ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          status: newStatus,
+          ...(cancelReason ? { cancelReason } : {}),
+        }),
       });
 
       if (response.ok) {
