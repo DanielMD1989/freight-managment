@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 import { handleApiError } from "@/lib/apiErrors";
-import { sanitizeText, zodErrorResponse } from "@/lib/validation";
+import { sanitizeText, zodErrorResponse, phoneSchema } from "@/lib/validation";
 
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
@@ -62,7 +62,11 @@ const updateTruckSchema = z.object({
   lengthM: z.number().positive().optional().nullable(),
   ownerName: z.string().max(200).optional().nullable(),
   contactName: z.string().max(200).optional().nullable(),
-  contactPhone: z.string().max(50).optional().nullable(),
+  // Parity with shipper load creation (commit 04a704d): enforce Ethiopian
+  // phone format on update too. The shared phoneSchema validates
+  // `^(\+251|0)?9\d{8}$` after stripping whitespace. Wrapping in union
+  // with z.null() so callers can clear the field by sending null.
+  contactPhone: z.union([phoneSchema, z.null()]).optional(),
   // G-M10-1: approvalStatus and rejectionReason removed — use /approve and /resubmit endpoints
 });
 

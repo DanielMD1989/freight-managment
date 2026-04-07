@@ -27,6 +27,7 @@ import { UserRole } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { phoneSchema } from "@/lib/validation";
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
@@ -37,7 +38,9 @@ const UpdateTruckPostingSchema = z.object({
   preferredDhToOriginKm: z.number().nonnegative().optional().nullable(),
   preferredDhAfterDeliveryKm: z.number().nonnegative().optional().nullable(),
   contactName: z.string().min(2).optional(),
-  contactPhone: z.string().min(10).optional(),
+  // Parity with shipper load creation (commit 04a704d) and POST /api/truck-postings:
+  // enforce Ethiopian phone format here too instead of accepting any string >= 10 chars.
+  contactPhone: phoneSchema.optional(),
   notes: z.string().optional().nullable(),
   status: z.enum(["ACTIVE", "EXPIRED", "CANCELLED", "MATCHED"]).optional(),
   // Additional fields from frontend

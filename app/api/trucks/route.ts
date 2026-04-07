@@ -16,7 +16,7 @@ import { TruckCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
-import { sanitizeText, zodErrorResponse } from "@/lib/validation";
+import { sanitizeText, zodErrorResponse, phoneSchema } from "@/lib/validation";
 import { checkWalletGate } from "@/lib/walletGate";
 import { TRUCK_TYPE_VALUES } from "@/lib/constants/truckTypes";
 
@@ -36,7 +36,10 @@ const createTruckSchema = z.object({
   lengthM: z.number().positive().optional(),
   ownerName: z.string().max(200).optional(),
   contactName: z.string().max(200).optional(),
-  contactPhone: z.string().max(50).optional(),
+  // Parity with shipper load creation (commit 04a704d): enforce Ethiopian
+  // phone format here too instead of accepting any string. The shared
+  // phoneSchema validates `^(\+251|0)?9\d{8}$` after stripping whitespace.
+  contactPhone: phoneSchema.optional(),
 });
 
 // POST /api/trucks - Create truck
