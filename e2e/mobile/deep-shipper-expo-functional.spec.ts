@@ -268,31 +268,30 @@ test.describe.serial("Mobile Shipper FUNCTIONAL: load create", () => {
     await page.getByTestId("create-load-next").click();
     await page.waitForTimeout(800);
 
-    // Step 2: Options — fill required Contact Name + Phone, then Next
-    const contactName = page.getByPlaceholder(/Contact Name/i).first();
-    if (await contactName.count()) {
-      await contactName.fill("SXP3-4 Tester");
-    }
-    const contactPhone = page.getByPlaceholder(/Contact Phone/i).first();
-    if (await contactPhone.count()) {
-      await contactPhone.fill("+251911234567");
-    }
+    // Step 2: Options — Contact Name + Phone are required for non-anonymous
+    // marketplace posting. The mobile Input component uses
+    // accessibilityLabel (NOT placeholder), so we address by label.
+    // pressSequentially required for RHF Controller propagation.
+    const contactName = page.getByLabel("Contact Name").first();
+    await expect(contactName).toBeVisible({ timeout: 5000 });
+    await contactName.click();
+    await contactName.pressSequentially("SXP3-4 Tester", { delay: 10 });
+
+    const contactPhone = page.getByLabel("Contact Phone").first();
+    await expect(contactPhone).toBeVisible({ timeout: 5000 });
+    await contactPhone.click();
+    await contactPhone.pressSequentially("+251911234567", { delay: 10 });
+
     await page.getByTestId("create-load-next").click();
     await page.waitForTimeout(800);
 
-    // Phase 3: the production form was fixed to bypass RHF's
-    // handleSubmit wrapper (commit pending) — onPress now calls
-    // trigger() + getValues() directly. End-to-end validation is
-    // deferred until the Expo headless environment is restored;
-    // mobile/__tests__/ Jest covers the form's contract.
-    test.skip(
-      true,
-      "Expo headless environment regression — re-enable once mobile auth bypass works again"
-    );
-    return;
-    // eslint-disable-next-line no-unreachable
+    // Phase 3 production fix (commit 95d5ad5) bypasses RHF's
+    // handleSubmit wrapper — onPress now calls trigger() + getValues()
+    // directly. Final-1 (commit eaa59df) restored the Expo headless
+    // env so this test can drive the real submit chain end-to-end.
     const submitBtn = page.getByTestId("create-load-submit");
     await expect(submitBtn).toBeVisible({ timeout: 5000 });
+    await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
     await submitBtn.click();
     await page.waitForTimeout(4500);
 
