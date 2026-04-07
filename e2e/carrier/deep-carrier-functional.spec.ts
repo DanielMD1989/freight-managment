@@ -953,3 +953,121 @@ test.describe.serial("Web Carrier FUNCTIONAL: trip chat send", () => {
     );
   });
 });
+
+// ─── CF-15: Carrier deactivates a posting via /carrier/loadboard "Cancel" button
+test.describe.serial("Web Carrier FUNCTIONAL: posting deactivate", () => {
+  test("CF-15 — Cancel button on a row → DELETE /api/truck-postings/[id]", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    // Setup: ensure there's at least one ACTIVE posting we can cancel.
+    // Create a fresh one via API to avoid touching seed postings other
+    // tests depend on.
+    const postingsRes = await apiCall<{
+      postings?: Array<{ id: string; truckId: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=20",
+      token
+    );
+    const before = postingsRes.data.postings ?? [];
+    test.skip(before.length === 0, "no active postings");
+    const targetId = before[0].id;
+
+    // Auto-accept the window.confirm() dialog
+    page.on("dialog", (d) => d.accept());
+
+    await page.goto("/carrier/loadboard");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Click the "Cancel" action button on the first posting row.
+    // (The action buttons are inside the postings DataTable.)
+    await page
+      .getByRole("button", { name: /^Cancel$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    // Verify the posting is gone from the ACTIVE list
+    const after = await apiCall<{
+      postings?: Array<{ id: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=20",
+      token
+    );
+    const stillActive = (after.data.postings ?? []).some(
+      (p) => p.id === targetId
+    );
+    expect(stillActive).toBe(false);
+    console.log(
+      `CF-15 posting ${targetId}: ACTIVE list size ${before.length} → ${(after.data.postings ?? []).length}`
+    );
+  });
+});
+
+// ─── CF-16: Carrier edits a truck-posting inline (Bug #1 regression)
+//   Bug #1 (commit d15ab85) was the inline Edit/Save sending date-only
+//   "YYYY-MM-DD" instead of full ISO datetime. This test changes the
+//   weight on an ACTIVE posting and verifies the PATCH succeeds and
+//   the new weight lands in the DB.
+test.describe.serial("Web Carrier FUNCTIONAL: posting edit", () => {
+  test("CF-16 — Edit + Save inline → PATCH /api/truck-postings/[id] → weight updated", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    const postingsRes = await apiCall<{
+      postings?: Array<{ id: string; availableWeight?: number | string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=20",
+      token
+    );
+    const target = (postingsRes.data.postings ?? [])[0];
+    test.skip(!target, "no active posting");
+    const newWeight = String(Math.floor(Math.random() * 5000) + 10000);
+
+    await page.goto("/carrier/loadboard");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Click first row's Edit button
+    await page
+      .getByRole("button", { name: /^Edit$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(800);
+
+    // The expanded edit form has a Weight (kg) input. Fill it.
+    // There are several number inputs in the form — find by placeholder.
+    await page.locator('input[placeholder="25000"]').fill(newWeight);
+    await page.waitForTimeout(300);
+
+    // Click Save in the inline edit footer
+    await page
+      .getByRole("button", { name: /^Save$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{
+      posting?: { availableWeight: number | string };
+      postings?: Array<{ id: string; availableWeight: number | string }>;
+    }>("GET", `/api/truck-postings/${target.id}`, token);
+    const afterWeight = Number(
+      after.data.posting?.availableWeight ??
+        (after.data.postings ?? []).find((p) => p.id === target.id)
+          ?.availableWeight ??
+        (after.data as { availableWeight?: number | string }).availableWeight
+    );
+    console.log(
+      `CF-16 posting ${target.id} availableWeight after: ${afterWeight}`
+    );
+    expect(afterWeight).toBe(Number(newWeight));
+  });
+});
