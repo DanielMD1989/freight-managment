@@ -108,5 +108,16 @@ export default defineConfig({
       },
       testMatch: /platform-lifecycle.*\.spec\.ts/,
     },
+    {
+      name: "mobile-expo",
+      use: {
+        browserName: "chromium",
+        baseURL: "http://localhost:8081",
+        viewport: { width: 414, height: 896 },
+      },
+      // Real Expo web build click-through tests. No setup dependency —
+      // each spec logs in fresh against the running Expo dev server.
+      testMatch: /mobile\/deep-.*\.spec\.ts/,
+    },
   ],
 });
