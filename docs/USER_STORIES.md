@@ -9,15 +9,25 @@
 
 ## Test Coverage Summary
 
-> Last updated: 2026-03-05 · Financial Atomicity Hardening (Round 9) complete
+> Last updated: 2026-04-08 · Final-7 (RB6 date flake root-fix) complete
 
-| Metric      | Value |
-| ----------- | ----- |
-| Test suites | 125   |
-| Total tests | 2,517 |
-| Passing     | 2,507 |
-| Skipped     | 10    |
-| Failures    | 0     |
+| Metric      | Web   | Mobile |
+| ----------- | ----- | ------ |
+| Test suites | 196   | 45     |
+| Total tests | 3,207 | 692    |
+| Passing     | 3,207 | 692    |
+| Skipped     | 0     | 0      |
+| Failures    | 0     | 0      |
+
+### Final Sprint (Final-1 → Final-7) Highlights
+
+- **Final-1**: Restored mobile Expo `__DEV__` URL precedence; fixed CF-1/SF-1 firstName drift via canonical-value beforeEach/afterEach.
+- **Final-2**: Mobile RHF + react-native-web TouchableOpacity bypass via `trigger() + getValues()`; SXP3-4 mobile load create re-enabled.
+- **Final-3**: Mobile shipper + carrier rating UI tests (SXP3-5, CXP3-8) via DOM-walk star click.
+- **Final-4**: Dispatcher PROPOSE_MATCH creation form (closes §5 gap) + DF-3 e2e test.
+- **Final-5**: `MFA_TEST_BYPASS_OTP` env-gated test bypass on `/api/user/mfa/verify`; SF-17/SF-18 2FA enable+disable e2e on fresh users.
+- **Final-6**: AF-12/AF-13 admin revoke + create-dispatcher tests; **fixed real production Bug #11** in `app/admin/users/create/CreateAdminForm.tsx` — CSRF token field name mismatch (`csrfData.token` → `csrfData.csrfToken`) had silently broken admin/dispatcher creation in production.
+- **Final-7**: RB6 date flake root-fix — `[local-midnight, now]` window excludes future-noon when test runs before 12:00 local; switched to `new Date()`.
 
 ### Coverage by User Story
 
