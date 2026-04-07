@@ -56,11 +56,14 @@ test.describe("Deep: Wallet Page", () => {
   });
 
   test("financial summary cards render", async ({ page }) => {
+    // Updated 2026-04-07 — labels were renamed in commit 9b0ea64
+    // (wallet financial integrity rewrite). The cards are now:
+    //   Total Deposited / Service Fees Paid / Refunds Received
     await expect(page.getByText("Total Deposited")).toBeVisible({
       timeout: 10000,
     });
-    await expect(page.getByText("Total Spent")).toBeVisible();
-    await expect(page.getByText("Pending")).toBeVisible();
+    await expect(page.getByText("Service Fees Paid")).toBeVisible();
+    await expect(page.getByText("Refunds Received")).toBeVisible();
   });
 
   test("transaction history section with filter tabs", async ({ page }) => {

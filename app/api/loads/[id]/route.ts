@@ -89,7 +89,24 @@ const updateLoadSchema = z
     specialInstructions: z.string().max(2000).optional().nullable(),
     safetyNotes: z.string().max(1000).optional().nullable(),
     bookMode: z.enum(["REQUEST", "INSTANT"]).optional(),
-    shipperContactPhone: z.string().max(20).optional().nullable(),
+    // Parity with the CREATE schema in app/api/loads/route.ts (commit 04a704d).
+    // The CREATE route already enforces the Ethiopian phone format; the
+    // UPDATE route was accepting any string up to 20 chars, which let
+    // garbage phones through. Wrap in a union with null so callers can clear
+    // the field by sending null.
+    shipperContactPhone: z
+      .union([
+        z
+          .string()
+          .min(10, "Phone must be at least 10 digits")
+          .max(20)
+          .regex(
+            /^(\+251|0)\d{9,}$/,
+            "Enter valid Ethiopian phone: +251... or 09..."
+          ),
+        z.null(),
+      ])
+      .optional(),
     shipperContactName: z.string().max(100).optional().nullable(),
     isFragile: z.boolean().optional(),
     requiresRefrigeration: z.boolean().optional(),
@@ -480,12 +497,32 @@ export async function PATCH(
       }
     }
 
+    // Convert date-string fields to Date objects so Prisma's DateTime
+    // columns get proper values. Without this, sending "2026-04-08" (the
+    // shape produced by <input type="date">) crashes the update with a
+    // Prisma type error and the route returns 500 to the client.
+    // (Mirror of the carrier d15ab85 fix, but on the server side because
+    // the shipper schema doesn't enforce ISO datetime at the Zod layer.)
+    const dateConvertedData: Record<string, unknown> = { ...validatedData };
+    if (typeof validatedData.pickupDate === "string") {
+      const d = new Date(validatedData.pickupDate);
+      if (!isNaN(d.getTime())) {
+        dateConvertedData.pickupDate = d;
+      }
+    }
+    if (typeof validatedData.deliveryDate === "string") {
+      const d = new Date(validatedData.deliveryDate);
+      if (!isNaN(d.getTime())) {
+        dateConvertedData.deliveryDate = d;
+      }
+    }
+
     // HIGH FIX #7: Wrap Load update + Trip sync in transaction for atomicity
     const { load } = await db.$transaction(async (tx) => {
       const load = await tx.load.update({
         where: { id },
         data: {
-          ...validatedData,
+          ...dateConvertedData,
           ...additionalData,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
