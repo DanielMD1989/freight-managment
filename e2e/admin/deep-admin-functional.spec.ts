@@ -874,3 +874,54 @@ test.describe.serial("Web Admin FUNCTIONAL: corridor edit", () => {
     }).catch(() => {});
   });
 });
+
+// ─── AF-15: Admin resolves an OPEN dispute via /admin/disputes/[id]
+test.describe.serial("Web Admin FUNCTIONAL: dispute resolve", () => {
+  test("AF-15 — change status to RESOLVED + add resolution → DB updated", async ({
+    page,
+  }) => {
+    test.skip(!adminToken || !shipperToken, "no tokens");
+
+    // /api/disputes is org-scoped — admin's org has no disputes against
+    // it. Query via the shipper token to find an OPEN dispute the
+    // shipper owns, then drive the admin UI to resolve it.
+    const list = await apiCall<{
+      disputes?: Array<{ id: string; status: string }>;
+    }>("GET", "/api/disputes?status=OPEN&limit=20", shipperToken);
+    const target = (list.data.disputes ?? [])[0];
+    test.skip(!target, "no OPEN dispute");
+
+    await page.goto(`/admin/disputes/${target.id}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // State machine: OPEN → UNDER_REVIEW → RESOLVED
+    await page.locator("select").first().selectOption("UNDER_REVIEW");
+    await page.waitForTimeout(300);
+    await page
+      .getByRole("button", { name: /^Update Dispute$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2000);
+
+    await page.locator("select").first().selectOption("RESOLVED");
+    await page
+      .locator("textarea")
+      .first()
+      .pressSequentially(`AF-15 e2e resolution ${Date.now()}`, { delay: 5 });
+    await page.waitForTimeout(300);
+    await page
+      .getByRole("button", { name: /^Update Dispute$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{
+      dispute?: { status: string; resolution: string };
+      status?: string;
+      resolution?: string;
+    }>("GET", `/api/disputes/${target.id}`, adminToken);
+    const status = after.data.dispute?.status ?? after.data.status;
+    expect(status).toBe("RESOLVED");
+  });
+});

@@ -835,3 +835,121 @@ test.describe.serial("Web Carrier FUNCTIONAL: withdraw request", () => {
     console.log(`CF-12 created withdrawal ${newOnes[0].id}`);
   });
 });
+
+// ─── CF-13: Carrier files a dispute via /carrier/disputes form
+test.describe.serial("Web Carrier FUNCTIONAL: dispute via form", () => {
+  test("CF-13 — File Dispute form → POST /api/disputes → Dispute row", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    const existing = await apiCall<{ disputes?: Array<{ loadId: string }> }>(
+      "GET",
+      "/api/disputes?limit=20",
+      token
+    );
+    const reusableLoadId = (existing.data.disputes ?? [])[0]?.loadId;
+    test.skip(
+      !reusableLoadId,
+      "no disputable load found via existing disputes"
+    );
+
+    const beforeRes = await apiCall<{ disputes?: Array<{ id: string }> }>(
+      "GET",
+      `/api/disputes?loadId=${reusableLoadId}`,
+      token
+    );
+    const beforeIds = new Set((beforeRes.data.disputes ?? []).map((d) => d.id));
+
+    await page.goto("/carrier/disputes");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    await page
+      .getByRole("button", { name: /^File Dispute$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(500);
+
+    await page.getByPlaceholder(/Enter Load ID/i).fill(reusableLoadId);
+    await page.locator("select").first().selectOption("PAYMENT_ISSUE");
+    await page
+      .getByPlaceholder(/Describe the issue/i)
+      .fill(`CF-13 e2e dispute description ${Date.now()}`);
+
+    await page.getByRole("button", { name: /^Submit Dispute$/i }).click();
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      disputes?: Array<{ id: string; type: string }>;
+    }>("GET", `/api/disputes?loadId=${reusableLoadId}`, token);
+    const newOnes = (afterRes.data.disputes ?? []).filter(
+      (d) => !beforeIds.has(d.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    expect(newOnes[0].type).toBe("PAYMENT_ISSUE");
+    console.log(`CF-13 created dispute ${newOnes[0].id}`);
+  });
+});
+
+// ─── CF-14: Carrier sends a TripChat message via /carrier/trips/[id]
+test.describe.serial("Web Carrier FUNCTIONAL: trip chat send", () => {
+  test("CF-14 — open Trip Messages → type → Send → Message row", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    let tripId: string | undefined;
+    try {
+      const shipperToken = await getSharedToken("shipper@test.com");
+      const adminToken = await getSharedToken("admin@test.com");
+      const seeded = await ensureTrip(shipperToken, token, adminToken);
+      tripId = seeded.tripId;
+    } catch (e) {
+      console.log(`CF-14 seed failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    test.skip(!tripId, "could not seed trip");
+
+    const beforeRes = await apiCall<{
+      messages?: Array<{ id: string }>;
+    }>("GET", `/api/trips/${tripId}/messages?limit=100`, token);
+    const beforeCount = (beforeRes.data.messages ?? []).length;
+
+    await page.goto(`/carrier/trips/${tripId}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    await page
+      .getByRole("button", { name: /^Messages/i })
+      .first()
+      .click();
+    await page.waitForTimeout(800);
+
+    const text = `CF-14 e2e ${Date.now()}`;
+    const ta = page.getByPlaceholder(/Type a message/i).first();
+    await ta.click();
+    await ta.pressSequentially(text, { delay: 5 });
+    await page.waitForTimeout(300);
+
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg.lucide-send") })
+      .first()
+      .click()
+      .catch(async () => {
+        await page.locator("button").last().click();
+      });
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      messages?: Array<{ id: string; content?: string }>;
+    }>("GET", `/api/trips/${tripId}/messages?limit=100`, token);
+    const afterMessages = afterRes.data.messages ?? [];
+    expect(afterMessages.length).toBeGreaterThan(beforeCount);
+    expect(afterMessages.some((m) => m.content?.includes(text))).toBe(true);
+    console.log(
+      `CF-14 trip ${tripId} messages: ${beforeCount} → ${afterMessages.length}`
+    );
+  });
+});

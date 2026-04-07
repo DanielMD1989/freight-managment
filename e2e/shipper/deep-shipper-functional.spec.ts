@@ -927,3 +927,133 @@ test.describe.serial("Web Shipper FUNCTIONAL: withdraw request", () => {
     console.log(`SF-13 created withdrawal ${newOnes[0].id}`);
   });
 });
+
+// ─── SF-14: Shipper files a dispute via /shipper/disputes form → DB row
+test.describe.serial("Web Shipper FUNCTIONAL: dispute via form", () => {
+  test("SF-14 — File Dispute form → POST /api/disputes → Dispute row", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    // Reuse a load that already has a dispute — that proves it has a
+    // valid counterparty (assigned carrier). The API rejects loads
+    // without an assignedTruck with "Cannot determine the other party".
+    const existing = await apiCall<{ disputes?: Array<{ loadId: string }> }>(
+      "GET",
+      "/api/disputes?limit=20",
+      token
+    );
+    const reusableLoadId = (existing.data.disputes ?? [])[0]?.loadId;
+    test.skip(
+      !reusableLoadId,
+      "no disputable load found via existing disputes"
+    );
+    const target = { id: reusableLoadId } as { id: string };
+
+    const beforeRes = await apiCall<{ disputes?: Array<{ id: string }> }>(
+      "GET",
+      `/api/disputes?loadId=${target!.id}`,
+      token
+    );
+    const beforeIds = new Set((beforeRes.data.disputes ?? []).map((d) => d.id));
+
+    await page.goto("/shipper/disputes");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    await page
+      .getByRole("button", { name: /^File Dispute$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(500);
+
+    await page.getByPlaceholder(/Enter Load ID/i).fill(target!.id);
+    await page.locator("select").first().selectOption("QUALITY_ISSUE");
+    await page
+      .getByPlaceholder(/Describe the issue/i)
+      .fill(`SF-14 e2e dispute description ${Date.now()}`);
+
+    await page.getByRole("button", { name: /^Submit Dispute$/i }).click();
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      disputes?: Array<{ id: string; type: string }>;
+    }>("GET", `/api/disputes?loadId=${target!.id}`, token);
+    const newOnes = (afterRes.data.disputes ?? []).filter(
+      (d) => !beforeIds.has(d.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    expect(newOnes[0].type).toBe("QUALITY_ISSUE");
+    console.log(`SF-14 created dispute ${newOnes[0].id}`);
+  });
+});
+
+// ─── SF-15: Shipper sends a TripChat message via /shipper/trips/[id] → Message row
+test.describe.serial("Web Shipper FUNCTIONAL: trip chat send", () => {
+  test("SF-15 — open Trip Messages → type → Send → Message row", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    // Need a writable trip — chat is read-only when status is COMPLETED.
+    // Seed a fresh ASSIGNED trip.
+    const carrierToken = await getToken("carrier@test.com");
+    const adminToken = await getToken("admin@test.com");
+    let tripId: string | undefined;
+    try {
+      const seeded = await ensureTrip(token, carrierToken, adminToken);
+      tripId = seeded.tripId;
+    } catch (e) {
+      console.log(`SF-15 seed failed: ${(e as Error).message.slice(0, 200)}`);
+    }
+    test.skip(!tripId, "could not seed trip");
+    const target = { id: tripId! } as { id: string };
+
+    const beforeRes = await apiCall<{
+      messages?: Array<{ id: string }>;
+    }>("GET", `/api/trips/${target!.id}/messages?limit=100`, token);
+    const beforeCount = (beforeRes.data.messages ?? []).length;
+
+    await page.goto(`/shipper/trips/${target!.id}`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Open the chat panel
+    const openChat = page.getByRole("button", { name: /^Messages/i }).first();
+    if (!(await openChat.isVisible().catch(() => false))) {
+      test.skip(true, "Messages toggle not visible (read-only or admin)");
+      return;
+    }
+    await openChat.click();
+    await page.waitForTimeout(800);
+
+    const text = `SF-15 e2e ${Date.now()}`;
+    const ta = page.getByPlaceholder(/Type a message/i).first();
+    await ta.click();
+    await ta.pressSequentially(text, { delay: 5 });
+    await page.waitForTimeout(300);
+
+    // Send button — there's exactly one Send icon button next to the textarea
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg.lucide-send") })
+      .first()
+      .click()
+      .catch(async () => {
+        // Fallback: click the last button in the chat panel that has type="button" near the textarea
+        await page.locator("button").last().click();
+      });
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      messages?: Array<{ id: string; content?: string }>;
+    }>("GET", `/api/trips/${target!.id}/messages?limit=100`, token);
+    const afterMessages = afterRes.data.messages ?? [];
+    expect(afterMessages.length).toBeGreaterThan(beforeCount);
+    expect(afterMessages.some((m) => m.content?.includes(text))).toBe(true);
+    console.log(
+      `SF-15 trip ${target!.id} messages: ${beforeCount} → ${afterMessages.length}`
+    );
+  });
+});
