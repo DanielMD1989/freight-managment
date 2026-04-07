@@ -27,7 +27,10 @@
     "type-check": "tsc -p tsconfig.build.json --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:functional": "playwright test deep-shipper-functional deep-carrier-functional deep-admin-functional deep-dispatcher-functional",
+    "test:e2e:functional:mobile": "playwright test deep-shipper-expo-functional deep-carrier-expo-functional",
+    "test:e2e:functional:all": "playwright test deep-shipper-functional deep-carrier-functional deep-admin-functional deep-dispatcher-functional deep-shipper-expo-functional deep-carrier-expo-functional"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

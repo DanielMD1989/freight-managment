@@ -1,5 +1,8 @@
 # 🚛 Freight Management Platform - MVP
 
+[![CI](https://github.com/DanielMD1989/freight-managment/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielMD1989/freight-managment/actions/workflows/ci.yml)
+[![E2E Functional](https://github.com/DanielMD1989/freight-managment/actions/workflows/e2e-functional.yml/badge.svg)](https://github.com/DanielMD1989/freight-managment/actions/workflows/e2e-functional.yml)
+
 A comprehensive freight management platform for connecting shippers and carriers in Ethiopia, with real-time GPS tracking, financial management, and marketplace functionality.
 
 ## 🌟 Features

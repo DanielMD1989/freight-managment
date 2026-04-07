@@ -5,17 +5,21 @@ export default defineConfig({
   timeout: 30000,
   expect: { timeout: 10000 },
   fullyParallel: false,
-  retries: 0,
+  // CI gets 2 retries for known shared-state flakes (SF-1/SF-3/SF-8 and
+  // similar). Local runs stay at 0 so flakes are visible to the developer.
+  retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: [["html", { open: "never" }], ["list"]],
   use: {
     baseURL: "http://localhost:3000",
-    headless: false,
+    // CI runs headless; local runs headed for visibility
+    headless: !!process.env.CI,
     screenshot: "only-on-failure",
     trace: "on-first-retry",
     video: "off",
     launchOptions: {
-      slowMo: 500,
+      // No slowMo in CI — ~3x faster
+      slowMo: process.env.CI ? 0 : 500,
     },
   },
   projects: [
