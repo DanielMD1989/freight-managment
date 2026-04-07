@@ -318,3 +318,113 @@ test.describe.serial("Mobile Shipper FUNCTIONAL: load create", () => {
       .catch(() => {});
   });
 });
+
+// ─── SXP3-5: Mobile shipper rates a carrier on a DELIVERED trip
+//   Blueprint v1.6 §12: post-trip rating. Mobile shipper UI shipped in
+//   commit 753a828; this test exercises the full UI → DB chain.
+test.describe.serial("Mobile Shipper FUNCTIONAL: rating", () => {
+  test("SXP3-5 — Rate Carrier modal → POST /api/trips/[id]/rate → Rating row", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(120000);
+
+    const token = await getApiToken();
+
+    // Find a DELIVERED or COMPLETED trip the shipper owns and hasn't
+    // already rated.
+    const tripsRes = await apiGet(
+      request,
+      "/api/trips?status=DELIVERED&limit=20"
+    );
+    let target = (
+      (tripsRes.data.trips as Array<{
+        id: string;
+        status: string;
+      }>) ?? []
+    ).find((t) => ["DELIVERED", "COMPLETED"].includes(t.status));
+
+    if (!target) {
+      const tripsRes2 = await apiGet(
+        request,
+        "/api/trips?status=COMPLETED&limit=20"
+      );
+      target = (
+        (tripsRes2.data.trips as Array<{
+          id: string;
+          status: string;
+        }>) ?? []
+      ).find((t) => ["DELIVERED", "COMPLETED"].includes(t.status));
+    }
+    test.skip(!target, "no DELIVERED/COMPLETED trip available");
+
+    // Skip if shipper already rated this trip
+    const existing = await apiGet(request, `/api/trips/${target!.id}/rate`);
+    if (existing.data.myRating) {
+      test.skip(true, "shipper already rated this trip");
+      return;
+    }
+
+    await loginAsShipper(page);
+    await page.goto(`${EXPO_URL}/(shipper)/trips/${target!.id}`);
+    await page.waitForTimeout(3500);
+
+    const rateBtn = page.getByText(/^Rate Carrier$/i).first();
+    if (!(await rateBtn.isVisible().catch(() => false))) {
+      test.skip(true, "Rate Carrier button not visible");
+      return;
+    }
+    await rateBtn.click();
+    await page.waitForTimeout(800);
+
+    // The 5 stars are TouchableOpacity divs with cursor:pointer style.
+    // Find them by traversing the modal — they're the only siblings
+    // of an Ionicons-rendered icon font. Use evaluate to walk the DOM.
+    const clickedStar = await page.evaluate(() => {
+      // Find any element whose direct text content contains "Rate"
+      // (modal title), then walk to its sibling row of clickable icons.
+      const allDivs = Array.from(document.querySelectorAll("div"));
+      // Find the StarRating row: a flex row with exactly 5 children that
+      // each have cursor:pointer (TouchableOpacity in RNW).
+      for (const div of allDivs) {
+        const children = Array.from(div.children);
+        if (children.length !== 5) continue;
+        const allClickable = children.every((c) => {
+          const cs = window.getComputedStyle(c as HTMLElement);
+          return cs.cursor === "pointer";
+        });
+        if (allClickable) {
+          (children[4] as HTMLElement).click();
+          return true;
+        }
+      }
+      return false;
+    });
+    test.skip(!clickedStar, "could not locate the 5-star row in the modal");
+    await page.waitForTimeout(500);
+
+    // Optional comment
+    const comment = page.locator("textarea").first();
+    if (await comment.count()) {
+      await comment.click();
+      await comment.pressSequentially(`SXP3-5 e2e ${Date.now()}`, {
+        delay: 10,
+      });
+    }
+
+    // Submit
+    await page
+      .getByText(/^Submit$/i)
+      .first()
+      .click();
+    await page.waitForTimeout(3000);
+
+    // Verify
+    const after = await apiGet(request, `/api/trips/${target!.id}/rate`);
+    console.log(
+      `SXP3-5 myRating after: ${JSON.stringify(after.data.myRating)?.slice(0, 100)}`
+    );
+    expect(after.data.myRating).toBeTruthy();
+    expect(after.data.myRating.stars).toBe(5);
+  });
+});

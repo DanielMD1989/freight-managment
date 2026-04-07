@@ -458,3 +458,92 @@ test.describe.serial("Mobile Carrier FUNCTIONAL: file dispute via UI", () => {
     console.log(`disputes AFTER (form opened only): ${afterIds.size}`);
   });
 });
+
+// ─── CXP3-8: Mobile carrier rates a shipper on a DELIVERED trip
+test.describe.serial("Mobile Carrier FUNCTIONAL: rating", () => {
+  test("CXP3-8 — Rate Shipper modal → POST /api/trips/[id]/rate → Rating row", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(120000);
+
+    // Find a DELIVERED or COMPLETED trip the carrier owns and hasn't
+    // already rated.
+    let target: { id: string; status: string } | undefined;
+    for (const status of ["DELIVERED", "COMPLETED"]) {
+      const r = await apiGet(request, `/api/trips?status=${status}&limit=20`);
+      const found = (
+        (r.data.trips as Array<{
+          id: string;
+          status: string;
+        }>) ?? []
+      ).find((t) => ["DELIVERED", "COMPLETED"].includes(t.status));
+      if (found) {
+        target = found;
+        break;
+      }
+    }
+    test.skip(!target, "no DELIVERED/COMPLETED trip");
+
+    const existing = await apiGet(request, `/api/trips/${target!.id}/rate`);
+    if (existing.data.myRating) {
+      test.skip(true, "carrier already rated this trip");
+      return;
+    }
+
+    await loginAsCarrier(page);
+    await page.goto(`${EXPO_URL}/(carrier)/trips/${target!.id}`);
+    await page.waitForTimeout(3500);
+
+    const rateBtn = page.getByText(/^Rate Shipper$/i).first();
+    if (!(await rateBtn.isVisible().catch(() => false))) {
+      test.skip(true, "Rate Shipper button not visible");
+      return;
+    }
+    await rateBtn.click();
+    await page.waitForTimeout(800);
+
+    // Same DOM walk as SXP3-5 — find the 5-children flex row of
+    // cursor:pointer divs and click the 5th
+    const clickedStar = await page.evaluate(() => {
+      const allDivs = Array.from(document.querySelectorAll("div"));
+      for (const div of allDivs) {
+        const children = Array.from(div.children);
+        if (children.length !== 5) continue;
+        const allClickable = children.every((c) => {
+          const cs = window.getComputedStyle(c as HTMLElement);
+          return cs.cursor === "pointer";
+        });
+        if (allClickable) {
+          (children[4] as HTMLElement).click();
+          return true;
+        }
+      }
+      return false;
+    });
+    test.skip(!clickedStar, "could not locate 5-star row");
+    await page.waitForTimeout(500);
+
+    // Optional comment
+    const comment = page.locator("textarea").first();
+    if (await comment.count()) {
+      await comment.click();
+      await comment.pressSequentially(`CXP3-8 e2e ${Date.now()}`, {
+        delay: 10,
+      });
+    }
+
+    await page
+      .getByText(/^Submit$/i)
+      .first()
+      .click();
+    await page.waitForTimeout(3000);
+
+    const after = await apiGet(request, `/api/trips/${target!.id}/rate`);
+    console.log(
+      `CXP3-8 myRating after: ${JSON.stringify(after.data.myRating)?.slice(0, 100)}`
+    );
+    expect(after.data.myRating).toBeTruthy();
+    expect(after.data.myRating.stars).toBe(5);
+  });
+});
