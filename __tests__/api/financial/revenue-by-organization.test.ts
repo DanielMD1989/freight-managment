@@ -349,14 +349,18 @@ describe("GET /api/admin/revenue/by-organization", () => {
       },
     });
 
-    // Load deducted 1 hour ago — should be INCLUDED
+    // Load deducted "now" — always within [local-midnight-today, now] window.
+    // Cannot use noon because at runs before 12:00 local, noon is in the future
+    // (end = now), and cannot use hoursAgo(1) because runs between 00:00-00:59
+    // local would land in yesterday.
+    const todayNoon = new Date();
     await db.load.create({
       data: {
         id: "rb-load-today",
         shipperId: SHIPPER_ORG_2,
         shipperServiceFee: 50,
         shipperFeeStatus: "DEDUCTED",
-        shipperFeeDeductedAt: hoursAgo(1),
+        shipperFeeDeductedAt: todayNoon,
         status: "DELIVERED",
       },
     });
