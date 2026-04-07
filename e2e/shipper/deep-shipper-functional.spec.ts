@@ -1255,3 +1255,144 @@ test.describe.serial("Web Shipper FUNCTIONAL: phone edit", () => {
     }).catch(() => {});
   });
 });
+
+// ─── SF-21: Fresh shipper uploads a document via /shipper/documents
+//   Setup: register a brand-new shipper org so documentsLockedAt is null,
+//   login to get the session cookie, swap the browser context's cookie
+//   to act as that user, navigate to /shipper/documents, fill the form,
+//   setInputFiles() with the fixture PDF, click Upload Document.
+test.describe.serial("Web Shipper FUNCTIONAL: document upload", () => {
+  test("SF-21 — Upload Document form → Document row + lockedAt stays null", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(120000);
+
+    // Register fresh shipper
+    const tag = `sf21-${Date.now()}`;
+    const email = `${tag}@test.com`;
+    const reg = await fetch("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({
+        email,
+        password: "Test123!",
+        firstName: "SF21",
+        lastName: "Tester",
+        role: "SHIPPER",
+        companyName: `SF21 ${tag}`,
+      }),
+    });
+    test.skip(![200, 201].includes(reg.status), `register ${reg.status}`);
+    const regData = await reg.json();
+    const orgId = regData.user?.organizationId ?? regData.organization?.id;
+    const userId = regData.user?.id;
+    test.skip(!orgId || !userId, "no orgId/userId");
+
+    // Promote to ACTIVE via admin so the doc upload OTP check
+    // (lib/auth.ts ACTIVE bypass) lets us through.
+    const adminToken = await getToken("admin@test.com");
+    await apiCall("PATCH", `/api/admin/users/${userId}`, adminToken, {
+      status: "ACTIVE",
+    });
+
+    // Login as the fresh shipper to get a session cookie
+    const loginRes = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: "Test123!" }),
+    });
+    test.skip(!loginRes.ok, "login failed");
+    const setCookie = loginRes.headers.get("set-cookie") ?? "";
+    const sessionMatch = setCookie.match(/session=([^;]+)/);
+    test.skip(!sessionMatch, "no session cookie");
+    const sessionValue = sessionMatch![1];
+    const freshToken = (await loginRes.json()).sessionToken as string;
+
+    // Wipe shipper@test.com cookies and swap to the fresh user
+    await context.clearCookies();
+    await context.addCookies([
+      {
+        name: "session",
+        value: sessionValue,
+        domain: "localhost",
+        path: "/",
+        httpOnly: true,
+      },
+    ]);
+
+    const beforeRes = await fetch(
+      `http://localhost:3000/api/documents?entityType=company&entityId=${orgId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${freshToken}`,
+          "x-client-type": "mobile",
+        },
+      }
+    );
+    const beforeBody = await beforeRes.json().catch(() => ({}));
+    const beforeCount = (beforeBody.documents ?? []).length;
+
+    await page.goto("/shipper/documents", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+
+    const openBtn = page
+      .getByRole("button", { name: /Upload New Document/i })
+      .first();
+    if (!(await openBtn.isVisible().catch(() => false))) {
+      test.skip(
+        true,
+        "upload form not visible — fresh org may already be locked"
+      );
+      return;
+    }
+    await openBtn.click();
+    await page.waitForTimeout(500);
+
+    // Document type select (default is fine — TIN_CERTIFICATE)
+    await page.locator("select").first().selectOption("TIN_CERTIFICATE");
+
+    // File input
+    const fileInput = page.locator('input[type="file"]').first();
+    await fileInput.setInputFiles("e2e/fixtures/sample-doc.pdf");
+    await page.waitForTimeout(500);
+
+    await page
+      .getByRole("button", { name: /^Upload Document$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(4000);
+
+    // Verify via admin token (cleanest — bypasses any per-user filter)
+    const adminGetRes = await fetch(
+      `http://localhost:3000/api/documents?entityType=company&entityId=${orgId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "x-client-type": "mobile",
+        },
+      }
+    );
+    const afterBody = await adminGetRes.json();
+    const afterCount = (afterBody.documents ?? []).length;
+    console.log(`SF-21 orgId=${orgId} docs: ${beforeCount} → ${afterCount}`);
+    expect(afterCount).toBeGreaterThan(beforeCount);
+
+    // Verify the org is still unlocked (Blueprint §3 — uploading more docs
+    // doesn't auto-lock)
+    const orgRes = await fetch(
+      `http://localhost:3000/api/organizations/${orgId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${freshToken}`,
+          "x-client-type": "mobile",
+        },
+      }
+    );
+    const orgBody = await orgRes.json();
+    expect(orgBody.organization?.documentsLockedAt ?? null).toBeNull();
+  });
+});

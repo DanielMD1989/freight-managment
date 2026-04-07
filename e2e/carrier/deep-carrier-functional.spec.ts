@@ -1071,3 +1071,128 @@ test.describe.serial("Web Carrier FUNCTIONAL: posting edit", () => {
     expect(afterWeight).toBe(Number(newWeight));
   });
 });
+
+// ─── CF-17: Fresh carrier uploads a document via /carrier/documents
+test.describe.serial("Web Carrier FUNCTIONAL: document upload", () => {
+  test("CF-17 — Upload Document form → Document row + lockedAt stays null", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(120000);
+
+    // Register fresh carrier
+    const tag = `cf17-${Date.now()}`;
+    const email = `${tag}@test.com`;
+    const reg = await fetch("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-type": "mobile",
+      },
+      body: JSON.stringify({
+        email,
+        password: "Test123!",
+        firstName: "CF17",
+        lastName: "Tester",
+        role: "CARRIER",
+        carrierType: "CARRIER_COMPANY",
+        companyName: `CF17 ${tag}`,
+      }),
+    });
+    test.skip(![200, 201].includes(reg.status), `register ${reg.status}`);
+    const regData = await reg.json();
+    const orgId = regData.user?.organizationId ?? regData.organization?.id;
+    const userId = regData.user?.id;
+    test.skip(!orgId || !userId, "no orgId/userId");
+
+    // Promote to ACTIVE so the OTP gate is bypassed
+    const adminToken = await getSharedToken("admin@test.com");
+    await apiCall("PATCH", `/api/admin/users/${userId}`, adminToken, {
+      status: "ACTIVE",
+    });
+
+    const loginRes = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: "Test123!" }),
+    });
+    test.skip(!loginRes.ok, "login failed");
+    const setCookie = loginRes.headers.get("set-cookie") ?? "";
+    const sessionMatch = setCookie.match(/session=([^;]+)/);
+    test.skip(!sessionMatch, "no session cookie");
+    const sessionValue = sessionMatch![1];
+
+    await context.clearCookies();
+    await context.addCookies([
+      {
+        name: "session",
+        value: sessionValue,
+        domain: "localhost",
+        path: "/",
+        httpOnly: true,
+      },
+    ]);
+
+    const beforeRes = await fetch(
+      `http://localhost:3000/api/documents?entityType=company&entityId=${orgId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "x-client-type": "mobile",
+        },
+      }
+    );
+    const beforeBody = await beforeRes.json().catch(() => ({}));
+    const beforeCount = (beforeBody.documents ?? []).length;
+
+    await page.goto("/carrier/documents", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+
+    const openBtn = page
+      .getByRole("button", { name: /Upload New Document/i })
+      .first();
+    if (!(await openBtn.isVisible().catch(() => false))) {
+      test.skip(true, "upload form not visible");
+      return;
+    }
+    await openBtn.click();
+    await page.waitForTimeout(500);
+
+    await page.locator("select").first().selectOption("TIN_CERTIFICATE");
+    const fileInput = page.locator('input[type="file"]').first();
+    await fileInput.setInputFiles("e2e/fixtures/sample-doc.pdf");
+    await page.waitForTimeout(500);
+
+    await page
+      .getByRole("button", { name: /^Upload Document$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(4000);
+
+    const afterRes = await fetch(
+      `http://localhost:3000/api/documents?entityType=company&entityId=${orgId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "x-client-type": "mobile",
+        },
+      }
+    );
+    const afterBody = await afterRes.json();
+    const afterCount = (afterBody.documents ?? []).length;
+    console.log(`CF-17 orgId=${orgId} docs: ${beforeCount} → ${afterCount}`);
+    expect(afterCount).toBeGreaterThan(beforeCount);
+
+    const orgRes = await fetch(
+      `http://localhost:3000/api/organizations/${orgId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          "x-client-type": "mobile",
+        },
+      }
+    );
+    const orgBody = await orgRes.json();
+    expect(orgBody.organization?.documentsLockedAt ?? null).toBeNull();
+  });
+});
