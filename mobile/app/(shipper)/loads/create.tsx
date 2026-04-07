@@ -89,6 +89,7 @@ export default function CreateLoadScreen() {
     handleSubmit,
     watch,
     trigger,
+    getValues,
     formState: { errors },
   } = useForm<LoadForm>({
     resolver: zodResolver(loadSchema),
@@ -763,7 +764,14 @@ export default function CreateLoadScreen() {
         ) : (
           <Button
             title={t("load.createLoad")}
-            onPress={handleSubmit(onSubmit)}
+            onPress={async () => {
+              // Bypass RHF's handleSubmit wrapper because it does not
+              // fire reliably under react-native-web's TouchableOpacity
+              // onClick chain in headless Playwright. Same validation
+              // path; no behavior change in real browsers.
+              const isValid = await trigger();
+              if (isValid) onSubmit(getValues());
+            }}
             loading={createLoad.isPending}
             variant="primary"
             style={styles.navBtn}

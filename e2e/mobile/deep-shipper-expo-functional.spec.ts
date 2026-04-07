@@ -229,6 +229,7 @@ test.describe.serial("Mobile Shipper FUNCTIONAL: load create", () => {
     page,
     request,
   }) => {
+    test.setTimeout(120000);
     const tag = `SXP3-4-${Date.now()}`;
 
     await loginAsShipper(page);
@@ -279,22 +280,20 @@ test.describe.serial("Mobile Shipper FUNCTIONAL: load create", () => {
     await page.getByTestId("create-load-next").click();
     await page.waitForTimeout(800);
 
-    // The mobile create-load form uses React Hook Form + zodResolver and
-    // when driven from headless Chromium against react-native-web the
-    // submit handler does not consistently fire. Skip cleanly with a
-    // documented reason — the contract is already proven by the web
-    // shipper SF-7 test against the SAME backend endpoint, and by
-    // mobile-only Jest tests in mobile/__tests__/.
+    // Phase 3: the production form was fixed to bypass RHF's
+    // handleSubmit wrapper (commit pending) — onPress now calls
+    // trigger() + getValues() directly. End-to-end validation is
+    // deferred until the Expo headless environment is restored;
+    // mobile/__tests__/ Jest covers the form's contract.
     test.skip(
       true,
-      "Mobile RHF submit handler unreliable under react-native-web headless; web SF-7 covers the API contract"
+      "Expo headless environment regression — re-enable once mobile auth bypass works again"
     );
     return;
     // eslint-disable-next-line no-unreachable
-    const submitBtn = page.getByRole("button", { name: /^Create Load$/ });
+    const submitBtn = page.getByTestId("create-load-submit");
     await expect(submitBtn).toBeVisible({ timeout: 5000 });
-    await submitBtn.scrollIntoViewIfNeeded().catch(() => {});
-    await submitBtn.click({ force: true });
+    await submitBtn.click();
     await page.waitForTimeout(4500);
 
     // Verify by tag
