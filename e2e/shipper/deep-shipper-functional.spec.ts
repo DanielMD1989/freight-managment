@@ -357,3 +357,129 @@ test.describe.serial("Web Shipper FUNCTIONAL: notification preferences", () => {
     }).catch(() => {});
   });
 });
+
+// ─── SF-7: Create POSTED load via /shipper/loads/create UI → DB row ──────
+test.describe.serial("Web Shipper FUNCTIONAL: load create", () => {
+  test("SF-7 — fill multi-step form → POST /api/loads → status POSTED", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+    const tag = `SF7-${Date.now()}`;
+
+    await page.goto("/shipper/loads/create");
+    await page.waitForLoadState("networkidle");
+
+    // Step 1: Route + dates
+    const tomorrow = new Date(Date.now() + 86400000)
+      .toISOString()
+      .split("T")[0];
+    const dayAfter = new Date(Date.now() + 2 * 86400000)
+      .toISOString()
+      .split("T")[0];
+    await page.locator("select").first().selectOption("Addis Ababa");
+    await page.locator("select").nth(1).selectOption("Dire Dawa");
+    await page.locator('input[type="date"]').first().fill(tomorrow);
+    await page.locator('input[type="date"]').nth(1).fill(dayAfter);
+    await page.getByRole("button", { name: /^Continue$/i }).click();
+    await page.waitForTimeout(500);
+
+    // Step 2: Cargo (truckType default FLATBED is OK)
+    await page.locator('input[type="number"]').first().fill("3500");
+    await page.locator("textarea").first().fill(`${tag} cargo description`);
+    await page.getByRole("button", { name: /^Continue$/i }).click();
+    await page.waitForTimeout(500);
+
+    // Step 3: Contact
+    await page.locator('input[type="text"]').first().fill("SF7 Tester");
+    await page.locator('input[type="tel"]').first().fill("+251911234567");
+    await page.getByRole("button", { name: /^Continue$/i }).click();
+    await page.waitForTimeout(500);
+
+    // Step 4: Post
+    await page.getByRole("button", { name: /^Post Load$/i }).click();
+    await page.waitForTimeout(3500);
+
+    // Verify in DB by description tag
+    const list = await apiCall<{
+      loads?: Array<{ id: string; status: string; cargoDescription: string }>;
+    }>("GET", "/api/loads?limit=20", token);
+    const created = (list.data.loads ?? []).find((l) =>
+      l.cargoDescription?.includes(tag)
+    );
+    expect(created).toBeTruthy();
+    expect(created!.status).toBe("POSTED");
+    console.log(`created load ${created!.id} status=${created!.status}`);
+
+    // Cleanup: cancel the load so it doesn't pollute the marketplace
+    await apiCall("PATCH", `/api/loads/${created!.id}/status`, token, {
+      status: "CANCELLED",
+      reason: "SF-7 cleanup",
+    }).catch(() => {});
+  });
+});
+
+// ─── SF-8: Edit a DRAFT load via /shipper/loads/[id]/edit → DB updated ──
+test.describe.serial("Web Shipper FUNCTIONAL: load edit", () => {
+  test("SF-8 — edit a DRAFT load weight via UI → DB updated", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+    // Create a DRAFT load to mutate
+    const tomorrow = new Date(Date.now() + 86400000).toISOString();
+    const dayAfter = new Date(Date.now() + 2 * 86400000).toISOString();
+    const draft = await apiCall<{ load?: { id: string }; id?: string }>(
+      "POST",
+      "/api/loads",
+      token,
+      {
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Dire Dawa",
+        pickupDate: tomorrow,
+        deliveryDate: dayAfter,
+        truckType: "DRY_VAN",
+        weight: 1234,
+        cargoDescription: "SF-8 edit target",
+        fullPartial: "FULL",
+        shipperContactName: "SF8",
+        shipperContactPhone: "+251911234567",
+        saveAsDraft: true,
+      }
+    );
+    const id = draft.data.load?.id ?? draft.data.id;
+    test.skip(!id, "no draft");
+
+    await page.goto(`/shipper/loads/${id}/edit`);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Find weight input (number) and change it
+    const weightInput = page.locator('input[type="number"]').first();
+    if (!(await weightInput.isVisible().catch(() => false))) {
+      test.skip(true, "weight input not visible on edit page");
+      return;
+    }
+    await weightInput.fill("9876");
+
+    const saveBtn = page
+      .getByRole("button", { name: /^Update Load$/i })
+      .first();
+    await expect(saveBtn).toBeVisible({ timeout: 5000 });
+    await saveBtn.click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{ load?: { weight: number } }>(
+      "GET",
+      `/api/loads/${id}`,
+      token
+    );
+    const newWeight = Number(after.data.load?.weight);
+    console.log(`load ${id} weight AFTER: ${newWeight}`);
+    expect(newWeight).toBe(9876);
+
+    // Cleanup
+    await apiCall("PATCH", `/api/loads/${id}/status`, token, {
+      status: "CANCELLED",
+      reason: "SF-8 cleanup",
+    }).catch(() => {});
+  });
+});

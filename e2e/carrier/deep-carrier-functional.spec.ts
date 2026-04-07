@@ -264,3 +264,160 @@ test.describe.serial("Web Carrier FUNCTIONAL: notification preferences", () => {
     }).catch(() => {});
   });
 });
+
+// ─── CF-6: Add a truck via /carrier/trucks/add UI → DB row ──────────────
+test.describe.serial("Web Carrier FUNCTIONAL: truck add", () => {
+  test("CF-6 — fill add-truck form → POST /api/trucks → row PENDING", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+    const plate = `CF6-${String(Date.now()).slice(-7)}`;
+
+    // Form pops a window.confirm() about missing required documents — accept.
+    page.on("dialog", (d) => d.accept());
+
+    await page.goto("/carrier/trucks/add");
+    await page.waitForLoadState("networkidle");
+
+    await page.locator('select[name="truckType"]').selectOption("DRY_VAN");
+    await page.locator('input[name="licensePlate"]').fill(plate);
+    await page.locator('input[name="capacity"]').fill("7500");
+
+    const submitBtn = page
+      .getByRole("button", { name: /Submit for Approval/i })
+      .first();
+    await expect(submitBtn).toBeVisible();
+    await submitBtn.click();
+    await page.waitForTimeout(3500);
+
+    // Verify in DB
+    const list = await apiCall<{
+      trucks?: Array<{
+        id: string;
+        licensePlate: string;
+        approvalStatus: string;
+      }>;
+    }>("GET", "/api/trucks?myTrucks=true&limit=20", token);
+    const created = (list.data.trucks ?? []).find(
+      (t) => t.licensePlate === plate
+    );
+    expect(created).toBeTruthy();
+    expect(["PENDING", "PENDING_APPROVAL"]).toContain(created!.approvalStatus);
+    console.log(
+      `created truck ${created!.id} plate=${plate} status=${created!.approvalStatus}`
+    );
+
+    // Cleanup: admin would normally approve/reject — here we just leave it
+    // (PENDING trucks don't pollute the marketplace).
+  });
+});
+
+// ─── CF-7: Create truck-posting via UI → DB row ─────────────────────────
+//   Form open → select unposted approved truck → type origin city →
+//   set availableFrom → fill contact phone → click Post Truck → verify
+//   posting row exists in /api/truck-postings.
+test.describe.serial("Web Carrier FUNCTIONAL: truck posting create", () => {
+  test("CF-7 — fill new posting form via UI → POST /api/truck-postings → row ACTIVE", async ({
+    page,
+  }) => {
+    test.skip(!token, "no token");
+
+    // Make sure carrier has at least one APPROVED+unposted truck
+    const trucksRes = await apiCall<{
+      trucks?: Array<{ id: string; approvalStatus: string }>;
+    }>(
+      "GET",
+      "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=20",
+      token
+    );
+    const approved = (trucksRes.data.trucks ?? []).filter(
+      (t) => t.approvalStatus === "APPROVED"
+    );
+    test.skip(approved.length === 0, "no APPROVED truck for CF-7");
+
+    const beforeRes = await apiCall<{
+      postings?: Array<{ id: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=50",
+      token
+    );
+    const beforeIds = new Set((beforeRes.data.postings ?? []).map((p) => p.id));
+
+    await page.goto("/carrier/loadboard");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Click NEW TRUCK POST
+    const openBtn = page
+      .getByRole("button", { name: /NEW TRUCK POST/i })
+      .first();
+    await expect(openBtn).toBeVisible({ timeout: 10000 });
+    await openBtn.click();
+    await page.waitForTimeout(800);
+
+    // Step 1: select first unposted truck
+    const truckSelect = page
+      .locator("select")
+      .filter({ hasText: /Select a truck to post/i })
+      .first();
+    if (!(await truckSelect.count())) {
+      test.skip(true, "no unposted truck dropdown — all trucks are posted");
+      return;
+    }
+    const options = await truckSelect.locator("option").all();
+    let pickedTruckId = "";
+    for (const opt of options) {
+      const v = await opt.getAttribute("value");
+      if (v) {
+        pickedTruckId = v;
+        break;
+      }
+    }
+    test.skip(!pickedTruckId, "no selectable truck option");
+    await truckSelect.selectOption(pickedTruckId);
+    await page.waitForTimeout(500);
+
+    // Step 2: origin (PlacesAutocomplete is a plain <input> when no Maps API key)
+    const originInput = page
+      .getByPlaceholder(/Where is truck available\?/i)
+      .first();
+    await expect(originInput).toBeVisible({ timeout: 5000 });
+    await originInput.fill("Addis Ababa");
+    await page.waitForTimeout(300);
+
+    // Available From
+    const tomorrow = new Date(Date.now() + 86400000)
+      .toISOString()
+      .split("T")[0];
+    await page.locator('input[type="date"]').first().fill(tomorrow);
+
+    // Contact phone
+    await page.getByPlaceholder(/\+251-9xx-xxx-xxx/).fill("+251911234567");
+
+    // Submit
+    await page.getByRole("button", { name: /^Post Truck$/i }).click();
+    await page.waitForTimeout(3500);
+
+    // Verify a new posting exists
+    const afterRes = await apiCall<{
+      postings?: Array<{ id: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=50",
+      token
+    );
+    const newOnes = (afterRes.data.postings ?? []).filter(
+      (p) => !beforeIds.has(p.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    console.log(`new postings created: ${newOnes.length}`);
+
+    // Cleanup: deactivate the new postings to keep seed clean
+    for (const p of newOnes) {
+      await apiCall("DELETE", `/api/truck-postings/${p.id}`, token).catch(
+        () => {}
+      );
+    }
+  });
+});
