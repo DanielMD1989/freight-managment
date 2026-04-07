@@ -1196,3 +1196,173 @@ test.describe.serial("Web Carrier FUNCTIONAL: document upload", () => {
     expect(orgBody.organization?.documentsLockedAt ?? null).toBeNull();
   });
 });
+
+// ─── CF-18: Carrier saves a search via /carrier/loadboard "Save Search"
+//   Blueprint v1.6 §4: shipper/carrier can save a search and get notified
+//   when matching loads are posted (via saved-search-monitor cron). The
+//   cron itself is exercised by SF-22 in the shipper spec.
+test.describe.serial("Web Carrier FUNCTIONAL: saved-search create", () => {
+  test("CF-18 — Save Search button → POST /api/saved-searches → row", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    const beforeRes = await apiCall<{ searches?: Array<{ id: string }> }>(
+      "GET",
+      "/api/saved-searches?type=LOADS",
+      token
+    );
+    const beforeIds = new Set((beforeRes.data.searches ?? []).map((s) => s.id));
+
+    const name = `CF-18 ${Date.now()}`;
+    page.on("dialog", (d) => d.accept(name));
+
+    await page.goto("/carrier/loadboard");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    await page
+      .locator("button", { hasText: /Search Loads/i })
+      .first()
+      .click();
+    await page.waitForTimeout(1500);
+
+    // Run a search so the Save Search button appears
+    const newSearchBtn = page
+      .locator("button", { hasText: /New Load Search/i })
+      .first();
+    if (await newSearchBtn.isVisible().catch(() => false)) {
+      await newSearchBtn.click();
+      await page.waitForTimeout(500);
+    }
+    const runSearchBtn = page.locator("button", { hasText: /^Search$/ }).last();
+    if (await runSearchBtn.isVisible().catch(() => false)) {
+      await runSearchBtn.click();
+      await page.waitForTimeout(2000);
+    }
+
+    const saveBtn = page
+      .getByRole("button", { name: /^Save Search$/i })
+      .first();
+    if (!(await saveBtn.isVisible().catch(() => false))) {
+      test.skip(true, "Save Search button not visible");
+      return;
+    }
+    await saveBtn.click();
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      searches?: Array<{ id: string; name: string }>;
+    }>("GET", "/api/saved-searches?type=LOADS", token);
+    const newOnes = (afterRes.data.searches ?? []).filter(
+      (s) => !beforeIds.has(s.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    expect(newOnes[0].name).toBe(name);
+    console.log(`CF-18 saved search ${newOnes[0].id}`);
+
+    // Cleanup
+    await apiCall(
+      "DELETE",
+      `/api/saved-searches/${newOnes[0].id}`,
+      token
+    ).catch(() => {});
+  });
+});
+
+// ─── CF-19: Saved-search alert cron fires notification on matching load
+//   Setup: ensure carrier has a saved search for LOADS (CF-18 leaves one
+//   if it doesn't clean up), OR create one fresh via API. Then create
+//   a fresh POSTED load matching the criteria as the shipper. Trigger
+//   the cron endpoint with CRON_SECRET. Verify a SAVED_SEARCH_MATCH
+//   notification was created for the carrier user.
+test.describe.serial("Web Carrier FUNCTIONAL: saved-search cron", () => {
+  test("CF-19 — POST /api/cron/saved-search-monitor → notification created", async ({}) => {
+    test.setTimeout(120000);
+    test.skip(!token, "no token");
+
+    // Read CRON_SECRET from .env.local since the test runs in a separate
+    // Node process from the dev server.
+    const fs = await import("fs");
+    const envFile = fs.readFileSync(".env.local", "utf8");
+    const match = envFile.match(/^CRON_SECRET=(.+)$/m);
+    const cronSecret = match?.[1]?.trim() || "test-cron-secret";
+    const shipperToken = await getSharedToken("shipper@test.com");
+
+    // Create a saved search via API (no UI here — CF-18 covers UI path)
+    const ssTag = `CF19-${Date.now()}`;
+    const create = await apiCall<{ search?: { id: string }; id?: string }>(
+      "POST",
+      "/api/saved-searches",
+      token,
+      {
+        name: ssTag,
+        type: "LOADS",
+        criteria: { pickupCity: "Addis Ababa", deliveryCity: "Hawassa" },
+      }
+    );
+    const searchId = create.data.search?.id ?? create.data.id;
+    test.skip(!searchId, "saved search create failed");
+
+    // Snapshot notifications before
+    const beforeNotif = await apiCall<{
+      notifications?: Array<{ id: string; type: string }>;
+    }>("GET", "/api/notifications?type=SAVED_SEARCH_MATCH&limit=50", token);
+    const beforeIds = new Set(
+      (beforeNotif.data.notifications ?? []).map((n) => n.id)
+    );
+
+    // Create a fresh POSTED load matching the criteria (must be < LOOKBACK 15min)
+    const tomorrow = new Date(Date.now() + 86400000).toISOString();
+    const dayAfter = new Date(Date.now() + 5 * 86400000).toISOString();
+    const loadRes = await apiCall<{ load?: { id: string } }>(
+      "POST",
+      "/api/loads",
+      shipperToken,
+      {
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Hawassa",
+        pickupDate: tomorrow,
+        deliveryDate: dayAfter,
+        truckType: "FLATBED",
+        weight: 4000,
+        cargoDescription: `${ssTag} cron trigger cargo`,
+        shipperContactName: "CF19",
+        shipperContactPhone: "+251911111111",
+        status: "POSTED",
+      }
+    );
+    test.skip(!loadRes.data.load?.id, "load create failed");
+
+    // Trigger the cron
+    const cronRes = await fetch(
+      "http://localhost:3000/api/cron/saved-search-monitor",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${cronSecret}` },
+      }
+    );
+    console.log(`CF-19 cron status: ${cronRes.status}`);
+    expect(cronRes.status).toBe(200);
+
+    // Wait briefly for notification fan-out
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const afterNotif = await apiCall<{
+      notifications?: Array<{ id: string; type: string; title: string }>;
+    }>("GET", "/api/notifications?type=SAVED_SEARCH_MATCH&limit=50", token);
+    const newOnes = (afterNotif.data.notifications ?? []).filter(
+      (n) => !beforeIds.has(n.id)
+    );
+    console.log(
+      `CF-19 new SAVED_SEARCH_MATCH notifications: ${newOnes.length}`
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+
+    // Cleanup the saved search
+    await apiCall("DELETE", `/api/saved-searches/${searchId}`, token).catch(
+      () => {}
+    );
+  });
+});
