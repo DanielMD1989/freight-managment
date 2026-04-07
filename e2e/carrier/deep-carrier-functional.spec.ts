@@ -783,3 +783,55 @@ test.describe.serial("Web Carrier FUNCTIONAL: trip exception", () => {
     }).catch(() => {});
   });
 });
+
+// ─── CF-12: Carrier requests withdrawal via /carrier/wallet → row PENDING
+test.describe.serial("Web Carrier FUNCTIONAL: withdraw request", () => {
+  test("CF-12 — fill withdraw form → POST /api/financial/withdraw → row PENDING", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+    test.skip(!token, "no token");
+
+    const beforeRes = await apiCall<{
+      withdrawals?: Array<{ id: string }>;
+    }>("GET", "/api/financial/withdraw", token);
+    const beforeIds = new Set(
+      (beforeRes.data.withdrawals ?? []).map((w) => w.id)
+    );
+
+    await page.goto("/carrier/wallet");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    await page
+      .getByRole("button", { name: /^Withdraw$/i })
+      .first()
+      .click();
+    await page.waitForTimeout(800);
+
+    await page.getByPlaceholder(/Enter amount/i).fill("310");
+    await page.getByPlaceholder(/Commercial Bank of Ethiopia/i).fill("CBE");
+    await page.getByPlaceholder(/Bank account number/i).fill("1000987654321");
+    await page
+      .getByPlaceholder(/Name on the bank account/i)
+      .fill("CF12 Tester");
+
+    await page.getByRole("button", { name: /^Submit Withdrawal$/i }).click();
+    await page.waitForTimeout(2500);
+
+    const afterRes = await apiCall<{
+      withdrawals?: Array<{
+        id: string;
+        amount: number | string;
+        status: string;
+      }>;
+    }>("GET", "/api/financial/withdraw", token);
+    const newOnes = (afterRes.data.withdrawals ?? []).filter(
+      (w) => !beforeIds.has(w.id)
+    );
+    expect(newOnes.length).toBeGreaterThanOrEqual(1);
+    expect(Number(newOnes[0].amount)).toBe(310);
+    expect(newOnes[0].status).toBe("PENDING");
+    console.log(`CF-12 created withdrawal ${newOnes[0].id}`);
+  });
+});

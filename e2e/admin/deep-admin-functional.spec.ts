@@ -323,3 +323,217 @@ test.describe.serial("Web Admin FUNCTIONAL: exception resolve", () => {
     expect(status).toBe("CANCELLED");
   });
 });
+
+// ─── AF-5: Admin approves PENDING withdrawal via /admin/withdrawals → APPROVED
+test.describe.serial("Web Admin FUNCTIONAL: approve withdrawal", () => {
+  test("AF-5 — Approve button on /admin/withdrawals → status APPROVED/PAID", async ({
+    page,
+  }) => {
+    test.skip(!adminToken || !shipperToken, "no tokens");
+
+    // Setup: shipper creates a fresh PENDING withdrawal via API
+    const ref = `AF5-${Date.now()}`;
+    const create = await apiCall<{
+      withdrawalRequest?: { id: string };
+      withdrawal?: { id: string };
+      id?: string;
+    }>("POST", "/api/financial/withdraw", shipperToken, {
+      amount: 111,
+      bankName: "CBE",
+      bankAccount: "1000111111",
+      accountHolder: ref,
+    });
+    const wid =
+      create.data.withdrawalRequest?.id ??
+      create.data.withdrawal?.id ??
+      create.data.id;
+    test.skip(!wid, "could not seed withdrawal");
+
+    await page.goto("/admin/withdrawals?status=PENDING");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Find the row matching our reference holder name and click Approve
+    const row = page.locator("tr", { hasText: ref }).first();
+    if (!(await row.count())) {
+      // Fallback: click the first Approve button
+      const allBtns = page.getByRole("button", { name: /^Approve$/i });
+      await expect(allBtns.first()).toBeVisible({ timeout: 5000 });
+      await allBtns.first().click();
+    } else {
+      await row.getByRole("button", { name: /^Approve$/i }).click();
+    }
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{
+      withdrawals?: Array<{ id: string; status: string }>;
+    }>("GET", `/api/admin/withdrawals?status=APPROVED&limit=100`, adminToken);
+    const found = (after.data.withdrawals ?? []).find((w) => w.id === wid);
+    console.log(`AF-5 withdrawal ${wid} status: ${found?.status}`);
+    expect(["APPROVED", "PAID"]).toContain(found?.status);
+  });
+});
+
+// ─── AF-6: Admin rejects PENDING withdrawal via /admin/withdrawals → REJECTED
+test.describe.serial("Web Admin FUNCTIONAL: reject withdrawal", () => {
+  test("AF-6 — Reject modal on /admin/withdrawals → status REJECTED", async ({
+    page,
+  }) => {
+    test.skip(!adminToken || !shipperToken, "no tokens");
+
+    const ref = `AF6-${Date.now()}`;
+    const create = await apiCall<{
+      withdrawalRequest?: { id: string };
+      withdrawal?: { id: string };
+      id?: string;
+    }>("POST", "/api/financial/withdraw", shipperToken, {
+      amount: 222,
+      bankName: "CBE",
+      bankAccount: "1000222222",
+      accountHolder: ref,
+    });
+    const wid =
+      create.data.withdrawalRequest?.id ??
+      create.data.withdrawal?.id ??
+      create.data.id;
+    test.skip(!wid, "could not seed withdrawal");
+
+    await page.goto("/admin/withdrawals?status=PENDING");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    const row = page.locator("tr", { hasText: ref }).first();
+    const rejectFromRow = row.getByRole("button", { name: /^Reject$/i });
+    if (await rejectFromRow.isVisible().catch(() => false)) {
+      await rejectFromRow.click();
+    } else {
+      await page
+        .getByRole("button", { name: /^Reject$/i })
+        .first()
+        .click();
+    }
+    await page.waitForTimeout(800);
+
+    // Modal: textarea + Reject
+    await page.locator("textarea").first().fill("AF-6 e2e reject reason");
+    await page
+      .getByRole("button", { name: /^Reject$/i })
+      .last()
+      .click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{
+      withdrawals?: Array<{ id: string; status: string }>;
+    }>("GET", `/api/admin/withdrawals?status=REJECTED&limit=100`, adminToken);
+    const found = (after.data.withdrawals ?? []).find((w) => w.id === wid);
+    expect(found?.status).toBe("REJECTED");
+  });
+});
+
+// ─── AF-7: Admin rejects PENDING deposit via /admin/wallet-deposits → REJECTED
+test.describe.serial("Web Admin FUNCTIONAL: reject deposit", () => {
+  test("AF-7 — Reject button on /admin/wallet-deposits → status REJECTED", async ({
+    page,
+  }) => {
+    test.skip(!adminToken || !shipperToken, "no tokens");
+
+    const ref = `AF7-${Date.now()}`;
+    const create = await apiCall<{ deposit?: { id: string }; id?: string }>(
+      "POST",
+      "/api/wallet/deposit",
+      shipperToken,
+      {
+        amount: 333,
+        paymentMethod: "TELEBIRR",
+        externalReference: ref,
+      }
+    );
+    const did = create.data.deposit?.id ?? (create.data as { id?: string }).id;
+    test.skip(!did, "could not seed deposit");
+
+    await page.goto("/admin/wallet-deposits");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    const row = page.locator("tr", { hasText: ref }).first();
+    test.skip(
+      (await row.count()) === 0,
+      "deposit row not visible in current admin view"
+    );
+
+    // Click Reject in the row → reveals an inline form with a reason
+    // input and a "Confirm Reject" submit button.
+    await row.getByRole("button", { name: /^Reject$/i }).click();
+    await page.waitForTimeout(500);
+    await page
+      .getByPlaceholder(/Rejection reason \(required\)/i)
+      .fill("AF-7 e2e reject reason");
+    await page
+      .getByRole("button", { name: /Confirm Reject/i })
+      .first()
+      .click();
+    await page.waitForTimeout(2500);
+
+    const after = await apiCall<{
+      deposits?: Array<{ id: string; status: string }>;
+    }>("GET", `/api/wallet/deposit?status=REJECTED&limit=100`, shipperToken);
+    const found = (after.data.deposits ?? []).find((d) => d.id === did);
+    expect(found?.status).toBe("REJECTED");
+  });
+});
+
+// ─── AF-8: Admin approves a pending settlement via /admin/settlement/review
+//   Best-effort: requires a COMPLETED load with POD verified that is in
+//   the PENDING settlement queue. If none exists, skip with diagnostic.
+test.describe.serial("Web Admin FUNCTIONAL: settle load", () => {
+  test("AF-8 — Approve a PENDING settlement → settlement processed", async ({
+    page,
+  }) => {
+    test.skip(!adminToken, "no admin token");
+
+    const list = await apiCall<{
+      settlements?: Array<{ id: string; loadId?: string }>;
+      loads?: Array<{ id: string }>;
+    }>("GET", "/api/admin/settlements?status=PENDING&limit=10", adminToken);
+    const items = list.data.settlements ?? list.data.loads ?? [];
+    if (items.length === 0) {
+      test.skip(true, "no PENDING settlement available to approve");
+      return;
+    }
+    const targetLoadId = items[0].loadId ?? items[0].id;
+
+    await page.goto("/admin/settlement/review");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Click the first row's Approve / Settle button
+    const approveBtn = page
+      .getByRole("button", { name: /Approve|Settle/i })
+      .first();
+    if (!(await approveBtn.isVisible().catch(() => false))) {
+      test.skip(true, "no approve button visible on settlement review page");
+      return;
+    }
+    await approveBtn.click();
+    await page.waitForTimeout(800);
+    // Modal may have a confirm button — click any "Approve" again to submit
+    const confirmBtn = page
+      .getByRole("button", {
+        name: /^Approve Settlement$|^Approve$|^Confirm$/i,
+      })
+      .last();
+    if (await confirmBtn.isVisible().catch(() => false)) {
+      await confirmBtn.click();
+      await page.waitForTimeout(2500);
+    }
+
+    const after = await apiCall<{
+      settlements?: Array<{ loadId: string; status: string }>;
+    }>("GET", `/api/admin/settlements?status=PAID&limit=50`, adminToken);
+    const found = (after.data.settlements ?? []).find(
+      (s) => s.loadId === targetLoadId
+    );
+    console.log(`AF-8 settlement for load ${targetLoadId}: ${found?.status}`);
+    expect(["PAID", "IN_PROGRESS"]).toContain(found?.status);
+  });
+});
