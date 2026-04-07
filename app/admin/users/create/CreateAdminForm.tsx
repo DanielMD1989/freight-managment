@@ -40,8 +40,14 @@ export default function CreateAdminForm({
 
     try {
       // Fetch CSRF token
+      // Bug fix: /api/csrf-token returns { csrfToken, expiresIn, fresh }
+      // — the previous code read csrfData.token which was always
+      // undefined, so X-CSRF-Token was missing on the POST and the
+      // server rejected with 403. CreateAdminForm has been silently
+      // broken in production since the csrf-token endpoint shipped.
       const csrfRes = await fetch("/api/csrf-token");
       const csrfData = await csrfRes.json();
+      const csrfToken = csrfData.csrfToken ?? csrfData.token;
 
       const payload: Record<string, string> = {
         firstName: formData.firstName,
@@ -58,7 +64,7 @@ export default function CreateAdminForm({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": csrfData.token,
+          "X-CSRF-Token": csrfToken,
         },
         body: JSON.stringify(payload),
       });

@@ -702,32 +702,6 @@ test.describe.serial("Web Admin FUNCTIONAL: user revoke", () => {
     test.setTimeout(120000);
     test.skip(!adminToken, "no admin token");
 
-    // Phase 6 investigation: AF-12 stays skipped. The Revoke modal's
-    // submit button is gated by `revokeReason.trim().length < 10`. We
-    // tried five textarea-update strategies:
-    //   1. locator.fill()
-    //   2. locator.pressSequentially({delay:10})
-    //   3. focus + page.keyboard.insertText()
-    //   4. native value setter via Object.getOwnPropertyDescriptor +
-    //      dispatchEvent('input') + dispatchEvent('change')
-    //   5. evaluate-injected setter targeting the last <textarea>
-    // The DOM value updates correctly each time (verified via
-    // page.evaluate returning ta.value), but React 19 re-renders with
-    // the empty controlled state on next tick and the submit button
-    // stays [disabled]. AF-10 (org reject) uses an identical pattern
-    // and DOES work, so the cause is specific to the user-detail
-    // modal's render path — possibly a portal mount race or a
-    // useState batching difference. Out of scope for this session.
-    //
-    // The /api/admin/users/[id]/revoke contract is covered by Jest in
-    // __tests__/api/admin/. Re-enable once the React 19 / Playwright
-    // textarea interop is sorted upstream.
-    test.skip(
-      true,
-      "React 19 controlled textarea — AF-10 pattern works, AF-12 doesn't, root cause TBD"
-    );
-    return;
-    // eslint-disable-next-line no-unreachable
     const reg = await registerFreshShipper("AF12");
     test.skip(![200, 201].includes(reg.status), `register failed`);
     const userId = reg.data.user?.id;
@@ -738,9 +712,13 @@ test.describe.serial("Web Admin FUNCTIONAL: user revoke", () => {
       status: "ACTIVE",
     });
 
-    await page.goto(`/admin/users/${userId}`);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
+    await page.goto(`/admin/users/${userId}`, {
+      waitUntil: "domcontentloaded",
+    });
+    // Wait long enough for the wallet useEffect fetch to settle —
+    // that fetch's setState was the cause of the modal re-render that
+    // wiped the controlled textarea state in earlier attempts.
+    await page.waitForTimeout(3500);
 
     const openBtn = page
       .getByRole("button", { name: /^Revoke Access$/i })
@@ -752,31 +730,39 @@ test.describe.serial("Web Admin FUNCTIONAL: user revoke", () => {
     await openBtn.click();
     await page.waitForTimeout(800);
 
-    // Modal textarea — needs ≥10 chars. The standard .fill() and
-    // .pressSequentially() don't propagate to React useState here, so
-    // we use the native input value setter + dispatch input AND change
-    // events. React's onChange listens for "input" but some bundles
-    // also gate on "change".
-    // React 19 controlled textarea: focus the element and use
-    // keyboard.insertText() which dispatches beforeinput + input
-    // events that React 19's onChange listener responds to.
+    // Plain locator.fill() updates both the DOM value AND React state
+    // (verified via the modal's "X / 10 minimum characters" counter).
+    // The earlier "stuck disabled" diagnosis was misleading: React state
+    // was updating correctly all along; the bug was clicking the OUTER
+    // page-action-bar Revoke Access button instead of the MODAL submit.
+    // Both buttons have the exact same accessible name, but the modal
+    // is a `<div class="fixed inset-0 z-50 ...">` overlay that's last
+    // in the DOM. Scope the locator to that overlay to disambiguate.
     const reason = "AF-12 e2e revoke reason long enough";
-    const ta = page.locator("textarea").last();
-    await ta.focus();
-    await page.keyboard.insertText(reason);
+    await page
+      .locator(".fixed.inset-0.z-50")
+      .first()
+      .locator("textarea")
+      .fill(reason);
     await page.waitForTimeout(500);
 
-    // Modal submit button — pick the one inside the modal (the disabled
-    // attribute is OFF after the textarea state propagated, so we filter
-    // for non-disabled).
-    await page.evaluate(() => {
-      const buttons = Array.from(
+    // Submit via JS click filtered by visible+enabled+text — bypasses any
+    // overlay click interception
+    const clickResult = await page.evaluate(() => {
+      const btns = Array.from(
         document.querySelectorAll<HTMLButtonElement>("button")
-      ).filter((b) => b.textContent?.trim() === "Revoke Access" && !b.disabled);
-      // Click the last enabled one (modal submit comes after the outer
-      // action-bar trigger in DOM order).
-      buttons[buttons.length - 1]?.click();
+      );
+      const target = btns.find(
+        (b) =>
+          b.textContent?.trim() === "Revoke Access" &&
+          !b.disabled &&
+          b.offsetParent !== null
+      );
+      if (!target) return { found: false, count: btns.length };
+      target.click();
+      return { found: true };
     });
+    console.log(`AF-12 click: ${JSON.stringify(clickResult)}`);
     await page.waitForTimeout(3000);
 
     const after = await apiCall<{ user?: { status: string }; status?: string }>(
@@ -784,8 +770,12 @@ test.describe.serial("Web Admin FUNCTIONAL: user revoke", () => {
       `/api/admin/users/${userId}`,
       adminToken
     );
+    // Per app/api/admin/users/[id]/revoke/route.ts line 9: revoke sets
+    // user.status = SUSPENDED + revokedAt + revocationReason. Blueprint
+    // §3 calls this "revoking access" but the canonical status enum
+    // value is SUSPENDED.
     const status = after.data.user?.status ?? after.data.status;
-    expect(status).toBe("REVOKED");
+    expect(status).toBe("SUSPENDED");
   });
 });
 
@@ -795,34 +785,39 @@ test.describe.serial("Web Admin FUNCTIONAL: user create", () => {
     page,
   }) => {
     test.skip(!adminToken, "no admin token");
-    // Phase 6 investigation: same React 19 root cause as AF-12. The
-    // CreateAdminForm uses controlled inputs (firstName/lastName/email/
-    // phone/password/role). Playwright's .fill() updates the DOM value
-    // but React 19's onChange listener doesn't fire — formData state
-    // stays empty, the submit handler runs but POSTs an invalid body
-    // (or returns early on validation). Same skip rationale as AF-12.
-    test.skip(
-      true,
-      "React 19 controlled inputs onChange not triggered by Playwright fill helpers"
-    );
-    return;
-    // eslint-disable-next-line no-unreachable
+    test.setTimeout(120000);
+
     const email = `af13-disp-${Date.now()}@test.com`;
 
-    await page.goto("/admin/users/create");
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(1500);
+    await page.goto("/admin/users/create", {
+      waitUntil: "domcontentloaded",
+    });
+    await page.waitForTimeout(2000);
 
     await page.locator('select[name="role"]').selectOption("DISPATCHER");
     await page.locator('input[name="firstName"]').fill("AF13");
     await page.locator('input[name="lastName"]').fill("Dispatcher");
     await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="phone"]').fill("+251911234567");
-    await page.locator('input[name="password"]').fill("Test123!");
-
+    // Unique phone per run — phone column is @unique in Prisma
     await page
-      .getByRole("button", { name: /^Create Admin$/i })
-      .click({ force: true });
+      .locator('input[name="phone"]')
+      .fill(`+2519${String(Date.now()).slice(-8)}`);
+    await page.locator('input[name="password"]').fill("Test123!");
+    await page.waitForTimeout(300);
+
+    // Submit via JS click — same pattern that fixed AF-12. Find the
+    // visible+enabled submit button by text and click it.
+    await page.evaluate(() => {
+      const btn = Array.from(
+        document.querySelectorAll<HTMLButtonElement>("button")
+      ).find(
+        (b) =>
+          b.textContent?.trim() === "Create Admin" &&
+          !b.disabled &&
+          b.offsetParent !== null
+      );
+      btn?.click();
+    });
     await page.waitForTimeout(4000);
 
     const list = await apiCall<{
