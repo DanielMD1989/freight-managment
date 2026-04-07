@@ -22,10 +22,21 @@ export const STORAGE_KEYS = {
   USER_ROLE: "user_role",
 } as const;
 
-// API base URL - configurable via Expo Constants
+// API base URL — precedence:
+//   1. EXPO_PUBLIC_API_BASE_URL env var (always wins, lets developers
+//      override per-machine for local network testing)
+//   2. In dev (__DEV__ truthy): http://localhost:3000 — never the prod
+//      URL even though app.json sets extra.apiBaseUrl to production.
+//      This is what unblocks Playwright headless e2e tests; without it,
+//      every test would try to hit api.freightethiopia.com and fail
+//      with ERR_NAME_NOT_RESOLVED.
+//   3. Production build: Constants.expoConfig.extra.apiBaseUrl from
+//      app.json, with a final localhost fallback for safety.
 const API_BASE_URL =
-  Constants.expoConfig?.extra?.apiBaseUrl ??
-  (process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000");
+  process.env.EXPO_PUBLIC_API_BASE_URL ??
+  (typeof __DEV__ !== "undefined" && __DEV__
+    ? "http://localhost:3000"
+    : (Constants.expoConfig?.extra?.apiBaseUrl ?? "http://localhost:3000"));
 
 /** Callback invoked on 401 to notify auth state */
 let onUnauthorizedCallback: (() => void) | null = null;

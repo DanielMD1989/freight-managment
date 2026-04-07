@@ -86,13 +86,29 @@ test.beforeAll(async () => {
 
 // ─── CF-1: Edit profile firstName → DB updated ─────────────────────────────
 test.describe.serial("Web Carrier FUNCTIONAL: profile edit", () => {
+  // Self-healing: force-reset firstName before AND after every run so a
+  // killed/crashed earlier run can't pollute the seed.
+  const CANONICAL_FIRST_NAME = "Carrier Test";
+
+  test.beforeEach(async () => {
+    if (!token) return;
+    await apiCall("PATCH", "/api/user/profile", token, {
+      firstName: CANONICAL_FIRST_NAME,
+    }).catch(() => {});
+  });
+
+  test.afterEach(async () => {
+    if (!token) return;
+    await apiCall("PATCH", "/api/user/profile", token, {
+      firstName: CANONICAL_FIRST_NAME,
+    }).catch(() => {});
+  });
+
   test("CF-1 — edit firstName via /settings/profile → DB updated", async ({
     page,
   }) => {
     test.skip(!token, "no token");
-    const before = await apiCall("GET", "/api/auth/me", token);
-    const beforeName =
-      (before.data as { user?: { firstName?: string } }).user?.firstName ?? "";
+    const beforeName = CANONICAL_FIRST_NAME;
     console.log(`firstName BEFORE: "${beforeName}"`);
 
     const newName = `CF1-${String(Date.now()).slice(-6)}`;

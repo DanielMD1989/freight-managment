@@ -120,20 +120,30 @@ async function createDraftLoad(): Promise<string | undefined> {
 
 // ─── SF-1: Edit profile name → DB updated ──────────────────────────────────
 test.describe.serial("Web Shipper FUNCTIONAL: profile edit", () => {
+  // Self-healing canonical name. Previous runs may have left a stray
+  // "SF1-XXXXXX" in firstName because cleanup didn't fire — force-reset
+  // before AND after every run so no other test sees corrupted seed.
+  const CANONICAL_FIRST_NAME = "Mobile Tester";
+
+  test.beforeEach(async () => {
+    if (!token) return;
+    await apiCall("PATCH", "/api/user/profile", token, {
+      firstName: CANONICAL_FIRST_NAME,
+    }).catch(() => {});
+  });
+
+  test.afterEach(async () => {
+    if (!token) return;
+    await apiCall("PATCH", "/api/user/profile", token, {
+      firstName: CANONICAL_FIRST_NAME,
+    }).catch(() => {});
+  });
+
   test("SF-1 — edit firstName via /settings/profile → DB updated", async ({
     page,
   }) => {
     test.skip(!token, "no token");
-    // Snapshot current name
-    const before = await apiCall<{ user?: { firstName?: string } }>(
-      "GET",
-      "/api/auth/me",
-      token
-    );
-    const beforeName =
-      before.data.user?.firstName ??
-      (before.data as { firstName?: string }).firstName ??
-      "";
+    const beforeName = CANONICAL_FIRST_NAME;
     console.log(`firstName BEFORE: "${beforeName}"`);
 
     const newName = `SF1-${String(Date.now()).slice(-6)}`;
