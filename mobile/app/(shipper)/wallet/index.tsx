@@ -9,13 +9,19 @@ import {
   RefreshControl,
   StyleSheet,
   TouchableOpacity,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import {
   useWalletBalance,
   useWalletTransactions,
+  useRequestDeposit,
 } from "../../../src/hooks/useWallet";
+import { borderRadius } from "../../../src/theme/spacing";
 import { Card } from "../../../src/components/Card";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
 import { EmptyState } from "../../../src/components/EmptyState";
@@ -57,6 +63,74 @@ function getTxColor(amount: number): string {
 export default function WalletScreen() {
   useTranslation();
   const [txFilter, setTxFilter] = useState<string>("ALL");
+
+  // Blueprint §8 self-service deposit (mirror of web shipper eb68304)
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositMethod, setDepositMethod] = useState<
+    "BANK_TRANSFER_SLIP" | "TELEBIRR" | "MPESA"
+  >("BANK_TRANSFER_SLIP");
+  const [depositSlipUrl, setDepositSlipUrl] = useState("");
+  const [depositReference, setDepositReference] = useState("");
+  const [depositNotes, setDepositNotes] = useState("");
+  const [depositError, setDepositError] = useState<string | null>(null);
+  const [depositSuccess, setDepositSuccess] = useState<string | null>(null);
+  const requestDeposit = useRequestDeposit();
+
+  const resetDepositForm = () => {
+    setDepositAmount("");
+    setDepositSlipUrl("");
+    setDepositReference("");
+    setDepositNotes("");
+    setDepositMethod("BANK_TRANSFER_SLIP");
+    setDepositError(null);
+    setDepositSuccess(null);
+  };
+
+  const submitDeposit = async () => {
+    setDepositError(null);
+    setDepositSuccess(null);
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setDepositError("Please enter a valid amount");
+      return;
+    }
+    if (depositMethod === "BANK_TRANSFER_SLIP" && !depositSlipUrl.trim()) {
+      setDepositError("Bank transfer requires a slip file URL");
+      return;
+    }
+    if (
+      (depositMethod === "TELEBIRR" || depositMethod === "MPESA") &&
+      !depositReference.trim()
+    ) {
+      setDepositError(
+        "Telebirr/M-Pesa deposits require a transaction reference"
+      );
+      return;
+    }
+    try {
+      await requestDeposit.mutateAsync({
+        amount,
+        paymentMethod: depositMethod,
+        slipFileUrl:
+          depositMethod === "BANK_TRANSFER_SLIP" ? depositSlipUrl : undefined,
+        externalReference:
+          depositMethod !== "BANK_TRANSFER_SLIP" ? depositReference : undefined,
+        notes: depositNotes || undefined,
+      });
+      setDepositSuccess(
+        "Deposit request submitted. Admin will review within 1-2 business days."
+      );
+      setDepositAmount("");
+      setDepositSlipUrl("");
+      setDepositReference("");
+      setDepositNotes("");
+    } catch (err) {
+      setDepositError(
+        err instanceof Error ? err.message : "Failed to submit deposit request"
+      );
+    }
+  };
 
   const {
     data: balanceData,
@@ -110,6 +184,36 @@ export default function WalletScreen() {
         <Text style={styles.balanceSub}>
           {balanceData?.recentTransactionsCount ?? 0} recent transactions
         </Text>
+        <TouchableOpacity
+          style={{
+            marginTop: spacing.md,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.white,
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.lg,
+            borderRadius: borderRadius.md,
+            gap: 6,
+          }}
+          onPress={() => {
+            resetDepositForm();
+            setShowDepositModal(true);
+          }}
+          accessibilityLabel="Deposit Funds"
+          testID="wallet-deposit-button"
+        >
+          <Ionicons name="add-circle" size={18} color={colors.primary500} />
+          <Text
+            style={{
+              ...typography.bodyMedium,
+              color: colors.primary500,
+              fontWeight: "600",
+            }}
+          >
+            Deposit Funds
+          </Text>
+        </TouchableOpacity>
       </Card>
 
       {/* Ledger integrity warning (only shown if drift detected) */}
@@ -256,6 +360,359 @@ export default function WalletScreen() {
       )}
 
       <View style={{ height: spacing["3xl"] }} />
+
+      {/* Blueprint §8 self-service deposit form modal */}
+      <Modal
+        visible={showDepositModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDepositModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            justifyContent: "center",
+            padding: spacing.lg,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.white,
+              borderRadius: borderRadius.lg,
+              padding: spacing.lg,
+              maxHeight: "90%",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: spacing.sm,
+              }}
+            >
+              <Text
+                style={{ ...typography.titleLarge, color: colors.textPrimary }}
+              >
+                Deposit Funds
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowDepositModal(false)}
+                disabled={requestDeposit.isPending}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text
+              style={{
+                ...typography.labelLarge,
+                color: colors.textSecondary,
+                marginBottom: spacing.md,
+              }}
+            >
+              Submit a deposit request. Admin verifies and credits within 1–2
+              business days.
+            </Text>
+
+            <ScrollView
+              style={{ maxHeight: 460 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {depositSuccess ? (
+                <View>
+                  <View
+                    style={{
+                      backgroundColor: "#D1FAE5",
+                      borderRadius: borderRadius.md,
+                      padding: spacing.md,
+                      marginBottom: spacing.md,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.bodyMedium,
+                        color: "#047857",
+                      }}
+                    >
+                      {depositSuccess}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowDepositModal(false);
+                      setDepositSuccess(null);
+                    }}
+                    style={{
+                      backgroundColor: colors.primary500,
+                      borderRadius: borderRadius.md,
+                      paddingVertical: spacing.sm,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.bodyMedium,
+                        color: colors.white,
+                        fontWeight: "600",
+                      }}
+                    >
+                      Close
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View>
+                  {depositError && (
+                    <View
+                      style={{
+                        backgroundColor: "#FEE2E2",
+                        borderRadius: borderRadius.md,
+                        padding: spacing.sm,
+                        marginBottom: spacing.md,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          ...typography.labelLarge,
+                          color: "#B91C1C",
+                        }}
+                      >
+                        {depositError}
+                      </Text>
+                    </View>
+                  )}
+
+                  <Text
+                    style={{
+                      ...typography.labelLarge,
+                      color: colors.textSecondary,
+                      marginBottom: 4,
+                    }}
+                  >
+                    Amount (ETB) *
+                  </Text>
+                  <TextInput
+                    value={depositAmount}
+                    onChangeText={setDepositAmount}
+                    placeholder="e.g. 5000"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric"
+                    accessibilityLabel="Deposit amount"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: borderRadius.md,
+                      padding: spacing.sm,
+                      color: colors.textPrimary,
+                      marginBottom: spacing.md,
+                    }}
+                  />
+
+                  <Text
+                    style={{
+                      ...typography.labelLarge,
+                      color: colors.textSecondary,
+                      marginBottom: 4,
+                    }}
+                  >
+                    Payment Method *
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: spacing.xs,
+                      marginBottom: spacing.md,
+                    }}
+                  >
+                    {(
+                      [
+                        ["BANK_TRANSFER_SLIP", "Bank Slip"],
+                        ["TELEBIRR", "Telebirr"],
+                        ["MPESA", "M-Pesa"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <TouchableOpacity
+                        key={key}
+                        onPress={() => setDepositMethod(key)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: spacing.sm,
+                          borderRadius: borderRadius.md,
+                          borderWidth: 1,
+                          borderColor:
+                            depositMethod === key
+                              ? colors.primary500
+                              : colors.border,
+                          backgroundColor:
+                            depositMethod === key
+                              ? colors.primary50
+                              : colors.white,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            ...typography.labelLarge,
+                            color:
+                              depositMethod === key
+                                ? colors.primary700
+                                : colors.textSecondary,
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {depositMethod === "BANK_TRANSFER_SLIP" ? (
+                    <View>
+                      <Text
+                        style={{
+                          ...typography.labelLarge,
+                          color: colors.textSecondary,
+                          marginBottom: 4,
+                        }}
+                      >
+                        Slip File URL *
+                      </Text>
+                      <TextInput
+                        value={depositSlipUrl}
+                        onChangeText={setDepositSlipUrl}
+                        placeholder="https://… link to your slip"
+                        placeholderTextColor={colors.textTertiary}
+                        autoCapitalize="none"
+                        accessibilityLabel="Slip file URL"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: borderRadius.md,
+                          padding: spacing.sm,
+                          color: colors.textPrimary,
+                          marginBottom: spacing.md,
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <View>
+                      <Text
+                        style={{
+                          ...typography.labelLarge,
+                          color: colors.textSecondary,
+                          marginBottom: 4,
+                        }}
+                      >
+                        Transaction Reference *
+                      </Text>
+                      <TextInput
+                        value={depositReference}
+                        onChangeText={setDepositReference}
+                        placeholder="e.g. CT123456789"
+                        placeholderTextColor={colors.textTertiary}
+                        accessibilityLabel="Transaction reference"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: borderRadius.md,
+                          padding: spacing.sm,
+                          color: colors.textPrimary,
+                          marginBottom: spacing.md,
+                        }}
+                      />
+                    </View>
+                  )}
+
+                  <Text
+                    style={{
+                      ...typography.labelLarge,
+                      color: colors.textSecondary,
+                      marginBottom: 4,
+                    }}
+                  >
+                    Notes (optional)
+                  </Text>
+                  <TextInput
+                    value={depositNotes}
+                    onChangeText={setDepositNotes}
+                    placeholder="Anything Admin should know"
+                    placeholderTextColor={colors.textTertiary}
+                    multiline
+                    accessibilityLabel="Notes"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: borderRadius.md,
+                      padding: spacing.sm,
+                      color: colors.textPrimary,
+                      marginBottom: spacing.md,
+                      minHeight: 60,
+                      textAlignVertical: "top",
+                    }}
+                  />
+
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "flex-end",
+                      gap: spacing.sm,
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => setShowDepositModal(false)}
+                      disabled={requestDeposit.isPending}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: borderRadius.md,
+                        paddingVertical: spacing.sm,
+                        paddingHorizontal: spacing.lg,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          ...typography.bodyMedium,
+                          color: colors.textSecondary,
+                        }}
+                      >
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={submitDeposit}
+                      disabled={requestDeposit.isPending}
+                      style={{
+                        backgroundColor: colors.primary500,
+                        borderRadius: borderRadius.md,
+                        paddingVertical: spacing.sm,
+                        paddingHorizontal: spacing.lg,
+                        minWidth: 120,
+                        alignItems: "center",
+                        opacity: requestDeposit.isPending ? 0.5 : 1,
+                      }}
+                    >
+                      {requestDeposit.isPending ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text
+                          style={{
+                            ...typography.bodyMedium,
+                            color: colors.white,
+                            fontWeight: "600",
+                          }}
+                        >
+                          Submit Request
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
