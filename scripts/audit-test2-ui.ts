@@ -767,7 +767,12 @@ function fmt(v: any): string {
   return String(v);
 }
 
+function dumpJson() {
+  fs.writeFileSync("/tmp/audit-test2.json", JSON.stringify(rows, null, 2));
+}
+
 function printTable() {
+  dumpJson();
   const cols = [
     "Role",
     "User",

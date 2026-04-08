@@ -683,7 +683,14 @@ function fmt(v: any): string {
   return String(v);
 }
 
+function dumpJson() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("fs");
+  fs.writeFileSync("/tmp/audit-test1.json", JSON.stringify(rows, null, 2));
+}
+
 function printTable() {
+  dumpJson();
   const cols = ["Role", "User", "Metric", "DB", "API", "Result"];
   const widths = cols.map((c) => c.length);
   const data = rows.map((r) => [
