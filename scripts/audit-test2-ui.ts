@@ -115,13 +115,18 @@ function parseNum(text: string | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-async function readWebDom(
+// Per-role browser pages reused across navigations so the human watcher
+// sees ONE window walking through every page, not flickering one-shot windows.
+const webPageCache = new Map<string, any>();
+const VISIBLE_PAUSE_MS = process.env.HEADED === "0" ? 0 : 1500;
+
+async function getOrCreateWebPage(
   browser: any,
-  cookie: string,
-  url: string,
-  testid: string,
-  opts: { waitNetworkIdle?: boolean; expectedDb?: number } = {}
-): Promise<number | null> {
+  cacheKey: string,
+  cookie: string
+) {
+  let page = webPageCache.get(cacheKey);
+  if (page) return page;
   const ctx = await browser.newContext();
   await ctx.addCookies([
     {
@@ -132,17 +137,28 @@ async function readWebDom(
       httpOnly: true,
     },
   ]);
-  const page = await ctx.newPage();
+  page = await ctx.newPage();
+  webPageCache.set(cacheKey, page);
+  return page;
+}
+
+async function readWebDom(
+  browser: any,
+  cookie: string,
+  url: string,
+  testid: string,
+  opts: { cacheKey?: string } = {}
+): Promise<number | null> {
+  const cacheKey = opts.cacheKey ?? cookie;
+  console.log(`  [WEB ] GET ${url}  → testid=${testid}`);
+  const page = await getOrCreateWebPage(browser, cacheKey, cookie);
   try {
     await page.goto(url, {
-      waitUntil: opts.waitNetworkIdle ? "networkidle" : "domcontentloaded",
+      waitUntil: "domcontentloaded",
       timeout: 30000,
     });
     const loc = page.locator(`[data-testid="${testid}"]`);
     await loc.first().waitFor({ timeout: 10000 });
-    // Some pages render the testID immediately with the initial state (0)
-    // and only fill it after a client-side fetch resolves. Poll until the
-    // text stops changing for 2 consecutive reads, with a 6-second cap.
     let lastTxt = "";
     for (let i = 0; i < 12; i++) {
       const cur = (await loc.first().innerText()).trim();
@@ -150,21 +166,21 @@ async function readWebDom(
       lastTxt = cur;
       await page.waitForTimeout(500);
     }
-    return parseNum(lastTxt);
-  } catch {
+    const result = parseNum(lastTxt);
+    console.log(`  [WEB ]   read ${testid} = ${result}`);
+    if (VISIBLE_PAUSE_MS > 0) await page.waitForTimeout(VISIBLE_PAUSE_MS);
+    return result;
+  } catch (e: any) {
+    console.log(`  [WEB ]   FAILED to read ${testid}: ${e?.message ?? e}`);
     return null;
-  } finally {
-    await page.close();
-    await ctx.close();
   }
 }
 
-async function readExpoDom(
-  browser: any,
-  token: string,
-  routePath: string,
-  testid: string
-): Promise<number | null> {
+const expoPageCache = new Map<string, any>();
+
+async function getOrCreateExpoPage(browser: any, token: string) {
+  let page = expoPageCache.get(token);
+  if (page) return page;
   const ctx = await browser.newContext();
   await ctx.addInitScript((tok: string) => {
     try {
@@ -173,7 +189,19 @@ async function readExpoDom(
       /* ignore */
     }
   }, token);
-  const page = await ctx.newPage();
+  page = await ctx.newPage();
+  expoPageCache.set(token, page);
+  return page;
+}
+
+async function readExpoDom(
+  browser: any,
+  token: string,
+  routePath: string,
+  testid: string
+): Promise<number | null> {
+  console.log(`  [EXPO] GET ${EXPO_URL}${routePath}  → testid=${testid}`);
+  const page = await getOrCreateExpoPage(browser, token);
   try {
     await page.goto(`${EXPO_URL}${routePath}`, {
       waitUntil: "domcontentloaded",
@@ -182,12 +210,13 @@ async function readExpoDom(
     const loc = page.locator(`[data-testid="${testid}"]`);
     await loc.first().waitFor({ timeout: 15000 });
     const txt = (await loc.first().innerText()).trim();
-    return parseNum(txt);
-  } catch {
+    const result = parseNum(txt);
+    console.log(`  [EXPO]   read ${testid} = ${result}`);
+    if (VISIBLE_PAUSE_MS > 0) await page.waitForTimeout(VISIBLE_PAUSE_MS);
+    return result;
+  } catch (e: any) {
+    console.log(`  [EXPO]   FAILED to read ${testid}: ${e?.message ?? e}`);
     return null;
-  } finally {
-    await page.close();
-    await ctx.close();
   }
 }
 
@@ -826,9 +855,19 @@ async function main() {
   console.log("Starting Expo static server on", EXPO_URL);
   const expoServer = await startExpoStaticServer();
 
-  console.log("Launching Chromium...");
-  const browser = await chromium.launch({ headless: true });
-  const expoBrowser = await chromium.launch({ headless: true });
+  // HEADED mode so the user can watch the browser drive every page in
+  // real time. SlowMo adds 250ms between Playwright actions so you can
+  // see every click/navigation. Set HEADED=0 to revert to headless.
+  const headless = process.env.HEADED === "0";
+  console.log(`Launching Chromium (headless=${headless}, slowMo=250ms)...`);
+  const browser = await chromium.launch({
+    headless,
+    slowMo: headless ? 0 : 250,
+  });
+  const expoBrowser = await chromium.launch({
+    headless,
+    slowMo: headless ? 0 : 250,
+  });
 
   try {
     await auditShipper(browser, expoBrowser, "shipper@test.com");
