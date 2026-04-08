@@ -177,7 +177,7 @@ export default function WalletScreen() {
       {/* Balance Card */}
       <Card style={styles.balanceCard} padding="2xl">
         <Text style={styles.balanceLabel}>Current Balance</Text>
-        <Text style={styles.balanceAmount}>
+        <Text testID="wallet-current-balance" style={styles.balanceAmount}>
           {formatCurrency(balance, currency)}
         </Text>
         <Text style={styles.balanceSub}>

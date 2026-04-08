@@ -6,10 +6,10 @@
  *   - DB    (Prisma direct query, ground truth)
  *   - API   (real HTTP fetch with real auth)
  *   - Web   (Playwright drives real Chromium against http://localhost:3000)
- *   - Expo  (verified-by-source: read the mobile screen .tsx, confirm it
- *            renders the SAME API field that Web renders. The mobile bundle
- *            and the web app both call the same endpoint, so if both surfaces
- *            consume the same field, they show the same number by construction.)
+ *   - Expo  (Playwright drives a static-served Expo web export at
+ *            http://localhost:8088, with sessionStorage.session_token
+ *            injected before navigation. Reads the rendered DOM via
+ *            testID-mapped data-testid attributes.)
  *
  * Output: a per-row table you can read top-to-bottom.
  */
@@ -20,10 +20,48 @@ require("dotenv").config({ path: ".env" });
 const { db: prisma } = require("../lib/db");
 const { reconcileWallet } = require("../lib/walletReconcile");
 const { chromium } = require("playwright");
+const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
 const BASE_URL = "http://localhost:3000";
+const EXPO_URL = "http://localhost:8088";
+const EXPO_DIST = path.join(process.cwd(), "mobile/dist");
+
+// ─── Static server for Expo web export ──────────────────────────────────────
+function startExpoStaticServer(): Promise<any> {
+  return new Promise((resolve) => {
+    const mime: Record<string, string> = {
+      ".html": "text/html",
+      ".js": "application/javascript",
+      ".css": "text/css",
+      ".json": "application/json",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".svg": "image/svg+xml",
+      ".ttf": "font/ttf",
+      ".woff": "font/woff",
+      ".woff2": "font/woff2",
+      ".ico": "image/x-icon",
+      ".map": "application/json",
+    };
+    const server = http.createServer((req: any, res: any) => {
+      let urlPath = decodeURIComponent((req.url as string).split("?")[0]);
+      if (urlPath === "/") urlPath = "/index.html";
+      // Expo Router web export uses index.html as a SPA fallback for all routes.
+      let filePath = path.join(EXPO_DIST, urlPath);
+      if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        // SPA fallback
+        filePath = path.join(EXPO_DIST, "index.html");
+      }
+      const ext = path.extname(filePath);
+      const ct = mime[ext] || "application/octet-stream";
+      res.writeHead(200, { "Content-Type": ct });
+      fs.createReadStream(filePath).pipe(res);
+    });
+    server.listen(8088, () => resolve(server));
+  });
+}
 
 // ─── Result table ────────────────────────────────────────────────────────────
 
@@ -108,47 +146,50 @@ function parseNum(text: string | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-// ─── Mobile source-cite verification ────────────────────────────────────────
+// ─── Expo runtime reader (Playwright against the real web export) ──────────
+//
+// Uses sessionStorage injection (the mobile app on web reads session_token
+// from sessionStorage via expo-secure-store's web fallback). After the token
+// is injected, navigating to / triggers the auth check, which fetches
+// /api/auth/me, sets the user, and the root layout redirects to the
+// role-specific group ((shipper)/ or (carrier)/).
 
-const mobileFieldMap = {
-  shipper: {
-    totalLoads: "data?.stats?.totalLoads",
-    activeLoads: "data?.stats?.activeLoads",
-    inTransitLoads: "data?.stats?.inTransitLoads",
-    deliveredLoads: "data?.stats?.deliveredLoads",
-    walletBalance: "wallet.balance via /api/wallet/balance",
-  },
-  carrier: {
-    totalTrucks: "data?.totalTrucks",
-    activeTrucks: "data?.activeTrucks",
-    activePostings: "(no mobile screen)",
-    walletBalance: "wallet.balance via /api/wallet/balance",
-  },
-};
-
-function expoVerifiedBySource(
-  role: "shipper" | "carrier",
-  metric:
-    | keyof typeof mobileFieldMap.shipper
-    | keyof typeof mobileFieldMap.carrier,
-  webSrc: string
-): boolean {
-  // Read the mobile screen file and confirm the field reference exists
-  const file =
-    role === "shipper"
-      ? path.join(process.cwd(), "mobile/app/(shipper)/index.tsx")
-      : path.join(process.cwd(), "mobile/app/(carrier)/index.tsx");
-  const src = fs.readFileSync(file, "utf-8");
-  // Loose check: the field name should appear in the file
-  const fieldName = (metric as string)
-    .replace(/([A-Z])/g, "$1")
-    .replace(/^Loads$/i, "loads");
-  return src.includes(metric as string) && webSrc.length > 0;
+async function readExpoStat(
+  expoCtx: any,
+  token: string,
+  routePath: string,
+  testId: string
+): Promise<string | null> {
+  const page = await expoCtx.newPage();
+  try {
+    // Inject session_token BEFORE the app boots
+    await page.addInitScript((tok: string) => {
+      try {
+        sessionStorage.setItem("session_token", tok);
+        // Also seed userId/role to skip the auth/me round trip if possible
+      } catch {
+        /* ignore */
+      }
+    }, token);
+    await page.goto(`${EXPO_URL}${routePath}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+    // Wait for the dashboard to hydrate and render the stat tile
+    const loc = page.locator(`[data-testid="${testId}"]`);
+    await loc.first().waitFor({ timeout: 15000 });
+    const txt = (await loc.first().innerText()).trim();
+    return txt;
+  } catch {
+    return null;
+  } finally {
+    await page.close();
+  }
 }
 
 // ─── Phase 1: DB + API + Web for every shipper ───────────────────────────────
 
-async function auditShippers(browser: any) {
+async function auditShippers(browser: any, expoCtx: any) {
   console.log("\n=== Auditing every Shipper ===");
   const shippers = await prisma.organization.findMany({
     where: { type: "SHIPPER" },
@@ -233,21 +274,38 @@ async function auditShippers(browser: any) {
       }
     }
 
-    // L4 — Expo (source-cite)
-    const expoTotalLoads = expoVerifiedBySource(
-      "shipper",
-      "totalLoads" as any,
-      webTotalLoads ?? ""
-    )
-      ? "same-as-API"
-      : "n/a";
-    const expoInTransit = expoVerifiedBySource(
-      "shipper",
-      "inTransitLoads" as any,
-      webInTransit ?? ""
-    )
-      ? "same-as-API"
-      : "n/a";
+    // L4 — Expo runtime: drive the real Expo web export with the auth token
+    let expoTotalLoads: number | string | null = null;
+    let expoInTransit: number | string | null = null;
+    let expoWallet: number | string | null = null;
+    if (wallet) {
+      // Mobile labels: "Total Loads" → totalLoads, "In Transit" → inTransitLoads
+      const t1 = await readExpoStat(
+        expoCtx,
+        auth.token,
+        "/(shipper)/",
+        "stat-value-Total Loads"
+      );
+      expoTotalLoads = t1 != null ? parseNum(t1) : null;
+      const t2 = await readExpoStat(
+        expoCtx,
+        auth.token,
+        "/(shipper)/",
+        "stat-value-In Transit"
+      );
+      expoInTransit = t2 != null ? parseNum(t2) : null;
+      const t3 = await readExpoStat(
+        expoCtx,
+        auth.token,
+        "/(shipper)/wallet",
+        "wallet-current-balance"
+      );
+      expoWallet = t3 != null ? parseNum(t3) : null;
+    } else {
+      expoTotalLoads = "n/a";
+      expoInTransit = "n/a";
+      expoWallet = "n/a";
+    }
 
     record({
       role: "Shipper",
@@ -260,10 +318,8 @@ async function auditShippers(browser: any) {
           webTotalLoads != null && webTotalLoads !== "n/a"
             ? parseNum(webTotalLoads)
             : webTotalLoads,
-        Expo: expoTotalLoads === "same-as-API" ? totalLoads : "n/a",
+        Expo: expoTotalLoads,
       },
-      notes:
-        "Expo verified by source: mobile/app/(shipper)/index.tsx renders data.stats.totalLoads (same field as web)",
     });
 
     record({
@@ -277,10 +333,8 @@ async function auditShippers(browser: any) {
           webInTransit != null && webInTransit !== "n/a"
             ? parseNum(webInTransit)
             : webInTransit,
-        Expo: expoInTransit === "same-as-API" ? inTransitLoads : "n/a",
+        Expo: expoInTransit,
       },
-      notes:
-        "Expo verified by source: mobile renders data.stats.inTransitLoads",
     });
 
     record({
@@ -291,17 +345,15 @@ async function auditShippers(browser: any) {
         DB: walletBalance,
         API: apiWalletBalance ?? null,
         Web: webWallet,
-        Expo: walletBalance,
+        Expo: expoWallet,
       },
-      notes:
-        "Read from /shipper/wallet via data-testid=wallet-current-balance; Expo verified by source: same /api/wallet/balance call",
     });
   }
 }
 
 // ─── Phase 2: Carriers ──────────────────────────────────────────────────────
 
-async function auditCarriers(browser: any) {
+async function auditCarriers(browser: any, expoCtx: any) {
   console.log("\n=== Auditing every Carrier ===");
   const carriers = await prisma.organization.findMany({
     where: {
@@ -388,6 +440,39 @@ async function auditCarriers(browser: any) {
       }
     }
 
+    // L4 — Expo runtime
+    let expoTotal: number | string | null = null;
+    let expoActive: number | string | null = null;
+    let expoWalletM: number | string | null = null;
+    if (wallet) {
+      // Mobile carrier labels: "My Trucks" → totalTrucks, "Available" → activeTrucks
+      const t1 = await readExpoStat(
+        expoCtx,
+        auth.token,
+        "/(carrier)/",
+        "stat-value-My Trucks"
+      );
+      expoTotal = t1 != null ? parseNum(t1) : null;
+      const t2 = await readExpoStat(
+        expoCtx,
+        auth.token,
+        "/(carrier)/",
+        "stat-value-Available"
+      );
+      expoActive = t2 != null ? parseNum(t2) : null;
+      const t3 = await readExpoStat(
+        expoCtx,
+        auth.token,
+        "/(carrier)/wallet",
+        "wallet-current-balance"
+      );
+      expoWalletM = t3 != null ? parseNum(t3) : null;
+    } else {
+      expoTotal = "n/a";
+      expoActive = "n/a";
+      expoWalletM = "n/a";
+    }
+
     record({
       role: "Carrier",
       user: user.email,
@@ -399,10 +484,8 @@ async function auditCarriers(browser: any) {
           webTotal != null && webTotal !== "n/a"
             ? parseNum(webTotal)
             : webTotal,
-        Expo: totalTrucks,
+        Expo: expoTotal,
       },
-      notes:
-        "Expo verified by source: mobile/app/(carrier)/index.tsx renders data.totalTrucks",
     });
 
     record({
@@ -416,9 +499,8 @@ async function auditCarriers(browser: any) {
           webActive != null && webActive !== "n/a"
             ? parseNum(webActive)
             : webActive,
-        Expo: activeTrucks,
+        Expo: expoActive,
       },
-      notes: "Expo verified by source: mobile renders data.activeTrucks",
     });
 
     record({
@@ -429,10 +511,8 @@ async function auditCarriers(browser: any) {
         DB: walletBalance,
         API: dash.wallet?.balance ?? null,
         Web: webWallet,
-        Expo: walletBalance,
+        Expo: expoWalletM,
       },
-      notes:
-        "Read from /carrier/wallet via data-testid=wallet-current-balance; Expo verified by source",
     });
   }
 }
@@ -664,17 +744,23 @@ function printTable() {
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
+  console.log("Starting Expo static server on", EXPO_URL);
+  const expoServer = await startExpoStaticServer();
+
   console.log("Launching Chromium...");
   const browser = await chromium.launch({ headless: true });
+  const expoCtx = await browser.newContext();
 
   try {
-    await auditShippers(browser);
-    await auditCarriers(browser);
+    await auditShippers(browser, expoCtx);
+    await auditCarriers(browser, expoCtx);
     await auditDispatcher(browser);
     await auditAdmin(browser, "admin@test.com", "Admin");
     await auditAdmin(browser, "superadmin@test.com", "Super Admin");
   } finally {
+    await expoCtx.close();
     await browser.close();
+    expoServer.close();
   }
 
   printTable();
