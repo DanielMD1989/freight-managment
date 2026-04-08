@@ -498,14 +498,313 @@ async function reconcileAdmin() {
   );
 }
 
+// ─── Phase E: per-status drill-down for every shipper / carrier ──────────────
+//
+// The dashboard endpoints only expose a few rolled-up metrics. To prove DB ===
+// API for EVERY status enum value, we hit the list endpoints with a status
+// filter and compare pagination.total to the equivalent DB count. This catches
+// drift the dashboard headlines hide.
+
+const ALL_LOAD_STATUSES = [
+  "DRAFT",
+  "POSTED",
+  "SEARCHING",
+  "OFFERED",
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "COMPLETED",
+  "EXCEPTION",
+  "CANCELLED",
+  "EXPIRED",
+] as const;
+
+const ALL_TRIP_STATUSES = [
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "COMPLETED",
+  "EXCEPTION",
+  "CANCELLED",
+] as const;
+
+async function reconcilePerStatusShipper(
+  email: string,
+  orgId: string,
+  token: string
+) {
+  for (const status of ALL_LOAD_STATUSES) {
+    const dbCount = await prisma.load.count({
+      where: { shipperId: orgId, status },
+    });
+    type ListResp = { pagination?: { total?: number } };
+    const list = await apiGet<ListResp>(
+      `/api/loads?myLoads=true&status=${status}&limit=1`,
+      token
+    );
+    if (list) {
+      assertEq(
+        `shipper.loads.status=${status}`,
+        `list:${email}`,
+        dbCount,
+        list.pagination?.total
+      );
+    }
+  }
+}
+
+async function reconcilePerStatusCarrierTrips(
+  email: string,
+  orgId: string,
+  token: string
+) {
+  for (const status of ALL_TRIP_STATUSES) {
+    const dbCount = await prisma.trip.count({
+      where: { carrierId: orgId, status },
+    });
+    type ListResp = { pagination?: { total?: number } };
+    const list = await apiGet<ListResp>(
+      `/api/trips?status=${status}&limit=1`,
+      token
+    );
+    if (list) {
+      assertEq(
+        `carrier.trips.status=${status}`,
+        `list:${email}`,
+        dbCount,
+        list.pagination?.total
+      );
+    }
+  }
+}
+
+// ─── Phase F: wallet transaction history row count ──────────────────────────
+async function reconcileWalletTransactions(
+  email: string,
+  orgId: string,
+  accountType: "SHIPPER_WALLET" | "CARRIER_WALLET",
+  token: string
+) {
+  const wallet = await prisma.financialAccount.findFirst({
+    where: { organizationId: orgId, accountType },
+  });
+  if (!wallet) return;
+
+  // Ground truth: number of journal entries that have at least one line in
+  // this wallet's account. The /api/wallet/transactions endpoint pages over
+  // exactly that set.
+  const dbEntryCount = await prisma.journalEntry.count({
+    where: { lines: { some: { accountId: wallet.id } } },
+  });
+
+  type TxResp = {
+    pagination?: { total?: number; totalCount?: number };
+    transactions?: unknown[];
+  };
+  const resp = await apiGet<TxResp>(`/api/wallet/transactions?limit=1`, token);
+  if (resp) {
+    assertEq(
+      `wallet.transactions.count`,
+      `wallet:${email}`,
+      dbEntryCount,
+      resp.pagination?.totalCount
+    );
+  }
+}
+
+// ─── Phase G: every shipper / every carrier (loop) ───────────────────────────
+async function reconcileEveryShipper() {
+  console.log(`\n=== Phase G: reconcile EVERY shipper org ===`);
+  const shippers = await prisma.organization.findMany({
+    where: { type: "SHIPPER" },
+    include: {
+      users: {
+        where: { role: "SHIPPER", status: "ACTIVE" },
+        take: 1,
+        select: { email: true, id: true },
+      },
+    },
+  });
+
+  for (const org of shippers) {
+    const user = org.users[0];
+    if (!user) {
+      console.log(
+        `  [-] org ${org.id} (${org.name}) has no ACTIVE shipper user — skipping`
+      );
+      continue;
+    }
+    console.log(`  -> ${user.email} (${org.name})`);
+    const truth = await shipperGroundTruth(org.id);
+    const token = await login(user.email);
+    if (!token) continue;
+
+    type DashResp = {
+      stats?: {
+        totalLoads?: number;
+        activeLoads?: number;
+        inTransitLoads?: number;
+      };
+      wallet?: { balance?: number };
+    };
+    const dash = await apiGet<DashResp>("/api/shipper/dashboard", token);
+    if (dash) {
+      assertEq(
+        "shipper.totalLoads",
+        `dashboard:${user.email}`,
+        truth.totalLoads,
+        dash.stats?.totalLoads
+      );
+      assertEq(
+        "shipper.activeLoads",
+        `dashboard:${user.email}`,
+        truth.activeLoads,
+        dash.stats?.activeLoads
+      );
+      assertEq(
+        "shipper.inTransitLoads",
+        `dashboard:${user.email}`,
+        truth.inTransitLoads,
+        dash.stats?.inTransitLoads
+      );
+      assertEq(
+        "shipper.wallet.balance",
+        `dashboard:${user.email}`,
+        truth.walletBalance,
+        dash.wallet?.balance
+      );
+    }
+
+    // Wallet endpoint — only if the org actually has a wallet
+    const hasWallet = await prisma.financialAccount.findFirst({
+      where: { organizationId: org.id, accountType: "SHIPPER_WALLET" },
+      select: { id: true },
+    });
+    if (hasWallet) {
+      type WalletResp = { totalBalance?: number };
+      const walletResp = await apiGet<WalletResp>("/api/wallet/balance", token);
+      if (walletResp) {
+        assertEq(
+          "shipper.wallet.totalBalance",
+          `wallet:${user.email}`,
+          truth.walletBalance,
+          walletResp.totalBalance
+        );
+      }
+      await reconcileWalletTransactions(
+        user.email,
+        org.id,
+        "SHIPPER_WALLET",
+        token
+      );
+    } else {
+      console.log(`     [skip wallet] org has no SHIPPER_WALLET — fixture`);
+    }
+
+    await reconcilePerStatusShipper(user.email, org.id, token);
+  }
+}
+
+async function reconcileEveryCarrier() {
+  console.log(`\n=== Phase G: reconcile EVERY carrier org ===`);
+  const carriers = await prisma.organization.findMany({
+    where: {
+      type: {
+        in: [
+          "CARRIER_COMPANY",
+          "CARRIER_INDIVIDUAL",
+          "CARRIER_ASSOCIATION",
+          "FLEET_OWNER",
+        ],
+      },
+    },
+    include: {
+      users: {
+        where: { role: "CARRIER", status: "ACTIVE" },
+        take: 1,
+        select: { email: true, id: true },
+      },
+    },
+  });
+
+  for (const org of carriers) {
+    const user = org.users[0];
+    if (!user) {
+      console.log(
+        `  [-] org ${org.id} (${org.name}) has no ACTIVE carrier user — skipping`
+      );
+      continue;
+    }
+    console.log(`  -> ${user.email} (${org.name})`);
+    const truth = await carrierGroundTruth(org.id);
+    const token = await login(user.email);
+    if (!token) continue;
+
+    type DashResp = {
+      totalTrucks?: number;
+      activeTrucks?: number;
+      activePostings?: number;
+      wallet?: { balance?: number };
+    };
+    const dash = await apiGet<DashResp>("/api/carrier/dashboard", token);
+    if (dash) {
+      assertEq(
+        "carrier.totalTrucks",
+        `dashboard:${user.email}`,
+        truth.totalTrucks,
+        dash.totalTrucks
+      );
+      assertEq(
+        "carrier.activeTrucks",
+        `dashboard:${user.email}`,
+        truth.activeTrucks,
+        dash.activeTrucks
+      );
+      assertEq(
+        "carrier.activePostings",
+        `dashboard:${user.email}`,
+        truth.activePostings,
+        dash.activePostings
+      );
+      assertEq(
+        "carrier.wallet.balance",
+        `dashboard:${user.email}`,
+        truth.walletBalance,
+        dash.wallet?.balance
+      );
+    }
+
+    type WalletResp = { totalBalance?: number };
+    const walletResp = await apiGet<WalletResp>("/api/wallet/balance", token);
+    if (walletResp) {
+      assertEq(
+        "carrier.wallet.totalBalance",
+        `wallet:${user.email}`,
+        truth.walletBalance,
+        walletResp.totalBalance
+      );
+    }
+
+    await reconcilePerStatusCarrierTrips(user.email, org.id, token);
+    await reconcileWalletTransactions(
+      user.email,
+      org.id,
+      "CARRIER_WALLET",
+      token
+    );
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log(`Audit base URL: ${BASE_URL}`);
 
   await checkEnumCoverage();
-  await reconcileShipper("shipper@test.com");
-  await reconcileCarrier("carrier@test.com");
+  await reconcileEveryShipper();
+  await reconcileEveryCarrier();
   await reconcileDispatcher();
   await reconcileAdmin();
 
