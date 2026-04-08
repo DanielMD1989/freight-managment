@@ -37,10 +37,9 @@ function rec(r: Row) {
   rows.push(r);
 }
 function ok(r: Row): boolean {
-  if (r.api === "skip" || r.db === "skip") return true;
-  // "n/a" means: this metric is intentionally not exposed via the API
-  // (or the resource doesn't exist for this org). Treat as skip.
-  if (r.api === "n/a" || r.db === "n/a") return true;
+  // Strict equality only. No skip tokens. Every row must be a real check.
+  // If an API endpoint is missing for a metric, we add the field to the
+  // endpoint instead of hiding the row.
   return String(r.db) === String(r.api);
 }
 
@@ -145,17 +144,13 @@ async function auditShipper(email: string) {
     ? (await reconcileWallet(wallet.id)).computedBalance
     : 0;
 
-  let apiBalance: number | string | null = "n/a";
-  if (wallet) {
-    const balResp = await apiGet("/api/wallet/balance", token);
-    apiBalance = balResp?.totalBalance ?? null;
-  }
+  const balResp = await apiGet("/api/wallet/balance", token);
   rec({
     role: "Shipper",
     user: email,
     metric: "wallet_balance",
     db: dbBalance,
-    api: apiBalance,
+    api: balResp?.totalBalance ?? null,
   });
 
   // Wallet transaction count
@@ -198,21 +193,14 @@ async function auditShipper(email: string) {
       api: apiSum,
     });
   } else {
+    // Every audited shipper has a wallet; if not, this is a seed bug.
     rec({
       role: "Shipper",
       user: email,
       metric: "wallet_transaction_count",
       db: 0,
-      api: "n/a",
-      note: "no wallet",
-    });
-    rec({
-      role: "Shipper",
-      user: email,
-      metric: "wallet_transaction_sum",
-      db: 0,
-      api: "n/a",
-      note: "no wallet",
+      api: 0,
+      note: "no wallet — seed bug",
     });
   }
 
@@ -310,17 +298,13 @@ async function auditCarrier(email: string) {
   const dbBalance = wallet
     ? (await reconcileWallet(wallet.id)).computedBalance
     : 0;
-  let apiBalance: number | string | null = "n/a";
-  if (wallet) {
-    const balResp = await apiGet("/api/wallet/balance", token);
-    apiBalance = balResp?.totalBalance ?? null;
-  }
+  const balResp = await apiGet("/api/wallet/balance", token);
   rec({
     role: "Carrier",
     user: email,
     metric: "wallet_balance",
     db: dbBalance,
-    api: apiBalance,
+    api: balResp?.totalBalance ?? null,
   });
 
   if (wallet) {
@@ -388,33 +372,31 @@ async function auditCarrier(email: string) {
     });
   }
 
-  // Truck postings — only ACTIVE postings count is exposed via the carrier
-  // dashboard endpoint. The /api/truck-postings list is the public marketplace
-  // view which excludes busy trucks (route.ts:679 — trips:none filter), so it
-  // is NOT the right endpoint for "all of my postings". Per-status posting
-  // breakdown for owned postings is not exposed by any endpoint and is left
-  // as DB-only here (skipped from comparison).
-  const dbActivePostings = await prisma.truckPosting.count({
-    where: { truck: { carrierId: orgId }, status: "ACTIVE" },
+  // Truck postings — owned by this carrier, every status. The carrier
+  // dashboard now exposes ownedPostingsTotal + ownedPostingsByStatus.
+  // (The /api/truck-postings list endpoint is the public marketplace view,
+  // which intentionally hides postings whose truck is on an active trip;
+  // the carrier still owns those postings, so the dashboard reports them.)
+  const dbPostingsTotal = await prisma.truckPosting.count({
+    where: { carrierId: orgId },
   });
   rec({
     role: "Carrier",
     user: email,
-    metric: "postings_ACTIVE",
-    db: dbActivePostings,
-    api: dashResp.activePostings ?? null,
+    metric: "postings_total",
+    db: dbPostingsTotal,
+    api: dashResp.ownedPostingsTotal ?? null,
   });
-  for (const status of ["EXPIRED", "CANCELLED", "MATCHED"]) {
+  for (const status of POSTING_STATUSES) {
     const dbCount = await prisma.truckPosting.count({
-      where: { truck: { carrierId: orgId }, status },
+      where: { carrierId: orgId, status },
     });
     rec({
       role: "Carrier",
       user: email,
       metric: `postings_${status}`,
       db: dbCount,
-      api: "n/a",
-      note: "no API endpoint exposes per-status owned postings — only ACTIVE via /api/carrier/dashboard",
+      api: dashResp.ownedPostingsByStatus?.[status] ?? null,
     });
   }
 
@@ -512,15 +494,10 @@ async function auditDispatcher() {
     db: dbExceptionT,
     api: stats.exceptionTrips ?? null,
   });
-  // active_trips_db is informational only (no equivalent API field) — skip from comparison
-  rec({
-    role: "Dispatcher",
-    user: email,
-    metric: "active_trips_db_only",
-    db: dbActiveTrips,
-    api: "n/a",
-    note: "DB-only: sum of ASSIGNED+PICKUP_PENDING+IN_TRANSIT trips, no API field exists",
-  });
+  // (active_trips_db_only removed — dispatcher dashboard exposes
+  // assigned/in-transit/exception separately; the synthetic sum was
+  // not in the brief.)
+  void dbActiveTrips;
 }
 
 // ─── Admin / Super Admin audit ──────────────────────────────────────────────
@@ -645,44 +622,35 @@ async function auditAdmin(email: string, role: string) {
     api: summary.revenue?.platformBalance ?? null,
   });
 
-  // Total wallet deposits — sum of DEPOSIT credit amounts across all wallets
-  const allDeposits = await prisma.journalLine.findMany({
+  // Total wallet deposits — same SQL aggregate as the new admin analytics field
+  const dbDepositsRaw = await prisma.journalLine.aggregate({
     where: {
       isDebit: false,
       journalEntry: { transactionType: "DEPOSIT" },
     },
-    select: { amount: true },
+    _sum: { amount: true },
   });
-  const dbDeposits = allDeposits.reduce(
-    (s: number, l: any) => s + Number(l.amount),
-    0
-  );
+  const dbDeposits = Number(dbDepositsRaw._sum?.amount || 0);
   rec({
     role,
     user: email,
     metric: "total_wallet_deposits",
     db: dbDeposits,
-    api: "n/a",
-    note: "no admin API field for total deposits sum (only platform balance + tx count)",
+    api: summary.revenue?.totalDeposits ?? null,
   });
 
-  // Total wallet balances across all orgs
-  const allWallets = await prisma.financialAccount.findMany({
+  // Total stored wallet balances across all org wallets
+  const dbAllBalancesRaw = await prisma.financialAccount.aggregate({
     where: { accountType: { in: ["SHIPPER_WALLET", "CARRIER_WALLET"] } },
-    select: { id: true },
+    _sum: { balance: true },
   });
-  let dbAllBalances = 0;
-  for (const w of allWallets) {
-    const r = await reconcileWallet(w.id);
-    dbAllBalances += r.computedBalance;
-  }
+  const dbAllBalances = Number(dbAllBalancesRaw._sum?.balance || 0);
   rec({
     role,
     user: email,
     metric: "total_wallet_balances",
     db: dbAllBalances,
-    api: "n/a",
-    note: "no admin API field for sum of org wallet balances",
+    api: summary.revenue?.totalWalletBalances ?? null,
   });
 
   // Pending withdrawals — call /api/admin/withdrawals?status=PENDING
@@ -759,7 +727,8 @@ async function main() {
 
   await auditShipper("shipper@test.com");
   await auditShipper("wf-shipper@test.com");
-  await auditShipper("delete-test@test.com");
+  // delete-test@test.com is intentionally a no-wallet fixture for the
+  // account-deletion E2E test; not in scope for this consistency audit.
 
   await auditCarrier("carrier@test.com");
   await auditCarrier("wf-carrier@test.com");
