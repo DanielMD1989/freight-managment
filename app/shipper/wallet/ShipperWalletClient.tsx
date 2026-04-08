@@ -746,6 +746,14 @@ export default function ShipperWalletClient({
           </div>
         )}
 
+        {/* Hidden total count for stable test reads */}
+        <div
+          data-testid="wallet-transaction-count"
+          style={{ position: "absolute", left: "-9999px" }}
+        >
+          {filteredTransactions.length}
+        </div>
+
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 dark:border-slate-700">

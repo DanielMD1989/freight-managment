@@ -173,7 +173,8 @@ export default function AdminLoadsClient() {
 
       {/* Summary */}
       <div className="text-sm text-slate-500 dark:text-slate-400">
-        {totalCount} loads found
+        <span data-testid="admin-loads-total-count">{totalCount}</span> loads
+        found
       </div>
 
       {/* Table */}

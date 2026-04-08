@@ -270,7 +270,8 @@ export default function AdminWalletsClient() {
 
       {/* Summary */}
       <div className="text-sm text-slate-500 dark:text-slate-400">
-        {totalCount} accounts found
+        <span data-testid="admin-wallets-total-count">{totalCount}</span>{" "}
+        accounts found
       </div>
 
       {/* L1 FIX: Error message display */}

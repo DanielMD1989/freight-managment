@@ -121,7 +121,12 @@ function StatCard({
         <h3 className="text-sm font-medium text-[#064d51]/70">{title}</h3>
         <span className="text-xl">{icon}</span>
       </div>
-      <p className="mt-2 text-2xl font-bold text-[#064d51]">{value}</p>
+      <p
+        data-testid={`analytics-stat-${title}`}
+        className="mt-2 text-2xl font-bold text-[#064d51]"
+      >
+        {value}
+      </p>
       {subtitle && (
         <p
           className={`mt-1 text-sm ${trend ? trendColors[trend] : "text-[#064d51]/60"}`}

@@ -423,6 +423,12 @@ export default function CarrierTripsPage() {
         </div>
       </div>
 
+      {/* Hidden total counts for stable test reads */}
+      <div style={{ position: "absolute", left: "-9999px" }}>
+        <span data-testid="trips-tab-count-active">{tabCounts.active}</span>
+        <span data-testid="trips-tab-count-approved">{tabCounts.approved}</span>
+      </div>
+
       {/* Tab Navigation */}
       <div className="inline-flex gap-1 rounded-2xl border border-slate-200/60 bg-white p-1.5 shadow-sm">
         {(Object.keys(TAB_CONFIG) as TabType[]).map((tab) => (

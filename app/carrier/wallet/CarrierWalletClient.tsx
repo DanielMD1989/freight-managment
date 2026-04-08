@@ -776,6 +776,14 @@ export default function CarrierWalletClient({
           </div>
         )}
 
+        {/* Hidden total count for stable test reads */}
+        <div
+          data-testid="wallet-transaction-count"
+          style={{ position: "absolute", left: "-9999px" }}
+        >
+          {filteredTransactions.length}
+        </div>
+
         {(totalPages > 1 || hasMore) && (
           <div className="border-t border-slate-200 px-6 py-4 dark:border-slate-700">
             <div className="mb-3 flex items-center justify-between">

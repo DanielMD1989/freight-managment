@@ -166,7 +166,8 @@ export default function AdminTrucksClient() {
 
       {/* Summary */}
       <div className="text-sm text-slate-500 dark:text-slate-400">
-        {totalCount} trucks found
+        <span data-testid="admin-trucks-total-count">{totalCount}</span> trucks
+        found
       </div>
 
       {/* Table */}
