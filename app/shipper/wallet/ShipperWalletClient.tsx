@@ -746,12 +746,27 @@ export default function ShipperWalletClient({
           </div>
         )}
 
-        {/* Hidden total count for stable test reads */}
+        {/* Hidden total count + full JSON for stable test reads */}
         <div
           data-testid="wallet-transaction-count"
           style={{ position: "absolute", left: "-9999px" }}
         >
           {filteredTransactions.length}
+        </div>
+        <div
+          data-testid="wallet-transactions-json"
+          style={{ position: "absolute", left: "-9999px" }}
+        >
+          {/* Sprint: data-consistency audit — emit SIGNED amount only so
+              all surfaces (DB+API+Web+Expo) compare on the same shape:
+              negative = debit (money out), positive = credit (money in). */}
+          {JSON.stringify(
+            filteredTransactions.map((t) => ({
+              id: t.id,
+              type: t.type,
+              amount: t.isDebit ? -Math.abs(t.amount) : Math.abs(t.amount),
+            }))
+          )}
         </div>
 
         {/* Pagination */}

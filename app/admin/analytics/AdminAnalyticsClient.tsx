@@ -173,7 +173,12 @@ function StatusDistribution({
               <span className="text-[#064d51]/70">
                 {statusLabels[item.status] || item.status}
               </span>
-              <span className="font-medium text-[#064d51]">{item.count}</span>
+              <span
+                data-testid={`chart-loadsByStatus-${item.status}`}
+                className="font-medium text-[#064d51]"
+              >
+                {item.count}
+              </span>
             </div>
             <div className="h-2 w-full rounded-full bg-[#064d51]/10">
               <div

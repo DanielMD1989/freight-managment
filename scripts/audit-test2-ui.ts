@@ -75,13 +75,15 @@ function rec(r: Row) {
   rows.push(r);
 }
 function ok(r: Row): boolean {
-  // Strict equality for the columns that apply. Expo='-' means the screen
-  // does not exist for this role (not a skip — declared up front and
-  // documented in the table).
-  if (r.expo === "-") {
-    return String(r.db) === String(r.web);
-  }
-  return String(r.db) === String(r.web) && String(r.db) === String(r.expo);
+  // Strict equality for the columns that apply. "-" in a column means the
+  // screen genuinely does not exist for this role (e.g. dispatcher has no
+  // Expo). Skipped from equality but still recorded.
+  const checks: Array<number | string | null> = [r.db];
+  if (r.web !== "-") checks.push(r.web);
+  if (r.expo !== "-") checks.push(r.expo);
+  if (checks.length < 2) return false; // need at least DB + 1 surface
+  const first = String(checks[0]);
+  return checks.every((v) => String(v) === first);
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -194,6 +196,90 @@ async function getOrCreateExpoPage(browser: any, token: string) {
   return page;
 }
 
+// Read raw text (no parseNum) from a testID — used for JSON blobs
+async function readWebText(
+  browser: any,
+  cookie: string,
+  url: string,
+  testid: string
+): Promise<string | null> {
+  console.log(`  [WEB ] GET ${url}  → testid=${testid} (text)`);
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    {
+      name: "session",
+      value: cookie,
+      domain: "localhost",
+      path: "/",
+      httpOnly: true,
+    },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    const loc = page.locator(`[data-testid="${testid}"]`);
+    await loc.first().waitFor({ timeout: 10000 });
+    let lastTxt = "";
+    for (let i = 0; i < 12; i++) {
+      const cur = (await loc.first().innerText()).trim();
+      if (cur === lastTxt && i > 0) break;
+      lastTxt = cur;
+      await page.waitForTimeout(500);
+    }
+    console.log(`  [WEB ]   read ${testid} (text len=${lastTxt.length})`);
+    return lastTxt;
+  } catch (e: any) {
+    console.log(`  [WEB ]   FAILED text ${testid}: ${e?.message ?? e}`);
+    return null;
+  } finally {
+    await page.close();
+    await ctx.close();
+  }
+}
+
+async function readExpoText(
+  browser: any,
+  token: string,
+  routePath: string,
+  testid: string
+): Promise<string | null> {
+  console.log(
+    `  [EXPO] GET ${EXPO_URL}${routePath}  → testid=${testid} (text)`
+  );
+  const ctx = await browser.newContext();
+  await ctx.addInitScript((tok: string) => {
+    try {
+      sessionStorage.setItem("session_token", tok);
+    } catch {
+      /* noop */
+    }
+  }, token);
+  const page = await ctx.newPage();
+  try {
+    await page.goto(`${EXPO_URL}${routePath}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+    const loc = page.locator(`[data-testid="${testid}"]`);
+    await loc.first().waitFor({ timeout: 15000 });
+    let lastTxt = "";
+    for (let i = 0; i < 16; i++) {
+      const cur = (await loc.first().innerText()).trim();
+      if (cur === lastTxt && i > 0 && cur.length > 2) break;
+      lastTxt = cur;
+      await page.waitForTimeout(500);
+    }
+    console.log(`  [EXPO]   read ${testid} (text len=${lastTxt.length})`);
+    return lastTxt;
+  } catch (e: any) {
+    console.log(`  [EXPO]   FAILED text ${testid}: ${e?.message ?? e}`);
+    return null;
+  } finally {
+    await page.close();
+    await ctx.close();
+  }
+}
+
 async function readExpoDom(
   browser: any,
   token: string,
@@ -209,8 +295,16 @@ async function readExpoDom(
     });
     const loc = page.locator(`[data-testid="${testid}"]`);
     await loc.first().waitFor({ timeout: 15000 });
-    const txt = (await loc.first().innerText()).trim();
-    const result = parseNum(txt);
+    // Poll for stable value (mobile screens render testID with initial
+    // state then update after react-query fetch resolves)
+    let lastTxt = "";
+    for (let i = 0; i < 12; i++) {
+      const cur = (await loc.first().innerText()).trim();
+      if (cur === lastTxt && i > 0) break;
+      lastTxt = cur;
+      await page.waitForTimeout(500);
+    }
+    const result = parseNum(lastTxt);
     console.log(`  [EXPO]   read ${testid} = ${result}`);
     if (VISIBLE_PAUSE_MS > 0) await page.waitForTimeout(VISIBLE_PAUSE_MS);
     return result;
@@ -229,15 +323,20 @@ async function readExpoDom(
 // Shipper trips page tabs: DELIVERED, COMPLETED, CANCELLED (only)
 
 const SHIPPER_LOAD_TABS = [
-  { url: "draft", db: ["DRAFT"] },
-  { url: "unposted", db: ["UNPOSTED"] },
-  { url: "posted", db: ["POSTED"] },
-  { url: "active", db: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
-  { url: "delivered", db: ["DELIVERED"] },
-  { url: "completed", db: ["COMPLETED"] },
-  { url: "cancelled", db: ["CANCELLED"] },
-  { url: "exception", db: ["EXCEPTION"] },
-  { url: "expired", db: ["EXPIRED"] },
+  // url = web URL param, expoStatus = mobile single-status (or null if web is composite)
+  { url: "draft", expoStatus: "DRAFT", db: ["DRAFT"] },
+  { url: "unposted", expoStatus: "UNPOSTED", db: ["UNPOSTED"] },
+  { url: "posted", expoStatus: "POSTED", db: ["POSTED"] },
+  {
+    url: "active",
+    expoStatus: null,
+    db: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
+  },
+  { url: "delivered", expoStatus: "DELIVERED", db: ["DELIVERED"] },
+  { url: "completed", expoStatus: "COMPLETED", db: ["COMPLETED"] },
+  { url: "cancelled", expoStatus: "CANCELLED", db: ["CANCELLED"] },
+  { url: "exception", expoStatus: "EXCEPTION", db: ["EXCEPTION"] },
+  { url: "expired", expoStatus: null, db: ["EXPIRED"] }, // Mobile loads tabs don't include EXPIRED
 ];
 
 const SHIPPER_TRIP_TABS = [
@@ -269,6 +368,15 @@ async function auditShipper(browser: any, expoBrowser: any, email: string) {
       `${BASE_URL}/shipper/loads?status=${tab.url}`,
       "loads-total-count"
     );
+    let expoVal: number | string | null = "-";
+    if (tab.expoStatus) {
+      expoVal = await readExpoDom(
+        expoBrowser,
+        auth.token,
+        `/(shipper)/loads?status=${tab.expoStatus}`,
+        "loads-total-count"
+      );
+    }
     rec({
       role: "Shipper",
       user: email,
@@ -276,7 +384,7 @@ async function auditShipper(browser: any, expoBrowser: any, email: string) {
       page: "/shipper/loads",
       db: dbCount,
       web: webVal,
-      expo: "-", // Mobile shipper loads list — separate screen, not testID'd yet
+      expo: expoVal,
     });
   }
 
@@ -291,6 +399,12 @@ async function auditShipper(browser: any, expoBrowser: any, email: string) {
       `${BASE_URL}/shipper/trips?status=${tab.url}`,
       "trips-total-count"
     );
+    const expoVal = await readExpoDom(
+      expoBrowser,
+      auth.token,
+      `/(shipper)/trips?status=${tab.url}`,
+      "trips-total-count"
+    );
     rec({
       role: "Shipper",
       user: email,
@@ -298,7 +412,7 @@ async function auditShipper(browser: any, expoBrowser: any, email: string) {
       page: "/shipper/trips",
       db: dbCount,
       web: webVal,
-      expo: "-",
+      expo: expoVal,
     });
   }
 
@@ -341,6 +455,25 @@ async function auditShipper(browser: any, expoBrowser: any, email: string) {
       web: webBal,
       expo: expoBal,
     });
+    // Per-row wallet transactions check (Web)
+    const webTxJson = await readWebText(
+      browser,
+      auth.cookie,
+      `${BASE_URL}/shipper/wallet`,
+      "wallet-transactions-json"
+    );
+    const expoTxJson = await readExpoText(
+      expoBrowser,
+      auth.token,
+      "/(shipper)/wallet",
+      "wallet-transactions-json"
+    );
+    const expoTxCount = await readExpoDom(
+      expoBrowser,
+      auth.token,
+      "/(shipper)/wallet",
+      "wallet-transaction-count"
+    );
     rec({
       role: "Shipper",
       user: email,
@@ -348,7 +481,54 @@ async function auditShipper(browser: any, expoBrowser: any, email: string) {
       page: "/shipper/wallet",
       db: dbTxCount,
       web: webTxCount,
-      expo: "-",
+      expo: expoTxCount,
+    });
+    // Compare every transaction row by id+amount+isDebit against DB
+    const dbTxRowsRaw = await prisma.journalEntry.findMany({
+      where: { lines: { some: { accountId: wallet.id } } },
+      include: { lines: { where: { accountId: wallet.id } } },
+      orderBy: { createdAt: "desc" },
+    });
+    // Normalize all sources to {id, type, amount} where amount is SIGNED
+    // (negative = debit, positive = credit). This matches what the API +
+    // mobile + web wallet pages all emit.
+    const dbTxRows = dbTxRowsRaw.map((e: any) => {
+      const line = e.lines[0];
+      const raw = Number(line.amount);
+      return {
+        id: e.id,
+        type: e.transactionType,
+        amount: line.isDebit ? -Math.abs(raw) : Math.abs(raw),
+      };
+    });
+    const dbSig = JSON.stringify(
+      [...dbTxRows].sort((a, b) => a.id.localeCompare(b.id))
+    );
+    const sortedJson = (s: string | null): string => {
+      if (!s) return "null";
+      try {
+        const arr = JSON.parse(s);
+        return JSON.stringify(
+          arr
+            .map((t: any) => ({
+              id: t.id,
+              type: t.type,
+              amount: Number(t.amount),
+            }))
+            .sort((a: any, b: any) => a.id.localeCompare(b.id))
+        );
+      } catch {
+        return "parse-error";
+      }
+    };
+    rec({
+      role: "Shipper",
+      user: email,
+      metric: "wallet_transactions_row_by_row",
+      page: "/shipper/wallet",
+      db: dbSig,
+      web: sortedJson(webTxJson),
+      expo: sortedJson(expoTxJson),
     });
   }
 
@@ -415,6 +595,12 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
       `${BASE_URL}/carrier/trucks?tab=${t.tab}`,
       t.testid
     );
+    const expoVal = await readExpoDom(
+      expoBrowser,
+      auth.token,
+      `/(carrier)/trucks?tab=${t.status}`,
+      t.testid
+    );
     rec({
       role: "Carrier",
       user: email,
@@ -422,7 +608,7 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
       page: "/carrier/trucks",
       db: dbCount,
       web: webVal,
-      expo: "-",
+      expo: expoVal,
     });
   }
 
@@ -452,6 +638,28 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
     `${BASE_URL}/carrier/trips`,
     "trips-tab-count-active"
   );
+  // Carrier mobile trips screen accepts ?status=X (single enum). Verify
+  // each individual TripStatus value Expo-side that the carrier trips
+  // screen filters can access.
+  const carrierTripStatuses = [
+    "ASSIGNED",
+    "PICKUP_PENDING",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "EXCEPTION",
+    "COMPLETED",
+    "CANCELLED",
+  ];
+  const expoTripCounts: Record<string, number | null> = {};
+  for (const s of carrierTripStatuses) {
+    expoTripCounts[s] = await readExpoDom(
+      expoBrowser,
+      auth.token,
+      `/(carrier)/trips?status=${s}`,
+      "trips-total-count"
+    );
+  }
+  // Approved-tab composite (web tab ASSIGNED) — Expo single-status equivalent
   rec({
     role: "Carrier",
     user: email,
@@ -459,8 +667,17 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
     page: "/carrier/trips",
     db: dbApprovedTrips,
     web: webApproved,
-    expo: "-",
+    expo: expoTripCounts.ASSIGNED ?? null,
   });
+  // Web active-tab composite vs Expo: sum the matching expo single-status counts
+  const expoActiveSum = [
+    "PICKUP_PENDING",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "EXCEPTION",
+  ]
+    .map((s) => expoTripCounts[s] ?? 0)
+    .reduce((a, b) => Number(a) + Number(b), 0);
   rec({
     role: "Carrier",
     user: email,
@@ -468,8 +685,25 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
     page: "/carrier/trips",
     db: dbActiveTrips,
     web: webActive,
-    expo: "-",
+    expo: expoActiveSum,
   });
+  // Per-individual-status Expo rows for carrier trips
+  // (Web carrier trips page only has approved+active composite tabs;
+  // these are Expo-only screen verifications.)
+  for (const s of carrierTripStatuses) {
+    const dbCount = await prisma.trip.count({
+      where: { carrierId: user.organizationId, status: s },
+    });
+    rec({
+      role: "Carrier",
+      user: email,
+      metric: `trips_${s}_expo`,
+      page: "/(carrier)/trips",
+      db: dbCount,
+      web: "-", // no per-status web tab; carrier trips page is composite
+      expo: expoTripCounts[s] ?? null,
+    });
+  }
 
   // ── Wallet
   const wallet = await prisma.financialAccount.findFirst({
@@ -510,6 +744,24 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
       web: webBal,
       expo: expoBal,
     });
+    const webTxJson = await readWebText(
+      browser,
+      auth.cookie,
+      `${BASE_URL}/carrier/wallet`,
+      "wallet-transactions-json"
+    );
+    const expoTxJson = await readExpoText(
+      expoBrowser,
+      auth.token,
+      "/(carrier)/wallet",
+      "wallet-transactions-json"
+    );
+    const expoTxCount = await readExpoDom(
+      expoBrowser,
+      auth.token,
+      "/(carrier)/wallet",
+      "wallet-transaction-count"
+    );
     rec({
       role: "Carrier",
       user: email,
@@ -517,7 +769,53 @@ async function auditCarrier(browser: any, expoBrowser: any, email: string) {
       page: "/carrier/wallet",
       db: dbTxCount,
       web: webTxCount,
-      expo: "-",
+      expo: expoTxCount,
+    });
+    const dbTxRowsRaw = await prisma.journalEntry.findMany({
+      where: { lines: { some: { accountId: wallet.id } } },
+      include: { lines: { where: { accountId: wallet.id } } },
+      orderBy: { createdAt: "desc" },
+    });
+    // Normalize all sources to {id, type, amount} where amount is SIGNED
+    // (negative = debit, positive = credit). This matches what the API +
+    // mobile + web wallet pages all emit.
+    const dbTxRows = dbTxRowsRaw.map((e: any) => {
+      const line = e.lines[0];
+      const raw = Number(line.amount);
+      return {
+        id: e.id,
+        type: e.transactionType,
+        amount: line.isDebit ? -Math.abs(raw) : Math.abs(raw),
+      };
+    });
+    const dbSig = JSON.stringify(
+      [...dbTxRows].sort((a, b) => a.id.localeCompare(b.id))
+    );
+    const sortedJson = (s: string | null): string => {
+      if (!s) return "null";
+      try {
+        const arr = JSON.parse(s);
+        return JSON.stringify(
+          arr
+            .map((t: any) => ({
+              id: t.id,
+              type: t.type,
+              amount: Number(t.amount),
+            }))
+            .sort((a: any, b: any) => a.id.localeCompare(b.id))
+        );
+      } catch {
+        return "parse-error";
+      }
+    };
+    rec({
+      role: "Carrier",
+      user: email,
+      metric: "wallet_transactions_row_by_row",
+      page: "/carrier/wallet",
+      db: dbSig,
+      web: sortedJson(webTxJson),
+      expo: sortedJson(expoTxJson),
     });
   }
 
@@ -556,6 +854,11 @@ async function auditDispatcher(browser: any) {
   if (!auth) return;
 
   const checks = [
+    {
+      label: "Assigned Loads",
+      metric: "assigned_loads",
+      db: () => prisma.load.count({ where: { status: "ASSIGNED" } }),
+    },
     {
       label: "Unassigned Loads",
       metric: "posted_loads",
@@ -659,6 +962,35 @@ async function auditAdmin(browser: any, email: string, role: string) {
       metric: c.metric,
       page: "/admin/analytics",
       db: c.db,
+      web: webVal,
+      expo: "-",
+    });
+  }
+
+  // ── /admin/analytics — loadsByStatus chart data points
+  // The chart uses uppercase status keys from the API loadsByStatus array.
+  const chartStatuses = [
+    "POSTED",
+    "ASSIGNED",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "COMPLETED",
+    "CANCELLED",
+  ];
+  for (const s of chartStatuses) {
+    const dbCount = await prisma.load.count({ where: { status: s } });
+    const webVal = await readWebDom(
+      browser,
+      auth.cookie,
+      `${BASE_URL}/admin/analytics`,
+      `chart-loadsByStatus-${s}`
+    );
+    rec({
+      role,
+      user: email,
+      metric: `chart_loadsByStatus_${s}`,
+      page: "/admin/analytics",
+      db: dbCount,
       web: webVal,
       expo: "-",
     });

@@ -310,6 +310,27 @@ export default function WalletScreen() {
         ))}
       </ScrollView>
 
+      {/* Hidden JSON for stable test reads on Expo web export */}
+      <Text
+        testID="wallet-transactions-json"
+        style={{ position: "absolute", left: -9999, opacity: 0 }}
+      >
+        {JSON.stringify(
+          transactions.map((t: any) => ({
+            id: t.id,
+            type: t.type,
+            amount: t.amount,
+            isDebit: t.isDebit,
+          }))
+        )}
+      </Text>
+      <Text
+        testID="wallet-transaction-count"
+        style={{ position: "absolute", left: -9999, opacity: 0 }}
+      >
+        {transactions.length}
+      </Text>
+
       {/* Transaction List */}
       {txLoading && !txData ? (
         <LoadingSpinner />

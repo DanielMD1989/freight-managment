@@ -776,12 +776,25 @@ export default function CarrierWalletClient({
           </div>
         )}
 
-        {/* Hidden total count for stable test reads */}
+        {/* Hidden total count + full JSON for stable test reads */}
         <div
           data-testid="wallet-transaction-count"
           style={{ position: "absolute", left: "-9999px" }}
         >
           {filteredTransactions.length}
+        </div>
+        <div
+          data-testid="wallet-transactions-json"
+          style={{ position: "absolute", left: "-9999px" }}
+        >
+          {/* Sprint: data-consistency audit — emit SIGNED amount only */}
+          {JSON.stringify(
+            filteredTransactions.map((t) => ({
+              id: t.id,
+              type: t.type,
+              amount: t.isDebit ? -Math.abs(t.amount) : Math.abs(t.amount),
+            }))
+          )}
         </div>
 
         {(totalPages > 1 || hasMore) && (

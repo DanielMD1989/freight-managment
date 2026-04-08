@@ -10,7 +10,8 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { useEffect } from "react";
 import { useTrips } from "../../../src/hooks/useTrips";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
@@ -35,7 +36,14 @@ const statusFilters = [
 
 export default function CarrierTripsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ status?: string }>();
   const [statusFilter, setStatusFilter] = useState("ALL");
+  useEffect(() => {
+    if (params.status && params.status !== statusFilter) {
+      setStatusFilter(params.status);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.status]);
   const { data, isLoading, refetch, isRefetching } = useTrips(
     statusFilter === "ALL" ? undefined : { status: statusFilter }
   );
@@ -70,6 +78,12 @@ export default function CarrierTripsScreen() {
 
   return (
     <View style={styles.container}>
+      <Text
+        testID="trips-total-count"
+        style={{ position: "absolute", left: -9999, opacity: 0 }}
+      >
+        {data?.pagination?.total ?? trips.length}
+      </Text>
       {/* Status filter chips */}
       <View style={styles.filters}>
         <FlatList

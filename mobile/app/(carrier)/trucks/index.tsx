@@ -11,7 +11,8 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTrucks } from "../../../src/hooks/useTrucks";
 import { useOrganization } from "../../../src/hooks/useOrganization";
@@ -37,8 +38,24 @@ const TABS: { key: ApprovalTab; label: string }[] = [
 
 export default function TrucksListScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState<ApprovalTab>("APPROVED");
-  const { data, isLoading, refetch, isRefetching } = useTrucks();
+  useEffect(() => {
+    if (
+      params.tab &&
+      (params.tab === "APPROVED" ||
+        params.tab === "PENDING" ||
+        params.tab === "REJECTED") &&
+      params.tab !== activeTab
+    ) {
+      setActiveTab(params.tab as ApprovalTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.tab]);
+  // Sprint: data-consistency audit — fetch all owned trucks (default
+  // limit=20 was hiding APPROVED trucks behind status-coverage fixtures
+  // when the carrier had >20 trucks total)
+  const { data, isLoading, refetch, isRefetching } = useTrucks({ limit: 200 });
   const organizationId = useAuthStore((s) => s.user?.organizationId);
   const { data: org } = useOrganization(organizationId);
   const isOrgApproved =
@@ -120,6 +137,25 @@ export default function TrucksListScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Hidden per-status counts for stable test reads */}
+      <Text
+        testID="trucks-tab-count-approved"
+        style={{ position: "absolute", left: -9999, opacity: 0 }}
+      >
+        {counts.APPROVED}
+      </Text>
+      <Text
+        testID="trucks-tab-count-pending"
+        style={{ position: "absolute", left: -9999, opacity: 0 }}
+      >
+        {counts.PENDING}
+      </Text>
+      <Text
+        testID="trucks-tab-count-rejected"
+        style={{ position: "absolute", left: -9999, opacity: 0 }}
+      >
+        {counts.REJECTED}
+      </Text>
       {/* G-M10-4: Approval status tabs */}
       <View style={styles.tabBar}>
         {TABS.map((tab) => {

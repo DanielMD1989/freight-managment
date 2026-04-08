@@ -170,7 +170,7 @@ export default async function CarrierWalletPage() {
   });
 
   const transactions = recentTransactions.map((line) => ({
-    id: line.id,
+    id: line.journalEntry.id,
     date: line.createdAt.toISOString(),
     type: line.journalEntry.transactionType,
     description: line.journalEntry.description,

@@ -187,6 +187,9 @@ export default function DispatcherDashboardClient({
   const exceptionTrips = stats?.exceptionTrips ?? 0;
   const pendingProposals = stats?.pendingProposals ?? 0;
   const openEscalations = stats?.openEscalations ?? 0;
+  // Sprint: data-consistency audit gap 4 — surface assigned_loads on the
+  // dashboard so it can be cross-checked DB→API→Web
+  const assignedLoads = stats?.assignedLoads ?? 0;
 
   // Chart data with date range picker
   const [chartDateRange, setChartDateRange] = useState<DateRangeValue>(
@@ -296,6 +299,13 @@ export default function DispatcherDashboardClient({
                 ? { value: "Awaiting response", positive: false }
                 : undefined
             }
+          />
+          <StatCard
+            title="Assigned Loads"
+            value={assignedLoads}
+            icon={<PackageIcon />}
+            color="primary"
+            subtitle="Awaiting carrier dispatch"
           />
           <StatCard
             title="Unassigned Loads"
