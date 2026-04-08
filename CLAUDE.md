@@ -43,13 +43,6 @@ npx expo start           # Start Expo dev server
 npx expo export --platform web  # Build for web (Playwright-testable)
 ```
 
-### Mobile (Flutter — archived)
-
-```bash
-cd mobile-flutter        # Original Flutter codebase (kept for reference)
-flutter analyze          # Dart linter
-```
-
 ## Architecture
 
 ### Web Stack
@@ -82,7 +75,6 @@ lib/              # Shared utilities (auth, security, validation, prisma)
 components/       # Shared React components
 mobile/app/       # Expo Router screens (carrier, shipper, shared, auth)
 mobile/src/       # Services, stores, hooks, utils, theme, types, i18n
-mobile-flutter/   # Archived Flutter codebase (reference only)
 prisma/           # Schema and migrations
 __tests__/        # Jest test suites (191 suites across api/, components/, lib/, etc.)
 e2e/              # Playwright E2E tests (895 tests across shipper/, carrier/, admin/, dispatcher/)

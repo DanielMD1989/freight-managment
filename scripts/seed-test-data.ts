@@ -1289,6 +1289,341 @@ async function main() {
   console.log("");
 
   // ============================================================================
+  // 8. STATUS-COVERAGE FIXTURES
+  //
+  // Adds one realistic, relationally-consistent record for every Load /
+  // Trip / Truck / TruckPosting status enum value that the main seed
+  // doesn't already cover. The reconciliation script in
+  // scripts/audit-data-consistency.ts asserts every status has ≥1 row.
+  //
+  // Patterns mirror existing seed-test-data + seed-demo-data shapes —
+  // no new field conventions invented here.
+  // ============================================================================
+  console.log("8. Creating status-coverage fixtures...\n");
+
+  // Helper: pick the first existing test truck for the carrier so trips
+  // and assigned loads have a real FK target.
+  const fixtureTrucks = await prisma.truck.findMany({
+    where: { carrierId: carrierOrg.id, approvalStatus: "APPROVED" },
+    take: 12,
+  });
+  if (fixtureTrucks.length < 7) {
+    throw new Error(
+      `status-coverage fixtures need ≥7 approved trucks; got ${fixtureTrucks.length}`
+    );
+  }
+
+  // ─── Loads — one per missing status ──────────────────────────────────────
+  // Existing seed creates POSTED only. We add the other 11.
+  const baseLoadFields = (overrides: Record<string, unknown>) => ({
+    shipperId: shipperOrg.id,
+    createdById: shipperUser.id,
+    pickupCity: "Addis Ababa",
+    deliveryCity: "Djibouti",
+    truckType: "DRY_VAN" as const,
+    weight: 10000,
+    cargoDescription: "Status coverage fixture",
+    pickupDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+    deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    shipperContactName: "Test Shipper",
+    shipperContactPhone: "+251911111111",
+    bookMode: "REQUEST" as const,
+    fullPartial: "FULL" as const,
+    ...overrides,
+  });
+
+  // 1. DRAFT — never posted
+  await prisma.load.create({ data: baseLoadFields({ status: "DRAFT" }) });
+
+  // 2. SEARCHING — posted then advanced to searching
+  await prisma.load.create({
+    data: baseLoadFields({
+      status: "SEARCHING",
+      postedAt: new Date(),
+    }),
+  });
+
+  // 3. OFFERED — offered to a carrier
+  await prisma.load.create({
+    data: baseLoadFields({
+      status: "OFFERED",
+      postedAt: new Date(),
+    }),
+  });
+
+  // 4. ASSIGNED — has assignedTruckId + matching ASSIGNED Trip
+  const assignedLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "ASSIGNED",
+      postedAt: new Date(),
+      assignedTruckId: fixtureTrucks[0].id,
+      assignedAt: new Date(),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: assignedLoad.id,
+      truckId: fixtureTrucks[0].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "ASSIGNED",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-assigned",
+      trackingEnabled: true,
+      estimatedDistanceKm: 910,
+    },
+  });
+
+  // 5. PICKUP_PENDING — load + trip both PICKUP_PENDING
+  const pickupLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "PICKUP_PENDING",
+      postedAt: new Date(),
+      assignedTruckId: fixtureTrucks[1].id,
+      assignedAt: new Date(),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: pickupLoad.id,
+      truckId: fixtureTrucks[1].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "PICKUP_PENDING",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-pickup-pending",
+      trackingEnabled: true,
+      estimatedDistanceKm: 910,
+      startedAt: new Date(),
+    },
+  });
+
+  // 6. IN_TRANSIT
+  const inTransitLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "IN_TRANSIT",
+      postedAt: new Date(),
+      assignedTruckId: fixtureTrucks[2].id,
+      assignedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: inTransitLoad.id,
+      truckId: fixtureTrucks[2].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "IN_TRANSIT",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-in-transit",
+      trackingEnabled: true,
+      estimatedDistanceKm: 910,
+      startedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      pickedUpAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    },
+  });
+
+  // 7. DELIVERED
+  const deliveredLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "DELIVERED",
+      postedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      assignedTruckId: fixtureTrucks[3].id,
+      assignedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: deliveredLoad.id,
+      truckId: fixtureTrucks[3].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "DELIVERED",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-delivered",
+      startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      pickedUpAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      deliveredAt: new Date(),
+    },
+  });
+
+  // 8. COMPLETED — settled
+  const completedLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "COMPLETED",
+      postedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      assignedTruckId: fixtureTrucks[4].id,
+      assignedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      podSubmitted: true,
+      podSubmittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      podVerified: true,
+      podVerifiedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      settlementStatus: "PAID",
+      settledAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: completedLoad.id,
+      truckId: fixtureTrucks[4].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "COMPLETED",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-completed",
+      startedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      pickedUpAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      deliveredAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      shipperConfirmed: true,
+      shipperConfirmedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  // 9. EXCEPTION — IN_TRANSIT load with EXCEPTION trip
+  const exceptionLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "EXCEPTION",
+      postedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      assignedTruckId: fixtureTrucks[5].id,
+      assignedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: exceptionLoad.id,
+      truckId: fixtureTrucks[5].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "EXCEPTION",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-exception",
+      startedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      pickedUpAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    },
+  });
+
+  // 10. CANCELLED — load + matching CANCELLED trip
+  const cancelledLoad = await prisma.load.create({
+    data: baseLoadFields({
+      status: "CANCELLED",
+      postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      assignedTruckId: fixtureTrucks[6].id,
+      assignedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    }),
+  });
+  await prisma.trip.create({
+    data: {
+      loadId: cancelledLoad.id,
+      truckId: fixtureTrucks[6].id,
+      carrierId: carrierOrg.id,
+      shipperId: shipperOrg.id,
+      status: "CANCELLED",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Djibouti",
+      trackingUrl: "fixture-trip-cancelled",
+      cancelledAt: new Date(),
+      cancelReason: "Status coverage fixture",
+    },
+  });
+
+  // 11. EXPIRED — posted load that timed out
+  await prisma.load.create({
+    data: baseLoadFields({
+      status: "EXPIRED",
+      postedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+    }),
+  });
+
+  console.log(`   [+] Loads: 11 status-coverage rows added (DRAFT…EXPIRED)`);
+  console.log(
+    `   [+] Trips: 7 status-coverage rows added (ASSIGNED…CANCELLED)`
+  );
+
+  // ─── Trucks — PENDING + REJECTED ─────────────────────────────────────────
+  // POSTED status doesn't exist as an approvalStatus enum value (truckPosting
+  // is the "posted" state). Approval statuses we still need: PENDING, REJECTED.
+  await prisma.truck.create({
+    data: {
+      carrierId: carrierOrg.id,
+      licensePlate: "FX-PEND-001",
+      truckType: "DRY_VAN",
+      capacity: 10000,
+      lengthM: 10,
+      currentCity: "Addis Ababa",
+      isAvailable: false,
+      approvalStatus: "PENDING",
+      contactName: "Test Driver",
+      contactPhone: "+251944444445",
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date("2027-12-31"),
+    },
+  });
+  await prisma.truck.create({
+    data: {
+      carrierId: carrierOrg.id,
+      licensePlate: "FX-REJ-001",
+      truckType: "FLATBED",
+      capacity: 12000,
+      lengthM: 11,
+      currentCity: "Addis Ababa",
+      isAvailable: false,
+      approvalStatus: "REJECTED",
+      rejectedAt: new Date(),
+      contactName: "Test Driver",
+      contactPhone: "+251944444446",
+      insuranceStatus: "VALID",
+      insuranceExpiresAt: new Date("2027-12-31"),
+    },
+  });
+  console.log(
+    `   [+] Trucks: 2 status-coverage rows added (PENDING, REJECTED)`
+  );
+
+  // ─── TruckPostings — EXPIRED + CANCELLED ─────────────────────────────────
+  // Use 2 of the existing approved trucks; deactivate their existing ACTIVE
+  // posting first if any (we don't want duplicate/conflicting state).
+  const expiringTruck = fixtureTrucks[7] ?? fixtureTrucks[0];
+  const cancellingTruck = fixtureTrucks[8] ?? fixtureTrucks[1];
+  await prisma.truckPosting.create({
+    data: {
+      truckId: expiringTruck.id,
+      carrierId: carrierOrg.id,
+      createdById: carrierUser.id,
+      originCityId: locationMap["Addis Ababa"],
+      availableFrom: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      availableTo: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      status: "EXPIRED",
+      contactName: "Test Driver",
+      contactPhone: "+251955555556",
+      fullPartial: "FULL",
+    },
+  });
+  await prisma.truckPosting.create({
+    data: {
+      truckId: cancellingTruck.id,
+      carrierId: carrierOrg.id,
+      createdById: carrierUser.id,
+      originCityId: locationMap["Addis Ababa"],
+      availableFrom: new Date(),
+      availableTo: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: "CANCELLED",
+      contactName: "Test Driver",
+      contactPhone: "+251955555557",
+      fullPartial: "FULL",
+    },
+  });
+  console.log(
+    `   [+] TruckPostings: 2 status-coverage rows added (EXPIRED, CANCELLED)\n`
+  );
+
+  // ============================================================================
   // SUMMARY
   // ============================================================================
   console.log("========================================");
