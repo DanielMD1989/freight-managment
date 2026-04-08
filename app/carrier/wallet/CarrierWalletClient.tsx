@@ -358,7 +358,10 @@ export default function CarrierWalletClient({
             <p className="mb-1 text-sm font-medium text-white/80">
               Current Balance
             </p>
-            <p className="text-4xl font-bold">
+            <p
+              data-testid="wallet-current-balance"
+              className="text-4xl font-bold"
+            >
               {formatCurrency(walletData.balance, walletData.currency)}
             </p>
             {walletData.minimumBalance > 0 && (
