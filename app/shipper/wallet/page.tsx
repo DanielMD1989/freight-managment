@@ -172,11 +172,9 @@ export default async function WalletPage() {
     take: 50, // Get last 50 transactions for client-side filtering
   });
 
-  // Transform transactions for client. Sprint: data-consistency audit —
-  // use journalEntry.id (not journalLine.id) so the test can compare to
-  // the same entity API/Expo use.
+  // Transform transactions for client
   const transactions = recentTransactions.map((line) => ({
-    id: line.journalEntry.id,
+    id: line.id,
     date: line.createdAt.toISOString(),
     type: line.journalEntry.transactionType,
     description: line.journalEntry.description,

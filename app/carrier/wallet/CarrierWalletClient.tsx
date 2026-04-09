@@ -358,10 +358,7 @@ export default function CarrierWalletClient({
             <p className="mb-1 text-sm font-medium text-white/80">
               Current Balance
             </p>
-            <p
-              data-testid="wallet-current-balance"
-              className="text-4xl font-bold"
-            >
+            <p className="text-4xl font-bold">
               {formatCurrency(walletData.balance, walletData.currency)}
             </p>
             {walletData.minimumBalance > 0 && (
@@ -775,27 +772,6 @@ export default function CarrierWalletClient({
             </p>
           </div>
         )}
-
-        {/* Hidden total count + full JSON for stable test reads */}
-        <div
-          data-testid="wallet-transaction-count"
-          style={{ position: "absolute", left: "-9999px" }}
-        >
-          {filteredTransactions.length}
-        </div>
-        <div
-          data-testid="wallet-transactions-json"
-          style={{ position: "absolute", left: "-9999px" }}
-        >
-          {/* Sprint: data-consistency audit — emit SIGNED amount only */}
-          {JSON.stringify(
-            filteredTransactions.map((t) => ({
-              id: t.id,
-              type: t.type,
-              amount: t.isDebit ? -Math.abs(t.amount) : Math.abs(t.amount),
-            }))
-          )}
-        </div>
 
         {(totalPages > 1 || hasMore) && (
           <div className="border-t border-slate-200 px-6 py-4 dark:border-slate-700">

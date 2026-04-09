@@ -111,13 +111,6 @@ export async function GET(request: NextRequest) {
       pendingApprovals,
       tripsOverTimeRaw,
       earningsOverTimeRaw,
-      // Sprint: data-consistency audit — full owned-postings breakdown for
-      // the carrier's wallet/dashboard. The marketplace endpoint
-      // (/api/truck-postings) intentionally hides postings whose truck is on
-      // an active trip; the carrier still owns those postings and the
-      // dashboard MUST surface them with no filter.
-      ownedPostingsAll,
-      ownedPostingsByStatusRaw,
     ] = await Promise.all([
       // Total trucks owned by this carrier
       db.truck.count({
@@ -245,18 +238,6 @@ export async function GET(request: NextRequest) {
         GROUP BY DATE_TRUNC('day', je."createdAt")
         ORDER BY date ASC
       `,
-
-      // Total owned postings (every status) — no busy-truck exclusion
-      db.truckPosting.count({
-        where: { carrierId: session.organizationId },
-      }),
-
-      // Owned postings grouped by status
-      db.truckPosting.groupBy({
-        by: ["status"],
-        where: { carrierId: session.organizationId },
-        _count: true,
-      }),
     ]);
 
     // Calculate total distance from trips
@@ -270,23 +251,10 @@ export async function GET(request: NextRequest) {
       Number(revenueResult._sum?.amount || 0).toFixed(2)
     );
 
-    // Build owned-postings breakdown — every PostingStatus enum value
-    const postingsByStatus: Record<string, number> = {
-      ACTIVE: 0,
-      EXPIRED: 0,
-      CANCELLED: 0,
-      MATCHED: 0,
-    };
-    for (const row of ownedPostingsByStatusRaw) {
-      postingsByStatus[row.status] = (row as { _count: number })._count;
-    }
-
     return NextResponse.json({
       totalTrucks,
       activeTrucks,
       activePostings,
-      ownedPostingsTotal: ownedPostingsAll,
-      ownedPostingsByStatus: postingsByStatus,
       completedDeliveries: completedTrips,
       inTransitTrips,
       totalServiceFeesPaid,

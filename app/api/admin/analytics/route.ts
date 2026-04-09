@@ -83,29 +83,6 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Sprint: data-consistency audit — platform-wide aggregates that the
-    // audit script needs and that no other endpoint exposes:
-    //   - totalDeposits: sum of all DEPOSIT credit journal lines
-    //   - totalWalletBalances: sum of stored balances across every
-    //     SHIPPER_WALLET / CARRIER_WALLET account
-    const [allDepositCreditsRaw, allWalletBalancesRaw] = await Promise.all([
-      db.journalLine.aggregate({
-        where: {
-          isDebit: false,
-          journalEntry: { transactionType: "DEPOSIT" },
-        },
-        _sum: { amount: true },
-      }),
-      db.financialAccount.aggregate({
-        where: {
-          accountType: { in: ["SHIPPER_WALLET", "CARRIER_WALLET"] },
-        },
-        _sum: { balance: true },
-      }),
-    ]);
-    const totalDeposits = Number(allDepositCreditsRaw._sum?.amount || 0);
-    const totalWalletBalances = Number(allWalletBalancesRaw._sum?.balance || 0);
-
     // Get comprehensive SLA metrics for admin (platform-wide)
     const slaPeriod =
       period === "year" ? "month" : period === "day" ? "day" : "week";
@@ -131,10 +108,6 @@ export async function GET(request: NextRequest) {
               pendingWithdrawals: revenue.pendingWithdrawals,
               transactionsInPeriod: transactionsInPeriod._count || 0,
               transactionVolume: revenue.transactionVolume,
-              // Sprint: data-consistency audit — platform-wide totals
-              // exposed for the audit script + admin dashboard parity.
-              totalDeposits,
-              totalWalletBalances,
             },
         trucks: {
           total: trucks.total,

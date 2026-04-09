@@ -118,14 +118,6 @@ export default function AdminWithdrawalsPage() {
         </div>
       )}
 
-      {/* Hidden total count for stable test reads */}
-      <div
-        data-testid="admin-withdrawals-count"
-        style={{ position: "absolute", left: "-9999px" }}
-      >
-        {withdrawals.length}
-      </div>
-
       {/* Filter */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex gap-2">

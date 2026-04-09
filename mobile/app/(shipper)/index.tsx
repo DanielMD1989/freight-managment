@@ -150,9 +150,7 @@ export default function ShipperDashboard() {
         {stats.map((stat) => (
           <Card key={stat.label} style={styles.statCard} padding="lg">
             <Ionicons name={stat.icon} size={28} color={stat.color} />
-            <Text testID={`stat-value-${stat.label}`} style={styles.statValue}>
-              {stat.value}
-            </Text>
+            <Text style={styles.statValue}>{stat.value}</Text>
             <Text style={styles.statLabel}>{stat.label}</Text>
           </Card>
         ))}

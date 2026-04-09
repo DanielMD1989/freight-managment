@@ -414,14 +414,6 @@ export default function UserManagementClient({
           </table>
         </div>
 
-        {/* Always-rendered total for stable test reads */}
-        <div
-          data-testid="admin-users-total-count-stable"
-          style={{ position: "absolute", left: "-9999px" }}
-        >
-          {pagination.total}
-        </div>
-
         {/* Pagination */}
         {pagination.pages > 1 && (
           <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
@@ -434,14 +426,7 @@ export default function UserManagementClient({
               <span className="font-medium">
                 {Math.min(pagination.page * pagination.limit, pagination.total)}
               </span>{" "}
-              of{" "}
-              <span
-                data-testid="admin-users-total-count"
-                className="font-medium"
-              >
-                {pagination.total}
-              </span>{" "}
-              users
+              of <span className="font-medium">{pagination.total}</span> users
             </div>
             <div className="flex gap-2">
               <button

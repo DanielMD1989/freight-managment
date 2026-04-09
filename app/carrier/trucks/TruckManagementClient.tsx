@@ -222,7 +222,6 @@ export default function TruckManagementClient({
           </svg>
           Approved
           <span
-            data-testid="trucks-tab-count-approved"
             className={`${
               activeTab === "approved" ? "bg-white/20" : "bg-slate-100"
             } rounded-full px-2 py-0.5 text-xs font-bold`}
@@ -252,16 +251,17 @@ export default function TruckManagementClient({
             />
           </svg>
           Pending
-          <span
-            data-testid="trucks-tab-count-pending"
-            className={`${
-              activeTab === "pending"
-                ? "bg-white/20"
-                : "bg-amber-100 text-amber-700"
-            } rounded-full px-2 py-0.5 text-xs font-bold ${activeTab !== "pending" && pendingCount > 0 ? "animate-pulse" : ""}`}
-          >
-            {pendingCount}
-          </span>
+          {pendingCount > 0 && (
+            <span
+              className={`${
+                activeTab === "pending"
+                  ? "bg-white/20"
+                  : "bg-amber-100 text-amber-700"
+              } rounded-full px-2 py-0.5 text-xs font-bold ${activeTab !== "pending" ? "animate-pulse" : ""}`}
+            >
+              {pendingCount}
+            </span>
+          )}
         </button>
         <button
           onClick={() => handleTabChange("rejected")}
@@ -285,16 +285,17 @@ export default function TruckManagementClient({
             />
           </svg>
           Rejected
-          <span
-            data-testid="trucks-tab-count-rejected"
-            className={`${
-              activeTab === "rejected"
-                ? "bg-white/20"
-                : "bg-rose-100 text-rose-700"
-            } rounded-full px-2 py-0.5 text-xs font-bold`}
-          >
-            {rejectedCount}
-          </span>
+          {rejectedCount > 0 && (
+            <span
+              className={`${
+                activeTab === "rejected"
+                  ? "bg-white/20"
+                  : "bg-rose-100 text-rose-700"
+              } rounded-full px-2 py-0.5 text-xs font-bold`}
+            >
+              {rejectedCount}
+            </span>
+          )}
         </button>
       </div>
 

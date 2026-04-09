@@ -308,10 +308,7 @@ export default function LoadManagementClient({
           {/* Summary Stats */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">Total:</span>
-            <span
-              data-testid="loads-total-count"
-              className="text-xl font-bold text-slate-800"
-            >
+            <span className="text-xl font-bold text-slate-800">
               {pagination.total}
             </span>
             <span className="text-sm text-slate-500">loads</span>

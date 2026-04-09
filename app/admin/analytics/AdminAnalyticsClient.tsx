@@ -121,12 +121,7 @@ function StatCard({
         <h3 className="text-sm font-medium text-[#064d51]/70">{title}</h3>
         <span className="text-xl">{icon}</span>
       </div>
-      <p
-        data-testid={`analytics-stat-${title}`}
-        className="mt-2 text-2xl font-bold text-[#064d51]"
-      >
-        {value}
-      </p>
+      <p className="mt-2 text-2xl font-bold text-[#064d51]">{value}</p>
       {subtitle && (
         <p
           className={`mt-1 text-sm ${trend ? trendColors[trend] : "text-[#064d51]/60"}`}
@@ -173,12 +168,7 @@ function StatusDistribution({
               <span className="text-[#064d51]/70">
                 {statusLabels[item.status] || item.status}
               </span>
-              <span
-                data-testid={`chart-loadsByStatus-${item.status}`}
-                className="font-medium text-[#064d51]"
-              >
-                {item.count}
-              </span>
+              <span className="font-medium text-[#064d51]">{item.count}</span>
             </div>
             <div className="h-2 w-full rounded-full bg-[#064d51]/10">
               <div

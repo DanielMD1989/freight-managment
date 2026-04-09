@@ -279,8 +279,7 @@ export default function AdminTripsClient() {
 
       {/* Summary */}
       <div className="text-sm text-slate-500 dark:text-slate-400">
-        <span data-testid="admin-trips-total-count">{totalCount}</span> trips
-        found
+        {totalCount} trips found
       </div>
 
       {/* Table */}

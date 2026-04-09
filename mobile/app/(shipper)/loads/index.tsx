@@ -12,8 +12,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   useLoads,
@@ -51,16 +50,7 @@ const STATUS_TABS = [
 
 export default function ShipperLoadsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ status?: string }>();
   const [activeStatus, setActiveStatus] = useState("");
-  // Sync URL ?status=X param into state so the audit harness can navigate
-  // directly to a specific status filter without clicking tabs.
-  useEffect(() => {
-    if (params.status && params.status !== activeStatus) {
-      setActiveStatus(params.status);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.status]);
   const { data, isLoading, refetch, isRefetching } = useLoads(
     activeStatus ? { status: activeStatus, myLoads: true } : { myLoads: true }
   );
@@ -184,13 +174,6 @@ export default function ShipperLoadsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Hidden total count for stable test reads */}
-      <Text
-        testID="loads-total-count"
-        style={{ position: "absolute", left: -9999, opacity: 0 }}
-      >
-        {data?.pagination?.total ?? loads.length}
-      </Text>
       {/* Status filter tabs */}
       <View style={styles.tabContainer}>
         <ScrollView

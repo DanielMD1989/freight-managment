@@ -66,7 +66,6 @@ export default function StatCard({
 
   return (
     <div
-      data-testid={`stat-card-${title}`}
       className="relative overflow-hidden rounded-xl border p-5 transition-all duration-200 hover:shadow-md"
       style={{
         background: "var(--card)",
@@ -96,7 +95,6 @@ export default function StatCard({
 
       {/* Value */}
       <div
-        data-testid={`stat-value-${title}`}
         className="mb-1 truncate text-3xl font-bold tracking-tight"
         style={{ color: "var(--foreground)" }}
         title={String(value)}

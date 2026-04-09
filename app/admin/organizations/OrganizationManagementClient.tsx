@@ -405,10 +405,7 @@ export default function OrganizationManagementClient({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-600">Total Organizations</div>
-          <div
-            data-testid="admin-orgs-total-count"
-            className="mt-1 text-2xl font-bold text-gray-900"
-          >
+          <div className="mt-1 text-2xl font-bold text-gray-900">
             {pagination.total}
           </div>
         </div>

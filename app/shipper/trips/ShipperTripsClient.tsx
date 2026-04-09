@@ -163,14 +163,6 @@ export default function ShipperTripsClient({
 
   return (
     <div className="space-y-6">
-      {/* Total count for the current status filter — always rendered for
-          stable test reads (audit script reads via data-testid). */}
-      <div
-        data-testid="trips-total-count"
-        style={{ position: "absolute", left: "-9999px" }}
-      >
-        {pagination.total}
-      </div>
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {STATUS_OPTIONS.map((option) => (

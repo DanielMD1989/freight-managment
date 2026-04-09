@@ -10,7 +10,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import { useTrips } from "../../../src/hooks/useTrips";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
@@ -24,10 +24,7 @@ import type { Trip } from "../../../src/types";
 
 export default function ShipperTripsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ status?: string }>();
-  const { data, isLoading, refetch, isRefetching } = useTrips(
-    params.status ? { status: params.status } : undefined
-  );
+  const { data, isLoading, refetch, isRefetching } = useTrips();
   const trips = data?.trips ?? [];
 
   const renderTrip = ({ item }: { item: Trip }) => (
@@ -49,12 +46,6 @@ export default function ShipperTripsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text
-        testID="trips-total-count"
-        style={{ position: "absolute", left: -9999, opacity: 0 }}
-      >
-        {data?.pagination?.total ?? trips.length}
-      </Text>
       {isLoading ? (
         <LoadingSpinner fullScreen />
       ) : (

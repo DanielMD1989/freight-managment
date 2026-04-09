@@ -305,10 +305,7 @@ export default function ShipperWalletClient({
             <p className="mb-1 text-sm font-medium text-white/80">
               Current Balance
             </p>
-            <p
-              data-testid="wallet-current-balance"
-              className="text-4xl font-bold"
-            >
+            <p className="text-4xl font-bold">
               {formatCurrency(walletData.balance, walletData.currency)}
             </p>
             {walletData.minimumBalance > 0 && (
@@ -745,29 +742,6 @@ export default function ShipperWalletClient({
             </p>
           </div>
         )}
-
-        {/* Hidden total count + full JSON for stable test reads */}
-        <div
-          data-testid="wallet-transaction-count"
-          style={{ position: "absolute", left: "-9999px" }}
-        >
-          {filteredTransactions.length}
-        </div>
-        <div
-          data-testid="wallet-transactions-json"
-          style={{ position: "absolute", left: "-9999px" }}
-        >
-          {/* Sprint: data-consistency audit — emit SIGNED amount only so
-              all surfaces (DB+API+Web+Expo) compare on the same shape:
-              negative = debit (money out), positive = credit (money in). */}
-          {JSON.stringify(
-            filteredTransactions.map((t) => ({
-              id: t.id,
-              type: t.type,
-              amount: t.isDebit ? -Math.abs(t.amount) : Math.abs(t.amount),
-            }))
-          )}
-        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
