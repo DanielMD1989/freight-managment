@@ -187,6 +187,8 @@ export default function DispatcherDashboardClient({
   const exceptionTrips = stats?.exceptionTrips ?? 0;
   const pendingProposals = stats?.pendingProposals ?? 0;
   const openEscalations = stats?.openEscalations ?? 0;
+  const assignedLoads =
+    stats?.assignedLoads ?? loads.filter((l) => l.status === "ASSIGNED").length;
 
   // Chart data with date range picker
   const [chartDateRange, setChartDateRange] = useState<DateRangeValue>(
@@ -307,6 +309,13 @@ export default function DispatcherDashboardClient({
                 ? { value: "Needs attention", positive: false }
                 : undefined
             }
+          />
+          <StatCard
+            title="Assigned Loads"
+            value={assignedLoads}
+            icon={<PackageIcon />}
+            color="primary"
+            subtitle="Awaiting carrier dispatch"
           />
           <StatCard
             title="In Transit"

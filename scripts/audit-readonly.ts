@@ -286,8 +286,15 @@ async function auditShipper(browser: any, email: string) {
         where: { lines: { some: { accountId: wallet.id } } },
       })
     : 0;
-  const dbTripCount = await prisma.trip.count({
-    where: { shipperId: user.organizationId },
+  // app/shipper/trips/page.tsx is "Trip History" — by design it filters
+  // to terminal statuses only (DELIVERED, COMPLETED, CANCELLED). Active
+  // trips live on /shipper/loads. The DB ground truth must mirror the
+  // page's scope.
+  const dbTripCount = await prisma.load.count({
+    where: {
+      shipperId: user.organizationId,
+      status: { in: ["DELIVERED", "COMPLETED", "CANCELLED"] },
+    },
   });
 
   // ── /shipper/dashboard

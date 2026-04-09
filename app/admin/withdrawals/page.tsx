@@ -36,6 +36,7 @@ async function fetchCsrfToken(): Promise<string> {
 
 export default function AdminWithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -51,6 +52,7 @@ export default function AdminWithdrawalsPage() {
       if (!res.ok) throw new Error("Failed to fetch withdrawals");
       const data = await res.json();
       setWithdrawals(data.withdrawals || []);
+      setTotalCount(data.pagination?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -138,6 +140,17 @@ export default function AdminWithdrawalsPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Total count */}
+      <div className="text-sm text-gray-600">
+        Total:{" "}
+        <span className="text-base font-semibold text-gray-900">
+          {totalCount}
+        </span>{" "}
+        {filterStatus
+          ? `${filterStatus.toLowerCase()} withdrawal request${totalCount === 1 ? "" : "s"}`
+          : `withdrawal request${totalCount === 1 ? "" : "s"}`}
       </div>
 
       {/* Table */}

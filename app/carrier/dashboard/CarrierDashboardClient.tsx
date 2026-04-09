@@ -250,8 +250,8 @@ export default function CarrierDashboardClient({
           </div>
         </div>
 
-        {/* Stats Grid - 5 cards */}
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 lg:gap-5">
+        {/* Stats Grid - 6 cards */}
+        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6 lg:gap-5">
           <StatCard
             title="Total Trucks"
             value={totalTrucks}
@@ -264,6 +264,13 @@ export default function CarrierDashboardClient({
             icon={<CheckCircleIcon />}
             color="success"
             subtitle="Ready for jobs"
+          />
+          <StatCard
+            title="Active Postings"
+            value={data.activePostings}
+            icon={<PackageIcon />}
+            color="accent"
+            subtitle="Listed in marketplace"
           />
           <StatCard
             title="Trucks on Job"

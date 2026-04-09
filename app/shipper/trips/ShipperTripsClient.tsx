@@ -163,6 +163,18 @@ export default function ShipperTripsClient({
 
   return (
     <div className="space-y-6">
+      {/* Total trips header — always visible regardless of pagination */}
+      <div className="flex items-center gap-2 text-sm">
+        <span style={{ color: "var(--foreground-muted)" }}>Total:</span>
+        <span
+          className="text-xl font-bold"
+          style={{ color: "var(--foreground)" }}
+        >
+          {pagination.total}
+        </span>
+        <span style={{ color: "var(--foreground-muted)" }}>trips</span>
+      </div>
+
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {STATUS_OPTIONS.map((option) => (
