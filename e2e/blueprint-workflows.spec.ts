@@ -54,11 +54,37 @@ async function api(method: string, path: string, token: string, body?: object) {
 }
 
 async function uiLogin(page: Page, email: string, pw: string, portal: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email address").fill(email);
-  await page.getByLabel("Password").fill(pw);
-  await page.getByRole("button", { name: /Sign in/i }).click();
-  await page.waitForURL(new RegExp(portal), { timeout: 15000 });
+  // Use cookie injection to avoid rate limiter exhaustion from form-based login
+  const r = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password: pw }),
+  });
+  const cookie = (r.headers.get("set-cookie") ?? "").match(
+    /session=([^;]+)/
+  )?.[1];
+  if (cookie) {
+    await page
+      .context()
+      .addCookies([
+        {
+          name: "session",
+          value: cookie,
+          domain: "localhost",
+          path: "/",
+          httpOnly: true,
+        },
+      ]);
+    await page.goto(portal, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+  } else {
+    // Fallback to form login
+    await page.goto("/login");
+    await page.getByLabel("Email address").fill(email);
+    await page.getByLabel("Password").fill(pw);
+    await page.getByRole("button", { name: /Sign in/i }).click();
+    await page.waitForURL(new RegExp(portal), { timeout: 15000 });
+  }
 }
 
 function days(n: number) {

@@ -156,13 +156,16 @@ test.describe("Deep: Carrier Wallet — UI ⇄ API parity (9b0ea64)", () => {
     await expect(page.getByText(/Service Fees Paid/i).first()).toBeVisible({
       timeout: 10000,
     });
-    const numericPart = String(Math.floor(Number(data.serviceFeesPaid)));
+    const raw = Math.floor(Number(data.serviceFeesPaid));
+    // Format with commas to match UI rendering (e.g. 30172 → "30,172")
+    const formatted = raw.toLocaleString("en-US");
+    const numericPart = String(raw);
     console.log(`expecting Service Fees Paid to show ${numericPart}`);
     await expect(
       page
         .getByText(/Service Fees Paid/i)
         .locator("..")
-        .getByText(new RegExp(numericPart))
+        .getByText(new RegExp(`${formatted}|${numericPart}`))
         .first()
     ).toBeVisible({ timeout: 10000 });
   });

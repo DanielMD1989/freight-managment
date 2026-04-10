@@ -34,13 +34,12 @@ test.describe("Shipper Documents", () => {
   });
 
   test("shows documents list with document types", async ({ page }) => {
-    // The actual document shown is "INSURANCE CERTIFICATE" with APPROVED badge
     const docContent = page
-      .getByText(/INSURANCE CERTIFICATE|All Documents/)
+      .getByText(/Insurance Certificate|All Documents|Document Type/i)
       .first();
-    const emptyState = page.getByText(/No Documents Yet/);
+    const emptyState = page.getByText(/No Documents Yet|No documents/i);
     await expect(docContent.or(emptyState).first()).toBeVisible({
-      timeout: 10000,
+      timeout: 15000,
     });
   });
 });

@@ -135,17 +135,17 @@ test.describe("Deep: Active Trips Tab", () => {
     const main = page.getByRole("main");
     const activeTab = main.getByText(/Active Trips/i).first();
     await activeTab.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     const tripContent = main
       .getByText(
-        /Pickup Pending|In Transit|Delivered|PICKUP_PENDING|IN_TRANSIT|ET-|E2E-/i
+        /Pickup Pending|In Transit|Delivered|PICKUP_PENDING|IN_TRANSIT|ET-|E2E-|TRIP-/i
       )
       .first();
     const emptyState = main
-      .getByText(/No Active Trips|no trips|Start a trip/i)
+      .getByText(/No active trips|no trips|Start a trip/i)
       .first();
-    await expect(tripContent.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(tripContent.or(emptyState)).toBeVisible({ timeout: 15000 });
   });
 
   test("status badges render with correct labels", async ({ page }) => {

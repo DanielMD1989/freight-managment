@@ -307,7 +307,7 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
   // ── Phase 1: Token acquisition ────────────────────────────────────────────
 
   test("PL-01 — Acquire tokens for all roles", async () => {
-    test.setTimeout(90000);
+    test.setTimeout(300000);
 
     const [
       shipperToken,

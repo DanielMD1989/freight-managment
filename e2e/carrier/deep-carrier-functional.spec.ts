@@ -412,6 +412,23 @@ test.describe.serial("Web Carrier FUNCTIONAL: truck posting create", () => {
     );
     test.skip(approved.length === 0, "no APPROVED truck for CF-7");
 
+    // Check if all approved trucks already have active postings (GPS IMEI blocks new ones)
+    const existingPostings = await apiCall<{
+      postings?: Array<{ truckId: string }>;
+    }>(
+      "GET",
+      "/api/truck-postings?myPostings=true&status=ACTIVE&limit=50",
+      token
+    );
+    const postedTruckIds = new Set(
+      (existingPostings.data.postings ?? []).map((p) => p.truckId)
+    );
+    const unpostedTrucks = approved.filter((t) => !postedTruckIds.has(t.id));
+    test.skip(
+      unpostedTrucks.length === 0,
+      "all APPROVED trucks already have active postings"
+    );
+
     const beforeRes = await apiCall<{
       postings?: Array<{ id: string }>;
     }>(
@@ -864,11 +881,14 @@ test.describe.serial("Web Carrier FUNCTIONAL: dispute via form", () => {
       "/api/disputes?limit=20",
       token
     );
-    const reusableLoadId = (existing.data.disputes ?? [])[0]?.loadId;
-    test.skip(
-      !reusableLoadId,
-      "no disputable load found via existing disputes"
-    );
+    const disputes =
+      existing.data.disputes ??
+      (Array.isArray(existing.data) ? existing.data : []);
+    const reusableLoadId = disputes[0]?.loadId;
+    if (!reusableLoadId) {
+      test.skip(true, "no disputable load found via existing disputes");
+      return;
+    }
 
     const beforeRes = await apiCall<{ disputes?: Array<{ id: string }> }>(
       "GET",

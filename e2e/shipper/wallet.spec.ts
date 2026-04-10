@@ -19,7 +19,7 @@ test.describe("Shipper Wallet", () => {
 
   test("shows financial summary cards", async ({ page }) => {
     await expect(page.getByText("Total Deposited")).toBeVisible();
-    await expect(page.getByText("Total Spent")).toBeVisible();
+    await expect(page.getByText("Service Fees Paid")).toBeVisible();
     await expect(page.getByText("Pending")).toBeVisible();
   });
 

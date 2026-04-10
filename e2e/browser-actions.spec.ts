@@ -15,11 +15,36 @@ async function loginViaUI(
   password: string,
   expectedPortal: string
 ) {
-  await page.goto("/login");
-  await page.getByLabel("Email address").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: /Sign in/i }).click();
-  await page.waitForURL(new RegExp(expectedPortal), { timeout: 15000 });
+  // Use cookie injection to avoid rate limiter exhaustion
+  const r = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const cookie = (r.headers.get("set-cookie") ?? "").match(
+    /session=([^;]+)/
+  )?.[1];
+  if (cookie) {
+    await page
+      .context()
+      .addCookies([
+        {
+          name: "session",
+          value: cookie,
+          domain: "localhost",
+          path: "/",
+          httpOnly: true,
+        },
+      ]);
+    await page.goto(expectedPortal, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+  } else {
+    await page.goto("/login");
+    await page.getByLabel("Email address").fill(email);
+    await page.getByLabel("Password").fill(password);
+    await page.getByRole("button", { name: /Sign in/i }).click();
+    await page.waitForURL(new RegExp(expectedPortal), { timeout: 15000 });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════

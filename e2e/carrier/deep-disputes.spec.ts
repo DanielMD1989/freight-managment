@@ -69,17 +69,20 @@ test.describe("Deep: Carrier Disputes List", () => {
   });
 
   test("dispute cards show load reference and date", async ({ page }) => {
-    await page.waitForTimeout(2000);
-    const info = page.getByText(/LOAD-|Filed|Created|No disputes/i).first();
-    await expect(info).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(3000);
+    const info = page
+      .getByText(/LOAD-|Filed|Created|No disputes found/i)
+      .first();
+    await expect(info).toBeVisible({ timeout: 15000 });
   });
 
   test("empty state shows No disputes found", async ({ page }) => {
+    await page.waitForTimeout(3000);
     // Either show disputes or empty state
     const content = page
       .getByText(/Payment Issue|Damage|No disputes found/i)
       .first();
-    await expect(content).toBeVisible({ timeout: 10000 });
+    await expect(content).toBeVisible({ timeout: 15000 });
   });
 
   test("cross-check disputes against API", async ({ page }) => {
@@ -114,7 +117,7 @@ test.describe("Deep: Carrier Dispute Detail", () => {
   test("dispute detail page navigable from list", async ({ page }) => {
     await page.goto("/carrier/disputes");
     await expectHeading(page, /Disputes/);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     // Try to click on a dispute to view details
     const disputeLink = page

@@ -213,7 +213,7 @@ test.describe.serial("Shipper Action Buttons", () => {
       "PATCH",
       `/api/loads/${cancelId}/status`,
       shipperToken,
-      { status: "CANCELLED" }
+      { status: "CANCELLED", reason: "E2E cancel test" }
     );
     expect(status).toBe(200);
 
