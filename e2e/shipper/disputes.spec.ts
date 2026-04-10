@@ -32,9 +32,13 @@ test.describe("Shipper Disputes", () => {
   test("clicking File Dispute opens the form", async ({ page }) => {
     await page.getByRole("button", { name: /File Dispute/ }).click();
     await expect(page.getByText("File a New Dispute")).toBeVisible();
-    await expect(page.getByText("Load ID")).toBeVisible();
-    await expect(page.getByText("Type")).toBeVisible();
-    await expect(page.getByText("Description")).toBeVisible();
+    await expect(
+      page.getByText("Load ID", { exact: true }).first()
+    ).toBeVisible();
+    await expect(page.getByText("Type", { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByPlaceholder(/Describe the issue/).first()
+    ).toBeVisible();
   });
 
   test("dispute form shows Cancel and Submit buttons", async ({ page }) => {

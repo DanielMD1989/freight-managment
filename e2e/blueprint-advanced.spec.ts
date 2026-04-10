@@ -402,6 +402,7 @@ test.describe.serial("§7: Exception Path", () => {
   });
 
   test("11. Carrier CANNOT resolve EXCEPTION (403)", async () => {
+    test.skip(!tripId, "No tripId — prior trip creation skipped");
     const { status } = await api(
       "PATCH",
       `/api/trips/${tripId}`,
@@ -412,6 +413,7 @@ test.describe.serial("§7: Exception Path", () => {
   });
 
   test("12. Dispatcher CANNOT resolve EXCEPTION (403)", async () => {
+    test.skip(!tripId, "No tripId — prior trip creation skipped");
     const { status } = await api(
       "PATCH",
       `/api/trips/${tripId}`,
@@ -422,6 +424,7 @@ test.describe.serial("§7: Exception Path", () => {
   });
 
   test("14. Admin resolves EXCEPTION → IN_TRANSIT (resumes)", async () => {
+    test.skip(!tripId, "No tripId — prior trip creation skipped");
     const { status } = await api("PATCH", `/api/trips/${tripId}`, adminToken, {
       status: "IN_TRANSIT",
     });

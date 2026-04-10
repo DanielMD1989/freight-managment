@@ -34,9 +34,13 @@ test.describe("Deep: Disputes Page", () => {
     await expect(page.getByText("File a New Dispute")).toBeVisible();
 
     // Verify all form fields are present
-    await expect(page.getByText("Load ID")).toBeVisible();
-    await expect(page.getByText("Type")).toBeVisible();
-    await expect(page.getByText("Description")).toBeVisible();
+    await expect(
+      page.getByText("Load ID", { exact: true }).first()
+    ).toBeVisible();
+    await expect(page.getByText("Type", { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByPlaceholder(/Describe the issue/).first()
+    ).toBeVisible();
 
     // Cancel button returns to list
     await page.getByRole("button", { name: "Cancel" }).click();

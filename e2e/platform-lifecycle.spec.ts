@@ -409,28 +409,25 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Check if truck already has an active posting (seed trucks do)
-    const { data: existingPostings } = await apiCall(
-      "GET",
-      `/api/truck-postings?truckId=${truck!.id}&limit=1`,
-      carrierToken
+    // Ensure truck has an ACTIVE posting — always try to create one
+    // (if one already exists, the API returns 409 which is fine)
+    const { status: pStatus } = await apiCall(
+      "POST",
+      "/api/truck-postings",
+      carrierToken,
+      {
+        truckId: truck!.id,
+        originCityId,
+        availableFrom: new Date().toISOString(), // today, not tomorrow
+        contactName: "Lifecycle Carrier",
+        contactPhone: "+251912345678",
+      }
     );
-    const hasPosting = (existingPostings.postings || []).length > 0;
-    if (!hasPosting) {
-      const { status: pStatus } = await apiCall(
-        "POST",
-        "/api/truck-postings",
-        carrierToken,
-        {
-          truckId: truck!.id,
-          originCityId,
-          availableFrom: tomorrow.toISOString(),
-          contactName: "Lifecycle Carrier",
-          contactPhone: "+251912345678",
-        }
-      );
-      expect([200, 201]).toContain(pStatus);
-    }
+    // 200/201 = created, 409 = already exists (both fine)
+    expect(
+      [200, 201, 409].includes(pStatus),
+      `truck posting creation unexpected status: ${pStatus}`
+    ).toBe(true);
 
     saveState({ truckId: truck!.id, licensePlate: truck!.licensePlate });
   });

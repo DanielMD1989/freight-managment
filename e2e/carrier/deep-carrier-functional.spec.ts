@@ -825,6 +825,19 @@ test.describe.serial("Web Carrier FUNCTIONAL: withdraw request", () => {
     test.setTimeout(90000);
     test.skip(!token, "no token");
 
+    // Check wallet balance first — skip if insufficient
+    const walletRes = await apiCall<{
+      balance?: number | string;
+      wallet?: { balance?: number | string };
+    }>("GET", "/api/financial/wallet", token);
+    const balance = Number(
+      walletRes.data.wallet?.balance ?? walletRes.data.balance ?? 0
+    );
+    test.skip(
+      balance < 310,
+      `Insufficient wallet balance (${balance} ETB) for 310 ETB withdrawal`
+    );
+
     const beforeRes = await apiCall<{
       withdrawals?: Array<{ id: string }>;
     }>("GET", "/api/financial/withdraw", token);
@@ -876,17 +889,18 @@ test.describe.serial("Web Carrier FUNCTIONAL: dispute via form", () => {
   }) => {
     test.skip(!token, "no token");
 
-    const existing = await apiCall<{ disputes?: Array<{ loadId: string }> }>(
+    // Find a load from the carrier's own trips (carrier can only dispute loads they transported)
+    const tripsRes = await apiCall<{ trips?: Array<{ loadId: string }> }>(
       "GET",
-      "/api/disputes?limit=20",
+      "/api/trips?limit=10",
       token
     );
-    const disputes =
-      existing.data.disputes ??
-      (Array.isArray(existing.data) ? existing.data : []);
-    const reusableLoadId = disputes[0]?.loadId;
+    const trips =
+      tripsRes.data.trips ??
+      (Array.isArray(tripsRes.data) ? tripsRes.data : []);
+    const reusableLoadId = trips[0]?.loadId;
     if (!reusableLoadId) {
-      test.skip(true, "no disputable load found via existing disputes");
+      test.skip(true, "no carrier trips found — cannot dispute without a load");
       return;
     }
 

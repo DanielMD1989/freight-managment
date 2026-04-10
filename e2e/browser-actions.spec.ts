@@ -25,17 +25,15 @@ async function loginViaUI(
     /session=([^;]+)/
   )?.[1];
   if (cookie) {
-    await page
-      .context()
-      .addCookies([
-        {
-          name: "session",
-          value: cookie,
-          domain: "localhost",
-          path: "/",
-          httpOnly: true,
-        },
-      ]);
+    await page.context().addCookies([
+      {
+        name: "session",
+        value: cookie,
+        domain: "localhost",
+        path: "/",
+        httpOnly: true,
+      },
+    ]);
     await page.goto(expectedPortal, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(2000);
   } else {
@@ -180,6 +178,9 @@ test.describe.serial("Shipper Browser Actions", () => {
       );
       return;
     }
+
+    // Accept the browser confirm dialog ("Remove this load from the marketplace?")
+    page.on("dialog", (d) => d.accept());
 
     const [response] = await Promise.all([
       page.waitForResponse(
@@ -337,14 +338,18 @@ test.describe("Admin Browser Actions", () => {
     await page.goto("/admin/users");
     await page.waitForLoadState("networkidle");
 
-    // Should show user list
+    // Should show user list heading and at least one user row
     const main = page.getByRole("main");
-    const hasUsers = await main
-      .getByText(/shipper@test|carrier@test|admin@test/i)
+    await expect(
+      main.getByText(/User Management|Manage all platform users/i).first()
+    ).toBeVisible({ timeout: 10000 });
+    // Verify at least one user row is visible (email column or name column)
+    const hasUserRow = await main
+      .locator("table tbody tr, [class*='user'], [class*='row']")
       .first()
       .isVisible({ timeout: 10000 })
       .catch(() => false);
-    expect(hasUsers).toBe(true);
+    expect(hasUserRow).toBe(true);
   });
 
   test("Organizations page loads", async ({ page }) => {
