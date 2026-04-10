@@ -38,7 +38,7 @@ const TABS: { key: ApprovalTab; label: string }[] = [
 export default function TrucksListScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ApprovalTab>("APPROVED");
-  const { data, isLoading, refetch, isRefetching } = useTrucks();
+  const { data, isLoading, refetch, isRefetching } = useTrucks({ limit: 200 });
   const organizationId = useAuthStore((s) => s.user?.organizationId);
   const { data: org } = useOrganization(organizationId);
   const isOrgApproved =

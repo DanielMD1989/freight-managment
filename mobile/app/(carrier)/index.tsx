@@ -77,6 +77,18 @@ export default function CarrierDashboard() {
       icon: "receipt" as const,
       color: colors.slate500,
     },
+    {
+      label: "Completed",
+      value: data?.completedDeliveries ?? 0,
+      icon: "checkmark-done" as const,
+      color: colors.success,
+    },
+    {
+      label: "Active Postings",
+      value: data?.activePostings ?? 0,
+      icon: "megaphone" as const,
+      color: colors.accent500,
+    },
   ];
 
   const quickActions = [

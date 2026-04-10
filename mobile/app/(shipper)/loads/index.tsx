@@ -1,7 +1,7 @@
 /**
  * Shipper Loads List Screen - with status filter tabs
  */
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -51,11 +51,24 @@ const STATUS_TABS = [
 export default function ShipperLoadsScreen() {
   const router = useRouter();
   const [activeStatus, setActiveStatus] = useState("");
+  // Fetch all loads (unfiltered) for total count and per-status badge counts
+  const { data: allData } = useLoads({ myLoads: true, limit: 500 });
   const { data, isLoading, refetch, isRefetching } = useLoads(
     activeStatus ? { status: activeStatus, myLoads: true } : { myLoads: true }
   );
 
   const loads = data?.loads ?? [];
+  const allLoads = allData?.loads ?? [];
+  const totalCount = allData?.pagination?.total ?? allLoads.length;
+
+  // Count loads per status for tab badges
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const load of allLoads) {
+      counts[load.status] = (counts[load.status] || 0) + 1;
+    }
+    return counts;
+  }, [allLoads]);
 
   const updateLoadMutation = useUpdateLoad();
   const deleteLoadMutation = useDeleteLoad();
@@ -174,6 +187,11 @@ export default function ShipperLoadsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Total count header */}
+      <View style={styles.totalHeader}>
+        <Text style={styles.totalText}>Total: {totalCount} loads</Text>
+      </View>
+
       {/* Status filter tabs */}
       <View style={styles.tabContainer}>
         <ScrollView
@@ -195,6 +213,25 @@ export default function ShipperLoadsScreen() {
               >
                 {tab.label}
               </Text>
+              {(tab.key === ""
+                ? totalCount > 0
+                : (statusCounts[tab.key] ?? 0) > 0) && (
+                <View
+                  style={[
+                    styles.badge,
+                    activeStatus === tab.key && styles.badgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      activeStatus === tab.key && styles.badgeTextActive,
+                    ]}
+                  >
+                    {tab.key === "" ? totalCount : statusCounts[tab.key]}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -243,6 +280,16 @@ export default function ShipperLoadsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  totalHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.white,
+  },
+  totalText: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
   tabContainer: {
     backgroundColor: colors.white,
     borderBottomWidth: 1,
@@ -254,6 +301,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   tab: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
@@ -264,6 +313,20 @@ const styles = StyleSheet.create({
   },
   tabText: { ...typography.labelSmall, color: colors.textSecondary },
   tabTextActive: { color: colors.white, fontWeight: "600" },
+  badge: {
+    backgroundColor: colors.slate200,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginLeft: 4,
+  },
+  badgeActive: { backgroundColor: "rgba(255,255,255,0.25)" },
+  badgeText: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  badgeTextActive: { color: colors.white },
   list: { padding: spacing.lg, gap: spacing.md },
   addButton: { marginBottom: spacing.md, alignSelf: "flex-end" },
   card: { marginBottom: spacing.md },

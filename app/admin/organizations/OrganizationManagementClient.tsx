@@ -422,7 +422,7 @@ export default function OrganizationManagementClient({
           </div>
         </div>
         <div className="rounded-lg bg-white p-4 shadow">
-          <div className="text-sm text-gray-600">Total Users</div>
+          <div className="text-sm text-gray-600">Organization Members</div>
           <div className="mt-1 text-2xl font-bold text-blue-600">
             {initialOrganizations.reduce(
               (sum, org) => sum + org._count.users,
