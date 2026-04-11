@@ -80,8 +80,11 @@ export async function GET(
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
     const isDispatcher = session.role === "DISPATCHER";
+    // Assigned driver may view route history for their own trip
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
+    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

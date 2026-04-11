@@ -142,6 +142,16 @@ export async function POST(
       );
     }
 
+    // Drivers can NEVER cancel trips. Explicit block with user-friendly
+    // 403 (the general access check below would also reject, but with a
+    // generic "Trip not found" 404 that would be misleading for drivers).
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot cancel trips" },
+        { status: 403 }
+      );
+    }
+
     // Check if user has permission to cancel
     // Blueprint §7: CARRIER or DISPATCHER can cancel. SHIPPER is not a cancel actor.
     const isCarrier =

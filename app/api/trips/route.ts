@@ -86,6 +86,10 @@ export async function GET(request: NextRequest) {
         // Can only see trips for their loads
         whereClause.shipperId = session.organizationId;
         break;
+      case "DRIVER":
+        // Drivers only see trips assigned to them (Trip.driverId)
+        whereClause.driverId = session.userId;
+        break;
       default:
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

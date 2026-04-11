@@ -53,6 +53,7 @@ export async function GET(
         deliveredAt: true,
         carrierId: true,
         shipperId: true,
+        driverId: true,
         truck: {
           select: {
             id: true,
@@ -82,9 +83,12 @@ export async function GET(
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isShipper =
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
+    // Assigned driver may track their own trip live
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
     // Fix 29: 403→404 resource cloaking
-    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
+    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper && !isDriver) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 

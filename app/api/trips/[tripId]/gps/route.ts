@@ -115,10 +115,13 @@ async function postHandler(
 
     // GPS writes are restricted to the owning carrier.
     // ADMIN/SUPER_ADMIN may override for ops/support purposes.
+    // The assigned driver may push GPS for their own trip (phone-based tracking).
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    if (!isCarrier && !isAdmin) {
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
+    if (!isCarrier && !isAdmin && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -280,8 +283,11 @@ async function getHandler(
     const isShipper =
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
     const isDispatcher = session.role === "DISPATCHER";
+    // Assigned driver may view GPS history for their own trip
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
+    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

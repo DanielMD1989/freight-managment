@@ -146,13 +146,22 @@ export async function GET(
       isCarrier: isCarrierView,
       isAdmin: isAdminView,
       isDispatcher,
+      isDriver,
     } = getAccessRoles(session, {
       shipperOrgId: trip.shipperId,
       carrierOrgId: trip.carrierId,
+      driverId: trip.driverId,
     });
 
     // G-M24-2: Dispatcher is platform-wide (Blueprint §5) — role-only check.
-    if (!isShipper && !isCarrierView && !isAdminView && !isDispatcher) {
+    // DRIVER: only the driver assigned to this trip via trip.driverId.
+    if (
+      !isShipper &&
+      !isCarrierView &&
+      !isAdminView &&
+      !isDispatcher &&
+      !isDriver
+    ) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -248,15 +257,23 @@ export async function PATCH(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // Carrier, admin, or dispatcher can update trip status
+    // Driver: only the driver assigned to this specific trip may touch it.
+    // Return 404 for non-assigned drivers to avoid leaking trip existence.
+    if (session.role === "DRIVER" && trip.driverId !== session.userId) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    }
+
+    // Carrier, admin, dispatcher, or assigned driver can update trip status
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     // G-M24-2: Dispatcher is platform-wide (Blueprint §5) — role-only check,
     // no org-scoping. Dispatcher org (LOGISTICS_AGENT) never matches carrier/shipper.
     const isDispatcher = session.role === "DISPATCHER";
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isCarrier && !isAdmin && !isDispatcher) {
+    if (!isCarrier && !isAdmin && !isDispatcher && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -328,6 +345,17 @@ export async function PATCH(
         return NextResponse.json(
           { error: "cancelReason is required when cancelling a trip" },
           { status: 400 }
+        );
+      }
+
+      // Drivers cannot cancel trips — they must contact their carrier.
+      // Belt-and-suspenders: TRIP_ROLE_PERMISSIONS already excludes CANCELLED
+      // for DRIVER, but return a user-friendly 403 instead of a generic
+      // role-mismatch error.
+      if (session.role === "DRIVER" && validatedData.status === "CANCELLED") {
+        return NextResponse.json(
+          { error: "Drivers cannot cancel trips. Contact your carrier." },
+          { status: 403 }
         );
       }
 

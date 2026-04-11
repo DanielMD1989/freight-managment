@@ -97,8 +97,11 @@ export async function POST(
     const isCarrier =
       session.role === "CARRIER" && session.organizationId === trip.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    // Assigned driver may upload POD for their own trip
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isCarrier && !isAdmin) {
+    if (!isCarrier && !isAdmin && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -405,6 +408,7 @@ export async function GET(
         id: true,
         carrierId: true,
         shipperId: true,
+        driverId: true,
       },
     });
 
@@ -420,8 +424,11 @@ export async function GET(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     // G-M29-3: Dispatcher is platform-wide (role-only) — matches M24 fix
     const isDispatcher = session.role === "DISPATCHER";
+    // Assigned driver may view POD for their own trip
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
+    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher && !isDriver) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
