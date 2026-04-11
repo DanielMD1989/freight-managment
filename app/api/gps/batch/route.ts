@@ -160,9 +160,14 @@ async function postHandler(request: NextRequest) {
     );
 
     // Create GPS position records
+    // Task 3C: batch endpoint is CARRIER-only (drivers use /api/trips/[id]/gps)
+    // and always backed by a registered GPS device, so tag every row as
+    // ELD_HARDWARE with no driver attribution.
     const createData = sortedPositions.map((pos) => ({
       truckId: truckId,
       deviceId: truck.gpsDeviceId!,
+      source: "ELD_HARDWARE",
+      driverId: null,
       latitude: pos.latitude,
       longitude: pos.longitude,
       speed: pos.speed,

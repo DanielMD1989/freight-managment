@@ -161,26 +161,42 @@ async function postHandler(
       ? new Date(validatedData.timestamp)
       : new Date();
 
+    // Task 3C: tag GPS source + driver attribution per caller role.
+    // - DRIVER: phone-based GPS, no physical device, attributed to driver
+    // - CARRIER / ADMIN / SUPER_ADMIN: uses truck's device path (MOBILE_CARRIER)
+    const gpsSource: string =
+      session.role === "DRIVER" ? "MOBILE_DRIVER" : "MOBILE_CARRIER";
+    const gpsDriverId: string | null =
+      session.role === "DRIVER" ? session.userId : null;
+    const isDriverCaller = session.role === "DRIVER";
+
     // TD-002 FIX: Wrap all GPS updates in a transaction for atomicity
     const gpsPosition = await db.$transaction(async (tx) => {
-      // Get or create GPS device ID (use truck's GPS device or create placeholder)
-      let deviceId = trip.truck.gpsDeviceId;
-      if (!deviceId) {
-        // Create a placeholder GPS device for this truck
-        const device = await tx.gpsDevice.create({
-          data: {
-            imei: `TRUCK-${trip.truck.id}`,
-            status: "ACTIVE",
-            lastSeenAt: now,
-          },
-        });
-        deviceId = device.id;
+      // Determine the deviceId for this position.
+      // DRIVER: skip device lookup/creation — phone is the GPS source, deviceId stays null.
+      // CARRIER / ADMIN: use truck's GPS device, creating a placeholder if missing.
+      let deviceId: string | null;
+      if (isDriverCaller) {
+        deviceId = null;
+      } else {
+        deviceId = trip.truck.gpsDeviceId;
+        if (!deviceId) {
+          // Create a placeholder GPS device for this truck
+          const device = await tx.gpsDevice.create({
+            data: {
+              imei: `TRUCK-${trip.truck.id}`,
+              status: "ACTIVE",
+              lastSeenAt: now,
+            },
+          });
+          deviceId = device.id;
 
-        // Link device to truck
-        await tx.truck.update({
-          where: { id: trip.truck.id },
-          data: { gpsDeviceId: device.id },
-        });
+          // Link device to truck
+          await tx.truck.update({
+            where: { id: trip.truck.id },
+            data: { gpsDeviceId: device.id },
+          });
+        }
       }
 
       // Create GPS position record linked to trip
@@ -190,6 +206,8 @@ async function postHandler(
           tripId: tripId,
           loadId: trip.loadId,
           deviceId: deviceId,
+          source: gpsSource,
+          driverId: gpsDriverId,
           latitude: new Prisma.Decimal(validatedData.latitude),
           longitude: new Prisma.Decimal(validatedData.longitude),
           speed: validatedData.speed
@@ -218,7 +236,8 @@ async function postHandler(
         },
       });
 
-      // Update truck's current location
+      // Update truck's current location (runs for both DRIVER and CARRIER —
+      // driver GPS still updates the truck's latest position).
       await tx.truck.update({
         where: { id: trip.truckId },
         data: {
@@ -230,14 +249,17 @@ async function postHandler(
         },
       });
 
-      // Update GPS device last seen
-      await tx.gpsDevice.update({
-        where: { id: deviceId },
-        data: {
-          lastSeenAt: now,
-          status: "ACTIVE",
-        },
-      });
+      // Update GPS device last seen — only when we have a physical device.
+      // DRIVER path has no device, so skip.
+      if (deviceId !== null) {
+        await tx.gpsDevice.update({
+          where: { id: deviceId },
+          data: {
+            lastSeenAt: now,
+            status: "ACTIVE",
+          },
+        });
+      }
 
       return position;
     });
