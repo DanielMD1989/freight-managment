@@ -412,12 +412,27 @@ export async function notifyOrganization(params: {
   title: string;
   message: string;
   metadata?: Record<string, unknown>;
+  excludeRoles?: UserRole[]; // Task 2: default excludes DRIVER from org-wide fan-out
 }) {
-  const { organizationId, type, title, message, metadata } = params;
+  const { organizationId, type, title, message, metadata, excludeRoles } =
+    params;
 
   try {
+    // Task 2: by default exclude DRIVER — drivers must not receive business
+    // notifications (load requests, fee deductions, wallet top-ups, settlements).
+    // Callers can pass `excludeRoles: []` to target everyone including drivers.
+    const rolesToExclude: UserRole[] = excludeRoles ?? [UserRole.DRIVER];
+
+    const where: Prisma.UserWhereInput = {
+      organizationId,
+      status: "ACTIVE",
+    };
+    if (rolesToExclude.length > 0) {
+      where.role = { notIn: rolesToExclude };
+    }
+
     const users = await db.user.findMany({
-      where: { organizationId, status: "ACTIVE" },
+      where,
       select: { id: true },
     });
 
