@@ -121,6 +121,20 @@ export async function GET(
             contactPhone: true,
           },
         },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
         routeHistory: {
           select: {
             id: true,
@@ -520,6 +534,20 @@ export async function PATCH(
                 id: true,
                 name: true,
                 contactPhone: true,
+              },
+            },
+            driver: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                driverProfile: {
+                  select: {
+                    cdlNumber: true,
+                    isAvailable: true,
+                  },
+                },
               },
             },
           },

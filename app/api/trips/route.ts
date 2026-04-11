@@ -149,6 +149,20 @@ export async function GET(request: NextRequest) {
               contactPhone: true,
             },
           },
+          driver: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              driverProfile: {
+                select: {
+                  cdlNumber: true,
+                  isAvailable: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         skip,

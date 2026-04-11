@@ -65,6 +65,20 @@ export async function GET(
             name: true,
           },
         },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
       },
     });
 

@@ -106,6 +106,20 @@ async function postHandler(
             carrierId: true,
           },
         },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -270,6 +284,22 @@ async function getHandler(
     // Get trip
     const trip = await db.trip.findUnique({
       where: { id: tripId },
+      include: {
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!trip) {

@@ -83,6 +83,20 @@ export async function POST(
             },
           },
         },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -409,6 +423,20 @@ export async function GET(
         carrierId: true,
         shipperId: true,
         driverId: true,
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
       },
     });
 

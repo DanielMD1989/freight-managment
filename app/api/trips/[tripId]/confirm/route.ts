@@ -82,6 +82,20 @@ export async function POST(
         podDocuments: {
           select: { id: true },
         },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
+          },
+        },
       },
     });
 
