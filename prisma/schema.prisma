@@ -19,6 +19,7 @@ enum UserRole {
   DISPATCHER // Assigns loads, handles exceptions
   ADMIN // Verifies users, manages wallets, configures rules
   SUPER_ADMIN // Platform owner, assigns roles, full access
+  DRIVER
 }
 
 enum UserStatus {
@@ -27,6 +28,7 @@ enum UserStatus {
   ACTIVE // Verified and approved, can access marketplace
   SUSPENDED // Temporarily suspended by admin
   REJECTED // Registration rejected by admin
+  INVITED
 }
 
 enum OrganizationType {
@@ -337,6 +339,10 @@ model User {
   // §13 In-App Messaging
   messagesSent Message[] @relation("MessageSender")
 
+  // Driver relations (Phase 1, Task 1)
+  driverProfile DriverProfile?
+  driverTrips   Trip[]         @relation("DriverTrips")
+
   @@index([email])
   @@index([organizationId])
   @@index([createdById])
@@ -346,6 +352,25 @@ model User {
   @@index([role]) // Filter users by role
   @@index([status, isActive]) // Active user checks (compound)
   @@map("users")
+}
+
+model DriverProfile {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cdlNumber      String?
+  cdlState       String?
+  cdlExpiry      DateTime?
+  medicalCertExp DateTime?
+  endorsements   Json?
+  cdlFrontUrl    String?
+  cdlBackUrl     String?
+  medicalCertUrl String?
+  isAvailable    Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  @@index([userId])
+  @@map("driver_profiles")
 }
 
 model PasswordResetToken {
@@ -1022,8 +1047,12 @@ model GpsPosition {
   truckId String
   truck   Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
 
-  deviceId String
-  device   GpsDevice @relation(fields: [deviceId], references: [id])
+  deviceId String?
+  device   GpsDevice? @relation(fields: [deviceId], references: [id])
+
+  // Source of GPS position (Phase 1, Task 1)
+  source   String? // "ELD_HARDWARE" | "MOBILE_CARRIER" | "MOBILE_DRIVER"
+  driverId String? // who sent this position (null for ELD)
 
   @@index([truckId, timestamp])
   @@index([deviceId])
@@ -1121,6 +1150,13 @@ model Trip {
   shipperId String
   shipper   Organization @relation("ShipperTrips", fields: [shipperId], references: [id])
 
+  // Driver assigned to this trip (Phase 1, Task 1)
+  driverId             String?
+  driver               User?     @relation("DriverTrips", fields: [driverId], references: [id])
+  previousDriverId     String?
+  driverReassignedAt   DateTime?
+  driverReassignReason String?
+
   // Route history - all GPS positions for this trip
   routeHistory GpsPosition[]
 
@@ -1144,6 +1180,7 @@ model Trip {
   @@index([carrierId, status]) // Carrier's trips by status
   @@index([shipperId, status]) // Shipper's trips by status
   @@index([status, createdAt]) // List trips by status sorted by date
+  @@index([driverId])
   @@map("trips")
 }
 
