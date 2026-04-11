@@ -135,12 +135,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting: 30 attempts per 15 minutes per email (raised from 5 for E2E test runs in dev)
+    // Rate limiting per email:ip — production uses strict 30/15min,
+    // development/test uses 10000 to avoid exhaustion during E2E suites
+    const isProduction = process.env.NODE_ENV === "production";
     const rateLimitKey = `${validatedData.email}:${clientIp}`;
     const rateLimit = await checkRateLimit(
       {
         name: "login",
-        limit: 30,
+        limit: isProduction ? 30 : 10000,
         windowMs: 15 * 60 * 1000, // 15 minutes
         message: "Too many login attempts. Please try again later.",
       },
