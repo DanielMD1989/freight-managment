@@ -127,7 +127,8 @@ export type Role =
   | "CARRIER"
   | "DISPATCHER"
   | "ADMIN"
-  | "SUPER_ADMIN";
+  | "SUPER_ADMIN"
+  | "DRIVER";
 
 /**
  * Permission mappings based on frozen role definitions
@@ -406,6 +407,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // ALL permissions
     ...Object.values(Permission),
   ],
+
+  // Task 1 placeholder — real permissions populated in Task 3
+  DRIVER: [],
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {
