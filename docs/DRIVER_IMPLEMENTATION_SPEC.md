@@ -1,618 +1,386 @@
-# 🚛 Driver Integration — Implementation Spec v3.0
+# 🚛 Driver Integration — Implementation Spec v5.0
 
 > **PURPOSE:** Single source of truth for adding Driver functionality.
-> Claude CLI: `Read DRIVER_IMPLEMENTATION_SPEC.md before making any changes.`
+> Claude CLI: `Read docs/DRIVER_IMPLEMENTATION_SPEC.md before making any changes.`
 >
-> **16 impact areas identified. 30 tasks. Every file traced.**
-> Verified against: github.com/DanielMD1989/freight-managment (April 2026)
+> **Verified against:** github.com/DanielMD1989/freight-managment (April 2026)
+> **34 security gaps found across 202 API routes. 5 tasks done. 23 remaining.**
+> **Deep dive: 10 rounds of analysis. Result stable across final 2 rounds.**
 
 ---
 
 ## 0. Guiding Principles
 
-1. Driver is a User with `role=DRIVER` under the carrier's Organization
+1. Driver is a User with `role=DRIVER` under the carrier's Organization (same organizationId)
 2. Driver is assigned per-trip (`Trip.driverId`), NOT per-truck
 3. No self-registration — carrier invites via 6-char invite code
 4. Carrier NEVER loses capability — driver is additive
 5. Backward compatible — `Trip.driverId` nullable; null = existing behavior
-6. Three separate mobile apps: FreightET (shipper), FreightET Carrier, FreightET Driver
-7. Shared mobile code via monorepo packages
+6. Three separate mobile apps via monorepo: FreightET (shipper), FreightET Carrier, FreightET Driver
+7. Shared mobile code via workspace packages
+
+**CRITICAL ARCHITECTURE NOTE:** DRIVER shares the carrier's `organizationId`. This means any API route that checks `organizationId === carrierId` WITHOUT also checking `role === "CARRIER"` will let DRIVER through. This is the root cause of 23 of the 34 gaps found below.
 
 ---
 
-## PHASE 1 — Foundation (Tasks 1–3)
+## COMPLETED TASKS
 
-### Task 1: Schema Migration
+### Task 1: Schema Migration ✅
 
-**Files:** `prisma/schema.prisma`
+**Commit:** 9a8b08f + d4e1fb0
+**Files:** prisma/schema.prisma, lib/rbac/permissions.ts
 
-Add to UserRole enum:
-```
-DRIVER
-```
+- Added DRIVER to UserRole enum
+- Added INVITED to UserStatus enum
+- Created DriverProfile model (14 fields)
+- Added Trip.driverId + driver relation + previousDriverId + driverReassignedAt + driverReassignReason + @@index([driverId])
+- Made GpsPosition.deviceId nullable (String?), device optional (GpsDevice?)
+- Added GpsPosition.source String? and GpsPosition.driverId String?
+- Added DRIVER to Role type union + DRIVER: [] placeholder in ROLE_PERMISSIONS
 
-Add to UserStatus enum:
-```
-INVITED
-```
+### Task 2: Notification System Fix ✅
 
-New model — DriverProfile:
-```prisma
-model DriverProfile {
-  id             String    @id @default(cuid())
-  userId         String    @unique
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cdlNumber      String?
-  cdlState       String?
-  cdlExpiry      DateTime?
-  medicalCertExp DateTime?
-  endorsements   Json?
-  cdlFrontUrl    String?
-  cdlBackUrl     String?
-  medicalCertUrl String?
-  isAvailable    Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  @@index([userId])
-  @@map("driver_profiles")
-}
-```
+**Commit:** 839e097
+**Files:** lib/notifications.ts
 
-Add to User model:
-```prisma
-driverProfile   DriverProfile?
-driverTrips     Trip[]    @relation("DriverTrips")
-```
+- notifyOrganization now accepts excludeRoles?: UserRole[], defaults to [DRIVER]
+- All 81 existing callers automatically exclude DRIVER
+- Callers can pass excludeRoles: [] to include drivers when needed
 
-Add to Trip model:
-```prisma
-driverId              String?
-driver                User?     @relation("DriverTrips", fields: [driverId], references: [id])
-previousDriverId      String?
-driverReassignedAt    DateTime?
-driverReassignReason  String?
-@@index([driverId])
-```
+### Task 3: RBAC & Permissions ✅
 
-Modify GpsPosition model:
-```prisma
-deviceId  String?         // ← MAKE NULLABLE (was required)
-device    GpsDevice?      // ← make optional
-source    String?         // "ELD_HARDWARE" | "MOBILE_CARRIER" | "MOBILE_DRIVER"
-driverId  String?         // who sent this position (null for ELD)
-```
+**Commit:** ec7badb
+**Files:** lib/rbac/permissions.ts, lib/rbac/accessHelpers.ts, lib/rbac/index.ts, lib/tripStateMachine.ts, lib/walletGate.ts, CLAUDE.md
 
-Run: `npx prisma migrate dev --name add-driver-role-and-gps-source`
-Run: `npm test` — all 3179 tests must pass.
+- DRIVER gets 8 permissions: VIEW_LOADS, UPDATE_TRIP_STATUS, UPLOAD_POD, VIEW_POD, VIEW_GPS, VIEW_LIVE_TRACKING, UPLOAD_DOCUMENTS, VIEW_DOCUMENTS
+- isDriver added to getAccessRoles (matches on driverId === userId)
+- canManageOrganization blocks DRIVER
+- TRIP_ROLE_PERMISSIONS: DRIVER gets PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, EXCEPTION (NO CANCELLED)
+- Wallet gate bypasses DRIVER
 
-**Validation:** Migration succeeds. No existing data affected. All tests green.
+### Task 4: Auth Wiring ✅
+
+**Commit:** 324d78a
+**Files:** 7 trip route files
+
+- app/api/trips/[tripId]/route.ts (GET: isDriver via getAccessRoles | PATCH: isDriver + cancel guard 403)
+- app/api/trips/[tripId]/pod/route.ts (POST + GET: isDriver added)
+- app/api/trips/[tripId]/cancel/route.ts (explicit DRIVER block 403)
+- app/api/trips/[tripId]/live/route.ts (isDriver added)
+- app/api/trips/[tripId]/history/route.ts (isDriver added)
+- app/api/trips/[tripId]/gps/route.ts (GET + POST: isDriver added)
+- app/api/trips/route.ts (GET: case DRIVER: whereClause.driverId = session.userId)
+
+### Task 5: Trip API Responses ✅
+
+**Commit:** f51a424
+**Files:** 8 files, 10 queries
+
+- All trip endpoints include driver info: { id, firstName, lastName, phone, driverProfile: { cdlNumber, isAvailable } }
+- Applied to: trip detail, trip list, live tracking, history, gps, cancel, confirm, pod
 
 ---
 
-### Task 2: Notification System Fix (CRITICAL)
+## SECURITY GAP ANALYSIS (34 gaps)
 
-**Problem:** `notifyOrganization()` in `lib/notifications.ts` line 420 sends to ALL active users in org. 81 callers across codebase. DRIVER in carrier org would receive every business notification (load requests, fee deductions, wallet top-ups, settlements).
+### Root Cause
 
-**Files:** `lib/notifications.ts`
+DRIVER shares carrier's `organizationId`. Routes that check `orgId === carrierId` without `role === "CARRIER"` grant DRIVER full carrier access.
 
-Modify `notifyOrganization`:
-```typescript
-export async function notifyOrganization(params: {
-  organizationId: string;
-  type: string;
-  title: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-  excludeRoles?: string[];  // ← ADD
-}) {
-  const { organizationId, type, title, message, metadata, excludeRoles } = params;
-  try {
-    const where: any = { organizationId, status: "ACTIVE" };
-    // Default: exclude DRIVER from org-wide notifications
-    const rolesToExclude = excludeRoles ?? ["DRIVER"];
-    if (rolesToExclude.length > 0) {
-      where.role = { notIn: rolesToExclude };
-    }
-    const users = await db.user.findMany({ where, select: { id: true } });
-    await Promise.all(users.map((user) => createNotification({ userId: user.id, type, title, message, metadata })));
-  } catch (error) {
-    console.error("Failed to notify organization:", error);
-  }
-}
+### Already Protected (by completed Tasks 1-5)
+
+- 81 notifyOrganization() callers — excludes DRIVER ✅
+- canManageOrganization — blocks DRIVER ✅
+- 7 trip route auth checks — isDriver added ✅
+- 10 trip response queries — driver info included ✅
+- walletGate — DRIVER bypass ✅
+- Trip cancel — explicit 403 ✅
+
+### Verified SAFE (23 routes — role guards block DRIVER)
+
+disputes/route.ts, disputes/[id]/route.ts, escalations/[id]/route.ts, load-requests/[id]/confirm, load-requests/[id]/respond, load-requests/[id]/route, loads/[id]/documents, loads/[id]/documents/download, loads/[id]/escalations, loads/[id]/pod, loads/[id]/service-fee, loads/[id]/settle, loads/[id]/status, trucks/[id]/location, trucks/[id]/nearby-loads, truck-requests/[id]/route, truck-requests/[id]/cancel, truck-postings/[id] PATCH, trucks/[id] PATCH (requirePermission EDIT_TRUCKS), financial/wallet (requirePermission VIEW_WALLET), financial/withdraw (requirePermission WITHDRAW_FUNDS), carrier/dashboard (role !== CARRIER), wallet/deposit POST (role guard).
+
+### CRITICAL — 14 security holes
+
+| #   | File                                                   | Line(s)          | Problem                                                                                                                                                 |
+| --- | ------------------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | app/api/wallet/balance/route.ts                        | 22-43            | NO role check. orgId query. DRIVER sees carrier wallet balance.                                                                                         |
+| 2   | app/api/wallet/transactions/route.ts                   | 25-36            | NO role check. orgId query. DRIVER sees all financial transactions.                                                                                     |
+| 3   | app/api/wallet/deposit/route.ts GET                    | 177-195          | POST has role guard, GET does not. DRIVER sees deposit history.                                                                                         |
+| 4   | app/api/organizations/members/[id]/route.ts DELETE     | 47-83            | NO role check. DRIVER can REMOVE any org member including carrier owner.                                                                                |
+| 5   | app/api/trucks/route.ts GET                            | 312-340          | DRIVER falls through all role checks (no DRIVER case). No WHERE filter. Sees ALL trucks in entire system.                                               |
+| 6   | app/api/match-proposals/route.ts GET                   | 372-383          | DRIVER falls through CARRIER/DISPATCHER/SHIPPER switch. No WHERE filter. Sees ALL match proposals in system.                                            |
+| 7   | app/api/trips/[tripId]/rate/route.ts                   | 78-85            | orgId match determines raterRole. DRIVER matches carrierId. Submits ratings as raterRole="CARRIER".                                                     |
+| 8   | app/api/documents/[id]/route.ts GET                    | 105-110          | orgId match only. DRIVER sees carrier business docs (license, insurance, tax).                                                                          |
+| 9   | app/api/documents/upload/route.ts                      | 227-231, 260-261 | orgId match. DRIVER has UPLOAD_DOCUMENTS permission. Can upload/overwrite carrier org and truck docs. Mitigated by documentsLockedAt for approved orgs. |
+| 10  | app/api/organizations/[id]/route.ts GET                | 68               | orgId isMember. DRIVER sees full org data + all user names, emails, roles.                                                                              |
+| 11  | app/api/organizations/invitations/route.ts POST        | 55-66            | NO role guard. DRIVER can invite new CARRIER/SHIPPER/DISPATCHER users to carrier org.                                                                   |
+| 12  | app/api/organizations/invitations/[id]/route.ts DELETE | 118              | orgId match. DRIVER can delete pending invitations.                                                                                                     |
+| 13  | app/api/organizations/me/route.ts                      | 11-55            | orgId query. Returns full org including financialAccounts with balance, all users, truck/load counts.                                                   |
+| 14  | lib/gpsTracking.ts canAccessTracking()                 | 459-461          | orgId match. DRIVER tracks ANY carrier load. Affects loads/tracking and loads/live-position routes.                                                     |
+
+### HIGH — 9 org-scoped data leaks
+
+| #   | File                                           | Line    | Problem                                                                                           |
+| --- | ---------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| 15  | app/api/loads/[id]/progress/route.ts           | 57-59   | orgId in hasAccess OR chain. DRIVER sees any carrier load progress.                               |
+| 16  | app/api/loads/[id]/gps-history/route.ts        | 57-58   | isCarrier = orgId match. DRIVER sees GPS history of any carrier load.                             |
+| 17  | app/api/loads/[id]/next-loads/route.ts         | 45      | isAssignedCarrier = orgId match. DRIVER sees return load recommendations.                         |
+| 18  | app/api/loads/[id]/matching-trucks/route.ts    | 62-68   | isAssignedCarrier = orgId match. DRIVER sees matching trucks for any carrier load.                |
+| 19  | app/api/loads/[id]/route.ts GET                | 220-221 | isAssignedCarrier = orgId match. DRIVER sees full details of any load assigned to carrier trucks. |
+| 20  | app/api/trucks/[id]/history/route.ts           | 64      | isOwner = orgId match. DRIVER sees GPS history of any carrier truck.                              |
+| 21  | app/api/trucks/[id]/position/route.ts          | 64      | Same as #20. DRIVER sees current position of any carrier truck.                                   |
+| 22  | app/api/gps/positions/route.ts                 | 41-44   | With truckId param: orgId match. DRIVER sees GPS positions of any carrier truck.                  |
+| 23  | app/api/organizations/invitations/route.ts GET | 170-195 | orgId query. DRIVER sees all pending/accepted invitation data.                                    |
+
+### HIGH — 8 functionality gaps
+
+| #   | File                                    | Line    | Problem                                                                                |
+| --- | --------------------------------------- | ------- | -------------------------------------------------------------------------------------- |
+| 24  | lib/notificationRoutes.ts               | 36-55   | No DRIVER case. Notification taps go nowhere.                                          |
+| 25  | mobile/src/utils/notificationRouting.ts | 38-39   | No DRIVER handling. Mobile notification taps unroutable.                               |
+| 26  | app/login/page.tsx                      | 63-69   | No DRIVER in roleRedirects. Login loop.                                                |
+| 27  | app/page.tsx                            | 20-31   | No DRIVER redirect. Combined with #26 creates infinite loop.                           |
+| 28  | lib/websocket-server.ts                 | 109-123 | DRIVER blocked from trip GPS subscription. Driver app cant receive real-time tracking. |
+| 29  | mobile/app/\_layout.tsx                 | 183-210 | DRIVER falls through CARRIER/SHIPPER routing. Force logout with "Unsupported Role".    |
+| 30  | mobile/src/stores/auth.ts               | 65      | Register type excludes DRIVER. Correct for registration. Noted for awareness.          |
+| 31  | prisma/schema.prisma Invitation model   | N/A     | No phone field. Driver invites need phone for validation.                              |
+
+### MEDIUM — 3 lower-impact
+
+| #   | File                                                | Line | Problem                                                                |
+| --- | --------------------------------------------------- | ---- | ---------------------------------------------------------------------- |
+| 32  | app/api/trucks/[id]/route.ts GET                    | 118  | orgId in canView. DRIVER sees truck details including GPS device IMEI. |
+| 33  | app/api/truck-postings/[id]/matching-loads/route.ts | 140  | orgId match. DRIVER sees matching loads for carrier postings.          |
+| 34  | components/RoleAwareSidebar.tsx                     | 552  | Role type excludes DRIVER. Minor TS issue.                             |
+
+---
+
+## REMAINING TASKS
+
+### Task 6: DRIVER Access Lockdown
+
+**MUST be done BEFORE any other task. These are live security holes.**
+
+Fixes all 14 CRITICAL + 9 HIGH data leaks. One focused commit. 21 files.
+
+**Group A — Block DRIVER completely (add role guard before orgId check):**
+
+| File                                            | Handler  | Fix                                                                   |
+| ----------------------------------------------- | -------- | --------------------------------------------------------------------- |
+| app/api/wallet/balance/route.ts                 | GET      | After requireActiveUser: `if (user.role === "DRIVER") return 403`     |
+| app/api/wallet/transactions/route.ts            | GET      | Same                                                                  |
+| app/api/wallet/deposit/route.ts                 | GET only | Same (POST already guarded)                                           |
+| app/api/organizations/members/[id]/route.ts     | DELETE   | `if (session.role === "DRIVER") return 403`                           |
+| app/api/organizations/members/[id]/route.ts     | PATCH    | Same                                                                  |
+| app/api/trucks/route.ts                         | GET      | After SHIPPER block: `if (user.role === "DRIVER") return 403`         |
+| app/api/match-proposals/route.ts                | GET      | Add in role switch: `else if (session.role === "DRIVER") return 403`  |
+| app/api/trips/[tripId]/rate/route.ts            | POST     | Before orgId: `if (session.role === "DRIVER") return 403`             |
+| app/api/trips/[tripId]/rate/route.ts            | GET      | In isParty check: add `&& session.role !== "DRIVER"`                  |
+| app/api/organizations/invitations/route.ts      | POST     | `if (session.role === "DRIVER") return 403`                           |
+| app/api/organizations/invitations/route.ts      | GET      | Same                                                                  |
+| app/api/organizations/invitations/[id]/route.ts | DELETE   | Same                                                                  |
+| app/api/documents/[id]/route.ts                 | GET      | `if (session.role === "DRIVER") return 403`                           |
+| app/api/documents/upload/route.ts               | POST     | Both org and truck paths: `if (session.role === "DRIVER") return 403` |
+| app/api/gps/positions/route.ts                  | GET      | Add `&& user?.role !== "DRIVER"` to canView                           |
+| app/api/organizations/me/route.ts               | GET      | If DRIVER: return { id, name, contactPhone } only                     |
+| app/api/organizations/[id]/route.ts             | GET      | If DRIVER: return limited data (no users array, no financial)         |
+
+**Group B — Add role === "CARRIER" to isCarrier/isOwner/isAssignedCarrier:**
+
+| File                                        | Variable                   | Change                                                                |
+| ------------------------------------------- | -------------------------- | --------------------------------------------------------------------- |
+| app/api/loads/[id]/progress/route.ts        | hasAccess line 59          | Wrap carrier orgId in: `(session.role === "CARRIER" && ...)`          |
+| app/api/loads/[id]/gps-history/route.ts     | isCarrier line 58          | Add: `user?.role === "CARRIER" &&`                                    |
+| app/api/loads/[id]/next-loads/route.ts      | isAssignedCarrier line 45  | Add: `user?.role === "CARRIER" &&`                                    |
+| app/api/loads/[id]/matching-trucks/route.ts | isAssignedCarrier line 62  | Add: `user?.role === "CARRIER" &&`                                    |
+| app/api/loads/[id]/route.ts GET             | isAssignedCarrier line 220 | Add: `user.role === "CARRIER" &&`                                     |
+| app/api/trucks/[id]/history/route.ts        | isOwner line 64            | Add: `user?.role === "CARRIER" &&`                                    |
+| app/api/trucks/[id]/position/route.ts       | isOwner line 64            | Add: `user?.role === "CARRIER" &&`                                    |
+| lib/gpsTracking.ts                          | canAccessTracking line 459 | Add: `if (user.role === "DRIVER") return false;` before carrier check |
+
+**Validation:**
+
+- npx tsc -p tsconfig.build.json --noEmit
+- npm test — all 3207+ tests must pass
+- NO behavior changes for CARRIER/SHIPPER/ADMIN/DISPATCHER
+
+---
+
+### Task 7: GPS Pipeline Fix
+
+**File 1: app/api/trips/[tripId]/gps/route.ts (POST)**
+
+Before transaction (~line 164): determine source based on role:
+
+```
+const isDriverRole = session.role === "DRIVER";
+const gpsSource = isDriverRole ? "MOBILE_DRIVER" : "MOBILE_CARRIER";
+const gpsDriverId = isDriverRole ? session.userId : null;
 ```
 
-**Validation:** Existing callers work unchanged (default excludes DRIVER). No test changes needed — DRIVER users don't exist in test data yet.
+Device logic (lines 167-184): If DRIVER skip device creation, deviceId = null. If CARRIER/ADMIN: existing logic unchanged.
+
+GpsPosition.create (lines 187-208): Add `deviceId: isDriverRole ? null : deviceId`, `source: gpsSource`, `driverId: gpsDriverId`.
+
+GpsDevice.update (lines 233-240): Wrap in `if (deviceId) { ... }`.
+
+GET handler positions select (lines 339-353): Add `source: true, driverId: true`. Add to response map.
+
+**File 2: app/api/gps/batch/route.ts**
+
+createData map (line 163): Add `source: "MOBILE_CARRIER", driverId: null`. No DRIVER support.
+
+**Validation:** npx tsc + npm test.
 
 ---
 
-### Task 3: RBAC & Permissions Updates
+### Task 8: Messaging Fix
 
-**Files:**
-- `lib/rbac/permissions.ts` — Add DRIVER to Role type + ROLE_PERMISSIONS
-- `lib/rbac/accessHelpers.ts` — Add isDriver to AccessRoles + getAccessRoles
-- `lib/rbac/index.ts` — Block DRIVER in canManageOrganization
-- `lib/tripStateMachine.ts` — Add DRIVER to TRIP_ROLE_PERMISSIONS
-- `lib/walletGate.ts` — Add DRIVER bypass
-- `CLAUDE.md` — Update roles section
+**Files:** messages/route.ts (POST+GET), messages/[messageId]/read, messages/unread-count
 
-**lib/rbac/permissions.ts:**
-```typescript
-export type Role = "SHIPPER" | "CARRIER" | "DISPATCHER" | "ADMIN" | "SUPER_ADMIN" | "DRIVER";
+POST: Check DRIVER before orgId. senderRole = "DRIVER". Add driverId to trip select.
+GET + read + unread: Add isDriver check. Add driverId to trip select.
 
-// Add to ROLE_PERMISSIONS:
-DRIVER: [
-  Permission.VIEW_LOADS,
-  Permission.UPDATE_TRIP_STATUS,
-  Permission.UPLOAD_POD,
-  Permission.VIEW_POD,
-  Permission.VIEW_GPS,
-  Permission.VIEW_LIVE_TRACKING,
-  Permission.UPLOAD_DOCUMENTS,
-  Permission.VIEW_DOCUMENTS,
-],
-```
-
-**lib/rbac/accessHelpers.ts:**
-- Add `isDriver: boolean` to AccessRoles interface
-- Add `driverId?: string | null` to entityOwners param
-- Add: `const isDriver = role === "DRIVER" && !!driverId && driverId === session.userId;`
-- Update hasAccess: include isDriver
-- NOTE: SessionInfo needs userId — it already has it
-
-**lib/rbac/index.ts:**
-```typescript
-// In canManageOrganization — add before the orgId check:
-if (session.role === "DRIVER") return false;
-```
-
-**lib/tripStateMachine.ts:**
-```typescript
-// Add to TRIP_ROLE_PERMISSIONS:
-DRIVER: [
-  TripStatus.PICKUP_PENDING,
-  TripStatus.IN_TRANSIT,
-  TripStatus.DELIVERED,
-  TripStatus.COMPLETED,
-  TripStatus.EXCEPTION,
-  // NO CANCELLED — drivers cannot cancel
-],
-```
-
-**lib/walletGate.ts:**
-```typescript
-// Add after DISPATCHER bypass:
-if (session.role === "DRIVER") return null;
-```
-
-**Validation:** `npm test` — all existing tests pass. No behavior change yet.
+**Validation:** npx tsc + npm test.
 
 ---
 
-## PHASE 2 — Driver APIs (Tasks 4–6)
+### Task 9: Truck Reassignment + Driver
 
-### Task 4: Driver Invite & Registration API
-
-**New files:**
-- `app/api/drivers/invite/route.ts` — POST: carrier generates invite code
-- `app/api/drivers/accept-invite/route.ts` — POST: driver enters code + phone + password
-
-**Modified files:**
-- `app/api/auth/register/route.ts` — add explicit DRIVER block (already excluded by Zod enum, add comment)
-
-**Invite flow:**
-1. Carrier POST /api/drivers/invite `{ name, phone, email? }`
-2. Validate: caller is CARRIER + ACTIVE, org is CARRIER type
-3. Generate 6-char alphanumeric invite code (uppercase, no ambiguous chars)
-4. Create Invitation record: `{ role: DRIVER, orgId: carrier.orgId, token: inviteCode, email, phone }`
-   NOTE: Reuse existing Invitation model — it already has role, orgId, token, expiresAt
-   Add `phone` field to Invitation model if not present
-5. Create User: `{ role: DRIVER, orgId: carrier.orgId, status: INVITED, name, phone }`
-6. Return invite code to carrier (carrier shares it manually)
-
-**Accept flow:**
-1. Driver POST /api/drivers/accept-invite `{ inviteCode, phone, password, cdlNumber?, cdlExpiry?, medicalCertExp? }`
-2. Validate: invitation exists, status=PENDING, not expired, phone matches
-3. Find linked User (role=DRIVER, status=INVITED, phone match, same org)
-4. Hash password, update User: status → PENDING_VERIFICATION
-5. Create DriverProfile with CDL data
-6. Update Invitation: status → ACCEPTED
-7. Notify carrier: DRIVER_REGISTERED
+**File:** reassign-truck/route.ts. Handle driver when truck changes. Optional newDriverId. Update audit fields. Notify drivers.
 
 ---
 
-### Task 5: Driver CRUD API
+### Task 10: Geofence + GPS Alerts
 
-**New files:**
-- `app/api/drivers/route.ts` — GET: list drivers for carrier org
-- `app/api/drivers/[id]/route.ts` — GET detail, PUT update profile, DELETE soft-delete
-- `app/api/drivers/[id]/approve/route.ts` — POST: carrier approves driver
-- `app/api/drivers/[id]/reject/route.ts` — POST: carrier rejects driver
-
-**Logic:**
-- GET list: `where: { role: DRIVER, organizationId: session.organizationId }`
-- Include: driverProfile, active trip count, availability
-- DELETE: check no active trips, set status → SUSPENDED. Do NOT hard delete.
-- Approve: validate caller is CARRIER same org, set User.status → ACTIVE
-- Reject: set User.status → REJECTED with reason
+**Files:** geofenceNotifications.ts, gpsAlerts.ts. Targeted driver notifications for trip events. Filter GPS alerts to assigned driver only.
 
 ---
 
-### Task 6: Trip Assignment + Conflict Detection
+### Task 11: Trip Cron + Carrier Dashboard
 
-**New files:**
-- `app/api/trips/[tripId]/assign-driver/route.ts` — POST
-- `app/api/trips/[tripId]/unassign-driver/route.ts` — POST
-
-**Modified files:**
-- `lib/assignmentConflictDetection.ts` — add driver conflict check
-
-**Assign validation:**
-1. Trip must be ASSIGNED or PICKUP_PENDING
-2. Driver must be same org as trip.carrierId
-3. Driver must be ACTIVE status
-4. Driver must have isAvailable=true
-5. **NEW: Driver must NOT have another active trip** (ASSIGNED, PICKUP_PENDING, or IN_TRANSIT)
-6. If replacing existing driver: set previousDriverId, driverReassignedAt, driverReassignReason
-7. Notify driver: TRIP_DRIVER_ASSIGNED
-8. Optionally set driver.isAvailable = false
-
-**Unassign validation:**
-1. Trip must be in ASSIGNED state only
-2. Set Trip.driverId = null
-3. Notify driver: TRIP_DRIVER_UNASSIGNED
-
-**Conflict detection addition:**
-```typescript
-// Add to lib/assignmentConflictDetection.ts:
-export async function checkDriverConflicts(driverId: string, tripId: string): Promise<ConflictCheck> {
-  const activeTrip = await db.trip.findFirst({
-    where: {
-      driverId,
-      id: { not: tripId },
-      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
-    },
-  });
-  if (activeTrip) {
-    return { hasConflict: true, conflicts: [{ type: "DRIVER_ALREADY_ASSIGNED", message: "Driver already has an active trip" }], warnings: [] };
-  }
-  return { hasConflict: false, conflicts: [], warnings: [] };
-}
-```
+**Files:** trip-monitor/route.ts (add driver notification), carrier/dashboard/route.ts (add driver stats).
 
 ---
 
-## PHASE 3 — Auth & Trip Pipeline (Tasks 7–10)
+### Task 12: Web Login + Root Page
 
-### Task 7: Auth Middleware Updates (13 files)
-
-Add DRIVER to auth checks. Pattern for each file:
-```typescript
-const isDriver = session.role === "DRIVER" && trip.driverId === session.userId;
-```
-
-| File | Change |
-|------|--------|
-| `app/api/trips/[tripId]/route.ts` GET | Add isDriver to access check |
-| `app/api/trips/[tripId]/route.ts` PATCH | Add isDriver + cancel guard: `if (role=DRIVER && status=CANCELLED) return 403` |
-| `app/api/trips/[tripId]/pod/route.ts` POST | Add isDriver to upload check |
-| `app/api/trips/[tripId]/pod/route.ts` GET | Add isDriver to view check |
-| `app/api/trips/[tripId]/cancel/route.ts` | Explicitly BLOCK DRIVER → 403 |
-| `app/api/trips/[tripId]/live/route.ts` | Add isDriver |
-| `app/api/trips/[tripId]/history/route.ts` | Add isDriver |
-| `app/api/trips/[tripId]/gps/route.ts` GET | Add isDriver |
-| `app/api/trips/[tripId]/gps/route.ts` POST | Add isDriver |
-| `app/api/trips/[tripId]/messages/route.ts` | Add isDriver send/read (see Task 9) |
-| `app/api/trips/[tripId]/messages/[messageId]/read/route.ts` | Add isDriver |
-| `app/api/trips/[tripId]/messages/unread-count/route.ts` | Add isDriver |
-| `app/api/trips/route.ts` GET | Add DRIVER case: `whereClause.driverId = session.userId` |
+**Files:** login/page.tsx (add DRIVER redirect), page.tsx (add DRIVER redirect), NEW app/driver/page.tsx.
 
 ---
 
-### Task 8: Trip API Responses — Add Driver Info
+### Task 13: Driver Invite & Registration API
 
-Add driver include to every trip query that returns trip data.
-
-Add to Prisma include:
-```typescript
-driver: trip.driverId ? {
-  select: {
-    id: true,
-    firstName: true,
-    lastName: true,
-    phone: true,
-    driverProfile: {
-      select: { cdlNumber: true, isAvailable: true }
-    }
-  }
-} : undefined,
-```
-
-**Files (9):**
-1. `app/api/trips/[tripId]/route.ts` (GET + PATCH response)
-2. `app/api/trips/route.ts` (GET list)
-3. `app/api/trips/[tripId]/live/route.ts`
-4. `app/api/trips/[tripId]/history/route.ts`
-5. `app/api/trips/[tripId]/gps/route.ts`
-6. `app/api/trips/[tripId]/cancel/route.ts`
-7. `app/api/trips/[tripId]/confirm/route.ts`
-8. `app/api/trips/[tripId]/pod/route.ts`
-9. `app/api/carrier/dashboard/route.ts`
-
-Also add to carrier dashboard: activeDriverCount, availableDriverCount.
+**Schema:** Add phone to Invitation model. Migration.
+**New routes:** drivers/invite, drivers/accept-invite.
 
 ---
 
-### Task 9: Messaging Updates
+### Task 14: Driver CRUD API
 
-**File:** `app/api/trips/[tripId]/messages/route.ts`
-
-**Problem:** senderRole determined by orgId match. Driver shares carrier orgId → sends as "CARRIER".
-
-**Fix:** Check DRIVER role BEFORE orgId check:
-```typescript
-if (session.role === "DRIVER" && session.userId === trip.driverId) {
-  senderRole = "DRIVER";
-  recipientOrgId = trip.shipperId;
-} else if (session.organizationId === trip.shipperId) {
-  senderRole = "SHIPPER";
-  recipientOrgId = trip.carrierId;
-} else if (session.organizationId === trip.carrierId) {
-  senderRole = "CARRIER";
-  recipientOrgId = trip.shipperId;
-} else {
-  return 404;
-}
-```
-
-Also: when sending notification for new message, if trip has driver, notify driver directly (not just org).
+**New routes:** drivers/ (GET list), drivers/[id] (GET/PUT/DELETE), drivers/[id]/approve, drivers/[id]/reject.
 
 ---
 
-### Task 10: Truck Reassignment + Driver
+### Task 15: Trip Assignment + Conflict Detection
 
-**File:** `app/api/trips/[tripId]/reassign-truck/route.ts`
-
-When truck is reassigned mid-trip, handle driver:
-- If new truck is same carrier org (always per blueprint): keep driver by default
-- Add optional `reassignDriver` boolean to request body
-- If `reassignDriver: true` + `newDriverId`: reassign driver too
-- If `reassignDriver: true` + no `newDriverId`: unassign driver
-- Update notifications to include driver reassignment info
+**New routes:** trips/[tripId]/assign-driver, trips/[tripId]/unassign-driver.
+**Modified:** assignmentConflictDetection.ts (checkDriverConflicts).
 
 ---
 
-## PHASE 4 — GPS Pipeline (Tasks 11–13)
+### Task 16: Notification Types + Wiring
 
-### Task 11: GPS Schema (Done in Task 1)
-
-Already handled in Task 1: GpsPosition.deviceId nullable, source field, driverId field.
+Add DRIVER notification types. Wire into notificationRoutes.ts + mobile notificationRouting.ts.
 
 ---
 
-### Task 12: Driver GPS Ingestion
+### Task 17: WebSocket DRIVER Support
 
-**New file:** `app/api/drivers/location/route.ts`
-
-POST — Driver sends GPS from phone:
-1. Require DRIVER role + ACTIVE status
-2. Find driver's active trip: `where: { driverId: session.userId, status: { in: ["PICKUP_PENDING", "IN_TRANSIT"] } }`
-3. Get truckId from trip
-4. Create GpsPosition: `{ truckId, deviceId: null, source: "MOBILE_DRIVER", driverId: session.userId, tripId, latitude, longitude, ... }`
-5. Update Trip.currentLat/currentLng + currentLocationUpdatedAt
-6. Update Truck.currentLocationLat/currentLocationLon
-7. Broadcast via WebSocket
-
-**Also modify:** `app/api/gps/batch/route.ts`
-- Line 64: allow DRIVER alongside CARRIER
-- When role=DRIVER: skip gpsDeviceId requirement, set source="MOBILE_DRIVER", set driverId
-- When role=CARRIER: existing behavior unchanged (source="MOBILE_CARRIER" or "ELD_HARDWARE")
+Add DRIVER case to checkLoadGpsPermission in websocket-server.ts.
 
 ---
 
-### Task 13: Live Tracking & Trip History — Source Awareness
+### Task 18: Carrier Web — Driver Management
 
-**Files:**
-- `app/api/trips/[tripId]/live/route.ts` — add driver info to response, add GPS source info
-- `app/api/trips/[tripId]/history/route.ts` — add driver info, add source field to route points
-
-For live tracking: use most recent position regardless of source.
-For trip history: include source field on each point so UI can show ELD vs mobile.
+New pages: driver list, invite, detail. Add to carrier sidebar.
 
 ---
 
-## PHASE 5 — Background Systems (Tasks 14–16)
+### Task 19: Carrier Web — Trip UI Updates
 
-### Task 14: Trip Cron — Driver Notifications
-
-**File:** `app/api/cron/trip-monitor/route.ts`
-
-After existing org notification (line 211), add:
-```typescript
-if (trip.driverId) {
-  createNotification({
-    userId: trip.driverId,
-    type: NotificationType.DELIVERY_CONFIRMED,
-    title: "Trip auto-closed",
-    message: `Your trip ... was automatically completed. Please upload POD.`,
-    metadata: { tripId: trip.id },
-  });
-}
-```
+Driver column in trip list. Assign dropdown in trip detail. Driver stats in dashboard.
 
 ---
 
-### Task 15: Geofence + GPS Alerts
+### Task 20: Shipper/Dispatcher/Admin Web — Trip UI
 
-**Files:**
-- `lib/geofenceNotifications.ts` — current role filter already excludes DRIVER (correct). Add targeted notification to trip.driverId for relevant events.
-- `lib/gpsAlerts.ts` — filter GPS alerts to only notify the ASSIGNED driver for their truck, not all drivers in org.
+Show driver info on trip detail across all portals.
 
 ---
 
-### Task 16: Carrier Dashboard Stats
+### Task 21: Mobile Monorepo Restructure
 
-**File:** `app/api/carrier/dashboard/route.ts`
-
-Add new queries:
-```typescript
-const driverStats = await db.user.count({
-  where: { organizationId: session.organizationId, role: "DRIVER", status: "ACTIVE" }
-});
-const availableDrivers = await db.user.count({
-  where: {
-    organizationId: session.organizationId, role: "DRIVER", status: "ACTIVE",
-    driverProfile: { isAvailable: true }
-  }
-});
-```
+Split mobile/ into packages/shared + apps/shipper + apps/carrier + apps/driver. Fix \_layout.tsx and auth store.
 
 ---
 
-## PHASE 6 — Carrier Web UI (Tasks 17–19)
+### Task 22: Carrier Mobile — Driver Management + Trip UI
 
-### Task 17: Carrier Web — Driver Management
-
-**New files:**
-- `app/carrier/drivers/page.tsx` — driver list
-- `app/carrier/drivers/invite/page.tsx` — invite form (generates code)
-- `app/carrier/drivers/[id]/page.tsx` — detail, approve/reject, remove
-- `components/carrier/DriverList.tsx`
-- `components/carrier/DriverInviteForm.tsx`
-
-Add "Drivers" to carrier sidebar navigation.
-
-### Task 18: Carrier Web — Trip UI Updates
-
-**Modified files:**
-- Trip list page — add Driver column
-- Trip detail page — show driver info card + "Assign Driver" dropdown
-- Dashboard — show driver name on active trip tiles
-- Fleet map — driver name on truck markers
-
-### Task 19: Shipper/Dispatcher/Admin — Trip UI Updates
-
-**Modified files:**
-- Shipper trip detail — show driver info (name, phone after PICKUP_PENDING)
-- Shipper live tracking — show driver name
-- Dispatcher trip detail — show driver info
-- Admin trip detail — show driver info
+Driver management screens + trip UI updates in apps/carrier/.
 
 ---
 
-## PHASE 7 — Mobile Restructure (Tasks 20–21)
+### Task 23: Driver App — Auth
 
-### Task 20: Monorepo Setup
-
-Restructure `mobile/` into:
-```
-mobile/
-  packages/shared/     ← @freight/shared (auth, API, components, hooks, stores, theme, i18n)
-  apps/shipper/        ← own app.json, eas.json, screens
-  apps/carrier/        ← own app.json, eas.json, screens
-  apps/driver/         ← own app.json, eas.json (empty shell)
-  package.json         ← workspaces config
-```
-
-### Task 21: Verify Independent Apps
-
-Test: `cd apps/shipper && npx expo start` — shipper works.
-Test: `cd apps/carrier && npx expo start` — carrier works.
-All mobile tests pass.
+Join carrier (invite code), CDL upload, pending approval, login.
 
 ---
 
-## PHASE 8 — Carrier Mobile (Tasks 22–23)
+### Task 24: Driver App — Trips + POD
 
-### Task 22: Carrier Mobile — Driver Management
-
-**New screens in apps/carrier/:**
-- drivers/index.tsx — driver list
-- drivers/invite.tsx — generate invite code
-- drivers/[id].tsx — detail, approve/reject
-
-### Task 23: Carrier Mobile — Trip UI
-
-- Trip detail: show driver info + "Assign Driver"
-- Trip list: show driver name on cards
-- Dashboard: driver on active trip cards
+My trips, trip detail, status buttons, POD upload, availability toggle.
 
 ---
 
-## PHASE 9 — Driver App (Tasks 24–27)
+### Task 25: Driver App — GPS + Navigation
 
-### Task 24: Driver App — Auth (Join Carrier)
-
-**Screens:**
-- Welcome: "Join Your Carrier (Enter Invite Code)"
-- Enter code + phone → validate → set password → upload CDL → wait for approval
-- Pending approval screen
-- Login (returning users)
-
-### Task 25: Driver App — Trips + POD
-
-**Screens:**
-- My Trips list (filtered by driverId)
-- Trip detail with status transition buttons
-- POD upload (camera/gallery)
-- Availability toggle
-
-### Task 26: Driver App — GPS + Navigation
-
-**Services:**
-- Background location service → POST /api/drivers/location
-- Google Maps with turn-by-turn directions
-- Offline GPS queue (reuse gps-queue.ts from shared)
-
-### Task 27: Driver App — Messaging + Profile
-
-**Screens:**
-- Chat with shipper (reuse shared chat component)
-- Profile: CDL info, documents, settings
-- Notification list
+Background location service, Google Maps, offline GPS queue.
 
 ---
 
-## PHASE 10 — Testing (Tasks 28–30)
+### Task 26: Driver App — Messaging + Profile
 
-### Task 28: Backend Tests
+Chat, profile, CDL info, notification list.
 
-Write tests covering:
-- Driver invite → accept → approve flow
-- Driver assignment + conflict detection
-- Driver trip operations (status, POD, exception)
-- Driver CANNOT: cancel, browse loads, manage trucks, see finances
-- GPS from driver phone
-- Notifications: driver gets trip notifications, NOT business notifications
-- Backward compat: driverId=null works exactly as before
+---
 
-### Task 29: E2E Tests
+### Task 27: Backend Tests
 
-- Carrier web: full driver management flow
-- Carrier mobile: invite + manage drivers
-- Driver app: join → assigned trip → execute → complete
-- Shipper sees driver info during trip
+All 34 gaps verified blocked. Full driver lifecycle. Assignment conflicts. GPS source tagging. Messaging senderRole. Notifications.
 
-### Task 30: Backward Compatibility
+---
 
-- All 3179 Jest tests pass
-- All 895 E2E tests pass
-- All 570 mobile tests pass
-- Trip with no driver = identical behavior to today
+### Task 28: E2E + Backward Compatibility
+
+All existing Jest (3207+), E2E (895+), mobile (570+) tests pass. Trip with driverId=null identical to before.
 
 ---
 
 ## WHAT NOT TO TOUCH
 
-- ❌ Load state machine / Load CRUD
-- ❌ Truck CRUD & approval & posting
-- ❌ Matching/request flow (match-proposals, truck-requests, load-requests)
-- ❌ Service fee CALCULATION logic (lib/serviceFeeManagement.ts business logic)
-- ❌ Rating system (stays org-level)
-- ❌ Corridor/distance management
-- ❌ `Truck.defaultDriverId` — DO NOT CREATE
-- ❌ Existing test expectations — fix implementation, not tests
+- Load state machine / Load CRUD
+- Truck CRUD & approval & posting
+- Matching/request flow (match-proposals, truck-requests, load-requests)
+- Service fee CALCULATION logic
+- Rating system logic (just block DRIVER from calling it)
+- Corridor/distance management
+- Truck.defaultDriverId — DO NOT CREATE
+- Existing test expectations — fix implementation, not tests
 
 ---
 
-_Spec v3.0 — Complete. 16 impact areas. 30 tasks. Every file traced._
-_Verified against actual codebase: schema.prisma, lib/auth.ts, lib/rbac/, lib/tripStateMachine.ts, lib/notifications.ts (81 callers), app/api/gps/batch/route.ts, app/api/trips/*/route.ts, lib/geofenceNotifications.ts, lib/gpsAlerts.ts, lib/walletGate.ts, lib/assignmentConflictDetection.ts, mobile/app/_layout.tsx_
+_Spec v5.0 — 10 rounds of deep analysis. 34 gaps. 5 done. 23 remaining._
+_Git commits verified: 9a8b08f, d4e1fb0, 839e097, ec7badb, 324d78a, f51a424_
+_202 API routes audited. 23 routes verified SAFE. 34 gaps documented with file, line, and fix._
