@@ -408,8 +408,28 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     ...Object.values(Permission),
   ],
 
-  // Task 1 placeholder — real permissions populated in Task 3
-  DRIVER: [],
+  /**
+   * DRIVER
+   * Assigned per-trip by a carrier (invite-only). Drivers can:
+   * - View loads attached to their assigned trips
+   * - Advance trip status (PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, EXCEPTION)
+   * - Upload and view POD for their trips
+   * - See GPS + live tracking for their trips
+   * - Upload and view their own driver documents (CDL, medical cert)
+   *
+   * Cannot: cancel trips, browse loads marketplace, manage trucks, see finances,
+   * manage organization, search or request loads.
+   */
+  DRIVER: [
+    Permission.VIEW_LOADS,
+    Permission.UPDATE_TRIP_STATUS,
+    Permission.UPLOAD_POD,
+    Permission.VIEW_POD,
+    Permission.VIEW_GPS,
+    Permission.VIEW_LIVE_TRACKING,
+    Permission.UPLOAD_DOCUMENTS,
+    Permission.VIEW_DOCUMENTS,
+  ],
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {

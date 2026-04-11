@@ -26,6 +26,8 @@ export interface AccessRoles {
   isAdmin: boolean;
   /** User is specifically a super admin */
   isSuperAdmin: boolean;
+  /** User is the driver assigned to this entity (via driverId match) */
+  isDriver: boolean;
   /** User has any access to the entity */
   hasAccess: boolean;
 }
@@ -63,10 +65,12 @@ export function getAccessRoles(
     shipperOrgId?: string | null;
     /** Organization ID of the carrier that owns the entity */
     carrierOrgId?: string | null;
+    /** User ID of the driver assigned to the entity (e.g. trip.driverId) */
+    driverId?: string | null;
   }
 ): AccessRoles {
-  const { role, organizationId } = session;
-  const { shipperOrgId, carrierOrgId } = entityOwners || {};
+  const { userId, role, organizationId } = session;
+  const { shipperOrgId, carrierOrgId, driverId } = entityOwners || {};
 
   const isShipper =
     role === "SHIPPER" && !!shipperOrgId && shipperOrgId === organizationId;
@@ -75,9 +79,12 @@ export function getAccessRoles(
   const isDispatcher = role === "DISPATCHER";
   const isSuperAdmin = role === "SUPER_ADMIN";
   const isAdmin = role === "ADMIN" || isSuperAdmin;
+  const isDriver = role === "DRIVER" && !!driverId && driverId === userId;
 
-  // User has access if they own the entity or are admin/dispatcher
-  const hasAccess = isShipper || isCarrier || isDispatcher || isAdmin;
+  // User has access if they own the entity, are admin/dispatcher, or are the
+  // assigned driver for this entity
+  const hasAccess =
+    isShipper || isCarrier || isDispatcher || isAdmin || isDriver;
 
   return {
     isShipper,
@@ -85,6 +92,7 @@ export function getAccessRoles(
     isDispatcher,
     isAdmin,
     isSuperAdmin,
+    isDriver,
     hasAccess,
   };
 }

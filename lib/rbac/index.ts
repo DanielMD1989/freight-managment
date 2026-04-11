@@ -164,6 +164,10 @@ export async function canManageOrganization(
   const session = await getSessionAny();
   if (!session) return false;
 
+  // Drivers never manage organizations — they are workers inside a carrier org,
+  // not representatives of it.
+  if (session.role === "DRIVER") return false;
+
   // Admin or Super Admin can manage any organization
   if (session.role === "ADMIN" || session.role === "SUPER_ADMIN") return true;
 

@@ -39,6 +39,12 @@ export async function checkWalletGate(
     return null;
   }
 
+  // Driver bypass — drivers are workers inside a carrier org, not marketplace
+  // actors. The carrier org's wallet gates its own marketplace access.
+  if (session.role === "DRIVER") {
+    return null;
+  }
+
   if (!session.organizationId) {
     return null;
   }

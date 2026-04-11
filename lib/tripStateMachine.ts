@@ -74,6 +74,15 @@ export const TRIP_ROLE_PERMISSIONS: Record<string, TripStatus[]> = {
     // Super admin can set any status
     ...Object.values(TripStatus),
   ],
+
+  DRIVER: [
+    TripStatus.PICKUP_PENDING,
+    TripStatus.IN_TRANSIT,
+    TripStatus.DELIVERED,
+    TripStatus.COMPLETED,
+    TripStatus.EXCEPTION,
+    // Intentionally NO CANCELLED — drivers cannot cancel trips
+  ],
 };
 
 /**

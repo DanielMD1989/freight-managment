@@ -102,12 +102,14 @@ Mobile code uses defensive pattern: `response.data.truck ?? response.data`
 
 ## Roles & Access Control
 
-Five roles: `SHIPPER`, `CARRIER`, `DISPATCHER`, `ADMIN`, `SUPER_ADMIN`
+Six roles: `SHIPPER`, `CARRIER`, `DISPATCHER`, `ADMIN`, `SUPER_ADMIN`, `DRIVER`
 
 - Only SHIPPER, CARRIER, DISPATCHER can self-register (admin-blocked at API level)
+- DRIVER is invite-only — created by a CARRIER via invite code; status flow: INVITED → PENDING_VERIFICATION → ACTIVE
 - Shippers cannot browse `/api/trucks` — must use `/api/truck-postings`
 - Cross-role route access returns 403 / redirects to `/unauthorized`
-- User statuses: REGISTERED → PENDING_VERIFICATION → ACTIVE (admin approval required)
+- User statuses: REGISTERED → PENDING_VERIFICATION → ACTIVE (admin approval required). Drivers use INVITED → PENDING_VERIFICATION → ACTIVE.
+- Drivers are assigned per-trip (`Trip.driverId`), NOT per-truck. They can advance trip status (PICKUP_PENDING → IN_TRANSIT → DELIVERED → COMPLETED) and raise EXCEPTION, but cannot CANCEL trips, browse the load marketplace, manage trucks, or access finances.
 
 ## Trip State Machine
 
