@@ -55,6 +55,17 @@ interface Trip {
       name: string;
     };
   } | null;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    driverProfile?: {
+      cdlNumber: string | null;
+      isAvailable: boolean;
+    } | null;
+  } | null;
+  driverId?: string | null;
   documents: {
     id: string;
     documentType: string;
@@ -112,6 +123,13 @@ export default function TripDetailClient({
   // Cancel modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Driver assignment state (Task 19)
+  const [availableDrivers, setAvailableDrivers] = useState<
+    Array<{ id: string; firstName: string | null; lastName: string | null }>
+  >([]);
+  const [showDriverSelect, setShowDriverSelect] = useState(false);
+  const [driverActionLoading, setDriverActionLoading] = useState(false);
 
   // Exception modal state
   const [showExceptionModal, setShowExceptionModal] = useState(false);
@@ -412,6 +430,63 @@ export default function TripDetailClient({
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Task 19: driver assignment helpers
+  const canAssignDriver =
+    trip.status === "ASSIGNED" || trip.status === "PICKUP_PENDING";
+
+  const fetchAvailableDrivers = async () => {
+    try {
+      const res = await fetch("/api/drivers?available=true&status=ACTIVE", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableDrivers(data.drivers ?? []);
+      }
+    } catch {
+      /* non-critical */
+    }
+  };
+
+  const handleAssignDriver = async (driverId: string) => {
+    setDriverActionLoading(true);
+    try {
+      const res = await csrfFetch(`/api/trips/${trip.id}/assign-driver`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driverId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to assign driver");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Assign driver failed");
+    } finally {
+      setDriverActionLoading(false);
+      setShowDriverSelect(false);
+    }
+  };
+
+  const handleUnassignDriver = async () => {
+    setDriverActionLoading(true);
+    try {
+      const res = await csrfFetch(`/api/trips/${trip.id}/unassign-driver`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to unassign driver");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unassign driver failed");
+    } finally {
+      setDriverActionLoading(false);
+    }
   };
 
   return (
@@ -1109,6 +1184,90 @@ export default function TripDetailClient({
               </p>
             </div>
           )}
+
+          {/* Driver Info — Task 19 */}
+          <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Driver
+              </h2>
+              {canAssignDriver && !isAdmin && (
+                <div className="flex gap-2">
+                  {trip.driver && trip.status === "ASSIGNED" && (
+                    <button
+                      onClick={handleUnassignDriver}
+                      disabled={driverActionLoading}
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
+                    >
+                      Unassign
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      fetchAvailableDrivers();
+                      setShowDriverSelect(!showDriverSelect);
+                    }}
+                    disabled={driverActionLoading}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {trip.driver ? "Reassign" : "Assign Driver"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {trip.driver ? (
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {[trip.driver.firstName, trip.driver.lastName]
+                    .filter(Boolean)
+                    .join(" ") || "-"}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {trip.driver.phone ?? "-"}
+                </p>
+                {trip.driver.driverProfile && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    {trip.driver.driverProfile.isAvailable
+                      ? "Available"
+                      : "Unavailable"}
+                    {trip.driver.driverProfile.cdlNumber &&
+                      ` • CDL: ${trip.driver.driverProfile.cdlNumber}`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No driver assigned</p>
+            )}
+
+            {/* Driver selection dropdown */}
+            {showDriverSelect && (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-medium text-slate-600">
+                  Select a driver:
+                </p>
+                {availableDrivers.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    No available drivers found
+                  </p>
+                ) : (
+                  <div className="max-h-40 space-y-1 overflow-y-auto">
+                    {availableDrivers.map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => handleAssignDriver(d.id)}
+                        disabled={driverActionLoading}
+                        className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-indigo-50 disabled:opacity-50"
+                      >
+                        {[d.firstName, d.lastName].filter(Boolean).join(" ") ||
+                          "(no name)"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Timeline */}
           {trip.events.length > 0 && (

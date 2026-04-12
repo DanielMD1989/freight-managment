@@ -52,6 +52,10 @@ interface DashboardData {
   inTransitTrips?: number;
   totalServiceFeesPaid: number;
   totalDistance?: number;
+  // Task 19: driver fleet metrics (added in Task 11 API)
+  activeDrivers?: number;
+  availableDrivers?: number;
+  tripsWithDriver?: number;
   wallet: {
     balance: number;
     currency: string;
@@ -295,6 +299,32 @@ export default function CarrierDashboardClient({
             color="secondary"
           />
         </div>
+
+        {/* Driver Stats — Task 19 */}
+        {(data.activeDrivers ?? 0) > 0 && (
+          <div className="mb-8 grid grid-cols-3 gap-4 lg:gap-5">
+            <StatCard
+              title="Active Drivers"
+              value={data.activeDrivers ?? 0}
+              icon={<CheckCircleIcon />}
+              color="primary"
+            />
+            <StatCard
+              title="Available Drivers"
+              value={data.availableDrivers ?? 0}
+              icon={<CheckCircleIcon />}
+              color="success"
+              subtitle="Ready for trips"
+            />
+            <StatCard
+              title="Trips with Driver"
+              value={data.tripsWithDriver ?? 0}
+              icon={<TruckIcon />}
+              color="accent"
+              subtitle="Currently assigned"
+            />
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="mb-8">

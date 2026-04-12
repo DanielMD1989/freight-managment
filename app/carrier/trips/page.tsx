@@ -42,6 +42,12 @@ interface Trip {
   deliveryDate?: string;
   startedAt?: string;
   completedAt?: string;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+  } | null;
   shipper?: {
     id: string;
     name: string;
@@ -545,6 +551,9 @@ export default function CarrierTripsPage() {
                   Truck
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-white uppercase">
+                  Driver
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-white uppercase">
                   Dates
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-white uppercase">
@@ -604,6 +613,17 @@ export default function CarrierTripsPage() {
                     <div className="text-sm font-medium text-slate-700">
                       {trip.truck?.licensePlate || "-"}
                     </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    {trip.driver ? (
+                      <div className="text-sm font-medium text-slate-700">
+                        {[trip.driver.firstName, trip.driver.lastName]
+                          .filter(Boolean)
+                          .join(" ") || "-"}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Unassigned</span>
+                    )}
                   </td>
                   <td className="px-4 py-4">
                     <div className="text-sm text-slate-700">
