@@ -18,12 +18,16 @@ import { Prisma } from "@prisma/client";
 import {
   notifyOrganization,
   createNotificationForRole,
+  createNotification,
   NotificationType,
 } from "@/lib/notifications";
 
 const reassignTruckSchema = z.object({
   newTruckId: z.string().min(1),
   reason: z.string().min(1).max(500),
+  // Task 9: optional driver reassignment alongside truck swap
+  newDriverId: z.string().min(1).optional(),
+  driverReassignReason: z.string().max(500).optional(),
 });
 
 export async function POST(
@@ -41,7 +45,8 @@ export async function POST(
 
     // 3. Parse + validate body
     const body = await request.json();
-    const { newTruckId, reason } = reassignTruckSchema.parse(body);
+    const { newTruckId, reason, newDriverId, driverReassignReason } =
+      reassignTruckSchema.parse(body);
 
     // 4. Fetch trip
     const trip = await db.trip.findUnique({
@@ -60,6 +65,14 @@ export async function POST(
             id: true,
             carrierId: true,
             licensePlate: true,
+          },
+        },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
           },
         },
       },
@@ -129,24 +142,90 @@ export async function POST(
       );
     }
 
+    // 13. Task 9: Optional driver reassignment validation.
+    // Only run when the caller explicitly supplied newDriverId. If omitted,
+    // the existing driver (if any) stays on the trip with the new truck.
+    if (newDriverId) {
+      // a) Driver must exist, have role=DRIVER, and be ACTIVE.
+      const newDriver = await db.user.findUnique({
+        where: { id: newDriverId },
+        select: {
+          id: true,
+          role: true,
+          status: true,
+          organizationId: true,
+        },
+      });
+
+      if (
+        !newDriver ||
+        newDriver.role !== "DRIVER" ||
+        newDriver.status !== "ACTIVE"
+      ) {
+        return NextResponse.json(
+          { error: "Driver not found or not active" },
+          { status: 400 }
+        );
+      }
+
+      // b) Driver must belong to the same carrier org as the (new) truck.
+      // trip.truck.carrierId === newTruck.carrierId at this point.
+      if (newDriver.organizationId !== trip.truck?.carrierId) {
+        return NextResponse.json(
+          { error: "Driver must belong to same carrier organization" },
+          { status: 400 }
+        );
+      }
+
+      // c) Driver must not already have another active trip.
+      const driverConflict = await db.trip.findFirst({
+        where: {
+          driverId: newDriverId,
+          id: { not: tripId },
+          status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+        },
+        select: { id: true },
+      });
+      if (driverConflict) {
+        return NextResponse.json(
+          { error: "Driver already has an active trip" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Transaction
     const reassignedAt = new Date();
 
     await db.$transaction(async (tx) => {
       // a) Update trip
+      // Task 9: when newDriverId is provided, also swap the driver and
+      // record the audit fields. When omitted, driverId stays untouched —
+      // the existing driver (if any) continues on the new truck. Using
+      // TripUncheckedUpdateInput so FK scalars (truckId, driverId) can be
+      // written directly — matches the pre-Task-9 pattern in this file.
+      const tripUpdateData: Prisma.TripUncheckedUpdateInput = {
+        truckId: newTruckId,
+        previousTruckId: trip.truckId,
+        reassignedAt,
+        reassignmentReason: reason,
+        status: "IN_TRANSIT",
+        trackingEnabled: true,
+      };
+
+      if (newDriverId) {
+        tripUpdateData.driverId = newDriverId;
+        tripUpdateData.previousDriverId = trip.driverId ?? null;
+        tripUpdateData.driverReassignedAt = reassignedAt;
+        tripUpdateData.driverReassignReason = driverReassignReason ?? reason;
+      }
+
       await tx.trip.update({
         where: {
           id: tripId,
           status: "EXCEPTION", // optimistic lock
         },
-        data: {
-          truckId: newTruckId,
-          previousTruckId: trip.truckId,
-          reassignedAt,
-          reassignmentReason: reason,
-          status: "IN_TRANSIT",
-          trackingEnabled: true,
-        },
+        data: tripUpdateData,
       });
 
       // b) Count other active trips on OLD truck
@@ -209,6 +288,9 @@ export async function POST(
           metadata: {
             previousTruckId: trip.truckId,
             newTruckId,
+            // Task 9: driver audit fields
+            previousDriverId: trip.driverId ?? null,
+            newDriverId: newDriverId ?? null,
             reassignedBy: session.userId,
             reassignedByRole: session.role,
           },
@@ -266,12 +348,72 @@ export async function POST(
       }).catch((err) => console.warn("Notification failed:", err?.message));
     }
 
+    // 4. Task 9: driver-side notifications
+    const route =
+      trip.load?.pickupCity && trip.load?.deliveryCity
+        ? `${trip.load.pickupCity} → ${trip.load.deliveryCity}`
+        : "your trip";
+    const driverChanged = !!newDriverId && newDriverId !== trip.driverId;
+
+    // 4a. The driver who stays on the trip (not replaced) gets a
+    //     "your truck changed" heads-up. Fires only when the trip already
+    //     had a driver AND that driver is still on the trip post-reassign.
+    if (trip.driverId && !driverChanged) {
+      createNotification({
+        userId: trip.driverId,
+        type: NotificationType.TRIP_REASSIGNED,
+        title: "Your trip truck has been changed",
+        message: `Your trip (${route}) is now on truck ${newTruck.licensePlate} after a breakdown. Tracking has resumed.`,
+        metadata: {
+          tripId,
+          loadId: trip.load?.id,
+          previousTruckId: trip.truckId,
+          newTruckId,
+        },
+      }).catch((err) => console.warn("Notification failed:", err?.message));
+    }
+
+    // 4b. Driver replacement: notify new driver (assigned) and, if one
+    //     existed, the old driver (unassigned).
+    if (driverChanged) {
+      createNotification({
+        userId: newDriverId!,
+        type: "TRIP_DRIVER_ASSIGNED",
+        title: "You have been assigned to a trip",
+        message: `You have been assigned to trip ${route} on truck ${newTruck.licensePlate}.`,
+        metadata: {
+          tripId,
+          loadId: trip.load?.id,
+          truckId: newTruckId,
+        },
+      }).catch((err) => console.warn("Notification failed:", err?.message));
+
+      if (trip.driverId) {
+        createNotification({
+          userId: trip.driverId,
+          type: "TRIP_DRIVER_UNASSIGNED",
+          title: "You have been unassigned from a trip",
+          message: `You have been unassigned from trip ${route}. Reason: ${driverReassignReason ?? reason}`,
+          metadata: {
+            tripId,
+            loadId: trip.load?.id,
+            previousTruckId: trip.truckId,
+            newTruckId,
+          },
+        }).catch((err) => console.warn("Notification failed:", err?.message));
+      }
+    }
+
     return NextResponse.json({
       success: true,
       tripId,
       newTruckId,
       previousTruckId: trip.truckId,
       reassignedAt,
+      // Task 9: driver reassignment info
+      driverReassigned: !!newDriverId,
+      newDriverId: newDriverId ?? null,
+      previousDriverId: trip.driverId ?? null,
     });
   } catch (error) {
     // P2025: optimistic lock failed — trip status changed concurrently
