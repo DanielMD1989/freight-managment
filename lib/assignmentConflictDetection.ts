@@ -17,7 +17,8 @@ export interface AssignmentConflict {
   type:
     | "TRUCK_ALREADY_ASSIGNED"
     | "LOAD_ALREADY_ASSIGNED"
-    | "SCHEDULE_CONFLICT";
+    | "SCHEDULE_CONFLICT"
+    | "DRIVER_ALREADY_ASSIGNED";
   message: string;
   details?: Record<string, unknown>;
 }
@@ -331,5 +332,46 @@ export async function getConflictSummary() {
       (sum, t) => sum + t._count - 1,
       0
     ),
+  };
+}
+
+/**
+ * Task 15: Check if a driver already has an active trip.
+ *
+ * @param driverId - Driver user ID
+ * @param tripId   - Trip being assigned (excluded from the conflict check)
+ * @returns ConflictCheck result
+ */
+export async function checkDriverConflicts(
+  driverId: string,
+  tripId: string
+): Promise<ConflictCheck> {
+  const conflicts: AssignmentConflict[] = [];
+  const warnings: AssignmentWarning[] = [];
+
+  const activeTrip = await db.trip.findFirst({
+    where: {
+      driverId,
+      id: { not: tripId },
+      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+    },
+    select: { id: true, status: true },
+  });
+
+  if (activeTrip) {
+    conflicts.push({
+      type: "DRIVER_ALREADY_ASSIGNED",
+      message: `Driver already has an active trip (${activeTrip.id}, status: ${activeTrip.status})`,
+      details: {
+        conflictingTripId: activeTrip.id,
+        conflictingStatus: activeTrip.status,
+      },
+    });
+  }
+
+  return {
+    hasConflict: conflicts.length > 0,
+    conflicts,
+    warnings,
   };
 }
