@@ -390,7 +390,8 @@ jest.mock("@/lib/db", () => {
               Object.entries(spec.where).every(([k, v]) => r[k] === v)
             );
           }
-          result[key] = related;
+          // HasOne pattern: return single object instead of array
+          result[key] = map.single ? (related[0] || null) : related;
         }
       } else if (map && !map.type) {
         const fkValue = record[map.fk];
