@@ -48,6 +48,7 @@ jest.mock("@/lib/db", () => {
     loadEscalations: new Map(),
     documents: new Map(),
     invitations: new Map(),
+    driverProfiles: new Map(),
     walletDeposits: new Map(),
     savedSearches: new Map(),
     ratings: new Map(),
@@ -88,6 +89,7 @@ jest.mock("@/lib/db", () => {
   let savedSearchIdCounter = 1;
   let ratingIdCounter = 1;
   let messageIdCounter = 1;
+  let driverProfileIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -204,6 +206,17 @@ jest.mock("@/lib/db", () => {
     invitation: {
       status: "PENDING",
     },
+    driverProfile: {
+      cdlNumber: null,
+      cdlState: null,
+      cdlExpiry: null,
+      medicalCertExp: null,
+      endorsements: null,
+      cdlFrontUrl: null,
+      cdlBackUrl: null,
+      medicalCertUrl: null,
+      isAvailable: true,
+    },
     walletDeposit: {
       currency: "ETB",
       status: "PENDING",
@@ -245,6 +258,8 @@ jest.mock("@/lib/db", () => {
     corridor:        { fk: 'corridorId',        store: 'corridors' },
     assignedTruck:   { fk: 'assignedTruckId',   store: 'trucks' },
     gpsDevice:       { fk: 'gpsDeviceId',       store: 'gpsDevices' },
+    driver:          { fk: 'driverId',          store: 'users' },
+    driverProfile:   { type: 'hasMany', store: 'driverProfiles', matchFk: 'userId', single: true },
     trip:            { fk: 'tripId',            store: 'trips' },
     originCity:        { fk: 'originCityId',        store: 'ethiopianLocations' },
     destinationCity:   { fk: 'destinationCityId',   store: 'ethiopianLocations' },
@@ -427,7 +442,8 @@ jest.mock("@/lib/db", () => {
           if (spec && typeof spec === 'object' && spec.take) {
             related = related.slice(0, spec.take);
           }
-          result[key] = related;
+          // HasOne pattern: return single object instead of array
+          result[key] = map.single ? (related[0] || null) : related;
         }
       } else {
         const fkValue = record[map.fk];
@@ -921,6 +937,7 @@ jest.mock("@/lib/db", () => {
     savedSearch: { value: savedSearchIdCounter },
     rating: { value: ratingIdCounter },
     message: { value: messageIdCounter },
+    driverProfile: { value: driverProfileIdCounter },
   };
 
   const result = {
@@ -1330,6 +1347,11 @@ jest.mock("@/lib/db", () => {
         stores.messages,
         "message",
         counters.message
+      ),
+      driverProfile: createModelMethods(
+        stores.driverProfiles,
+        "driverProfile",
+        counters.driverProfile
       ),
       $transaction: jest.fn(),
       $queryRaw: jest.fn().mockResolvedValue([]),
