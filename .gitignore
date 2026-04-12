@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/driver-app/node_modules
 /.pnp
 .pnp.*
 .yarn/*

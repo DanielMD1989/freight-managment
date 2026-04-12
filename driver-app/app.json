@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "FreightET Driver",
+    "slug": "freightet-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "freightet-driver",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0EA5E9"
+    },
+    "extra": {
+      "apiBaseUrl": "https://api.freightethiopia.com",
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    },
+    "owner": "freightethiopia",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.freightet.driver",
+      "config": {
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_KEY"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to track your trip and provide accurate ETA.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Background location is needed for GPS tracking during active trips.",
+        "NSCameraUsageDescription": "Camera is needed to capture proof of delivery photos.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is needed for uploading proof of delivery."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0EA5E9"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.freightet.driver",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow FreightET Driver to use your location for trip tracking."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow FreightET Driver to access photos for proof of delivery.",
+          "cameraPermission": "Allow FreightET Driver to use the camera for proof of delivery."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0EA5E9"
+        }
+      ]
+    ]
+  }
+}
