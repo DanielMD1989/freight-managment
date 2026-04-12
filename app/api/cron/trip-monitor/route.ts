@@ -17,6 +17,7 @@ import { Prisma } from "@prisma/client";
 import { deductServiceFee } from "@/lib/serviceFeeManagement";
 import {
   createNotificationForRole,
+  createNotification,
   notifyOrganization,
   NotificationType,
 } from "@/lib/notifications";
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
           deliveredAt: true,
           loadId: true,
           truckId: true,
+          driverId: true,
           load: {
             select: {
               id: true,
@@ -225,6 +227,21 @@ export async function POST(request: NextRequest) {
               type: NotificationType.DELIVERY_CONFIRMED,
               title: "Delivery automatically confirmed",
               message: `Your delivery for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} has been automatically completed after ${DELIVERED_TIMEOUT_HOURS} hours. Contact Admin if you have concerns.`,
+              metadata: { tripId: trip.id, loadId: trip.loadId },
+            }).catch((err) =>
+              console.warn("Notification failed:", err?.message)
+            );
+          }
+
+          // Task 11: targeted notification to the assigned driver (if any).
+          // notifyOrganization defaults exclude DRIVER from the carrier
+          // org-wide fan-out, so this is the driver's only direct signal.
+          if (trip.driverId) {
+            createNotification({
+              userId: trip.driverId,
+              type: NotificationType.DELIVERY_CONFIRMED,
+              title: "Trip auto-closed — upload POD",
+              message: `Your trip for ${trip.load?.pickupCity} → ${trip.load?.deliveryCity} was automatically completed after ${DELIVERED_TIMEOUT_HOURS} hours. Please upload POD for your records.`,
               metadata: { tripId: trip.id, loadId: trip.loadId },
             }).catch((err) =>
               console.warn("Notification failed:", err?.message)

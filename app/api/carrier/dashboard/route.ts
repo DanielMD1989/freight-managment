@@ -111,6 +111,10 @@ export async function GET(request: NextRequest) {
       pendingApprovals,
       tripsOverTimeRaw,
       earningsOverTimeRaw,
+      // Task 11: driver fleet metrics
+      activeDrivers,
+      availableDrivers,
+      tripsWithDriver,
     ] = await Promise.all([
       // Total trucks owned by this carrier
       db.truck.count({
@@ -238,6 +242,34 @@ export async function GET(request: NextRequest) {
         GROUP BY DATE_TRUNC('day', je."createdAt")
         ORDER BY date ASC
       `,
+
+      // Task 11: Active drivers in this carrier org
+      db.user.count({
+        where: {
+          organizationId: session.organizationId,
+          role: "DRIVER",
+          status: "ACTIVE",
+        },
+      }),
+
+      // Task 11: Available drivers (active + driverProfile.isAvailable)
+      db.user.count({
+        where: {
+          organizationId: session.organizationId,
+          role: "DRIVER",
+          status: "ACTIVE",
+          driverProfile: { isAvailable: true },
+        },
+      }),
+
+      // Task 11: Active trips that already have a driver assigned
+      db.trip.count({
+        where: {
+          carrierId: session.organizationId,
+          driverId: { not: null },
+          status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+        },
+      }),
     ]);
 
     // Calculate total distance from trips
@@ -259,6 +291,10 @@ export async function GET(request: NextRequest) {
       inTransitTrips,
       totalServiceFeesPaid,
       totalDistance,
+      // Task 11: driver fleet metrics
+      activeDrivers,
+      availableDrivers,
+      tripsWithDriver,
       wallet: {
         balance: Number(walletAccount?.balance || 0),
         currency: walletAccount?.currency || "ETB",
