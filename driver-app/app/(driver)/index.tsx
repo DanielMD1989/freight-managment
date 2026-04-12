@@ -16,6 +16,7 @@ import { Card, StatusBadge, EmptyState } from "../../src/components";
 import { colors, spacing, typography } from "../../src/theme";
 import { useTrips } from "../../src/hooks/useTrips";
 import { useMyProfile, useToggleAvailability } from "../../src/hooks/useDriver";
+import { useNotificationUnreadCount } from "../../src/hooks/useNotifications";
 import { useAuthStore } from "../../src/stores/auth";
 import { formatDate } from "../../src/utils/format";
 import type { Trip } from "../../src/types";
@@ -41,6 +42,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function DriverTripsScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const unreadCount = useNotificationUnreadCount();
   const [activeFilter, setActiveFilter] = useState("ALL");
 
   const {
@@ -117,6 +119,26 @@ export default function DriverTripsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Notification bell */}
+      <TouchableOpacity
+        style={styles.bellRow}
+        onPress={() => router.push("/(driver)/notifications")}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name={unreadCount > 0 ? "notifications" : "notifications-outline"}
+          size={22}
+          color={unreadCount > 0 ? colors.primary600 : colors.slate400}
+        />
+        {unreadCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
       {/* Availability toggle */}
       <TouchableOpacity
         style={[
@@ -198,6 +220,29 @@ export default function DriverTripsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  bellRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  badge: {
+    backgroundColor: colors.error,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    marginLeft: -8,
+    marginTop: -8,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: "700",
+  },
   availabilityBar: {
     flexDirection: "row",
     alignItems: "center",
