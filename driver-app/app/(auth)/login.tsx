@@ -1,0 +1,383 @@
+/**
+ * Driver Login Screen
+ * Adapted from mobile/app/(auth)/login.tsx — no register, adds join-carrier link.
+ */
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useAuthStore } from "../../src/stores/auth";
+import { Input } from "../../src/components/Input";
+import { Button } from "../../src/components/Button";
+import { colors } from "../../src/theme/colors";
+import { spacing } from "../../src/theme/spacing";
+import { typography } from "../../src/theme/typography";
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
+export default function DriverLoginScreen() {
+  const router = useRouter();
+  const {
+    login,
+    verifyMfa,
+    resendMfa,
+    isLoading,
+    error,
+    mfaPending,
+    phoneLastFour,
+    mfaExpiresAt,
+    clearError,
+  } = useAuthStore();
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Expiry countdown
+  useEffect(() => {
+    if (!mfaPending || !mfaExpiresAt) {
+      setSecondsLeft(0);
+      return;
+    }
+    const update = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((mfaExpiresAt - Date.now()) / 1000)
+      );
+      setSecondsLeft(remaining);
+      if (remaining <= 0 && timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+    update();
+    timerRef.current = setInterval(update, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [mfaPending, mfaExpiresAt]);
+
+  // Resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+      return;
+    }
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [resendCooldown]);
+
+  const handleResend = useCallback(async () => {
+    if (resendCooldown > 0 || isLoading) return;
+    setMfaError(null);
+    clearError();
+    try {
+      await resendMfa();
+      setResendCooldown(30);
+      setMfaCode("");
+    } catch {
+      // Error is set in store
+    }
+  }, [resendCooldown, isLoading, resendMfa, clearError]);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const onSubmit = async (data: LoginForm) => {
+    clearError();
+    try {
+      await login(data.email, data.password);
+    } catch {
+      // Error is set in store
+    }
+  };
+
+  const onMfaSubmit = async () => {
+    setMfaError(null);
+    if (mfaCode.length < 6) {
+      setMfaError("Please enter a valid 6-digit code");
+      return;
+    }
+    if (secondsLeft <= 0) {
+      setMfaError("Code expired. Please resend a new code.");
+      return;
+    }
+    try {
+      await verifyMfa(mfaCode);
+    } catch {
+      // Error is set in store
+    }
+  };
+
+  // MFA verification screen
+  if (mfaPending) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Ionicons
+              name="shield-checkmark"
+              size={64}
+              color={colors.primary500}
+            />
+            <Text style={styles.title}>Two-Factor Authentication</Text>
+            <Text style={styles.subtitle}>
+              {phoneLastFour
+                ? `Enter the code sent to ••••${phoneLastFour}`
+                : "Enter the verification code"}
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <Input
+              label="Verification Code"
+              value={mfaCode}
+              onChangeText={(text: string) => {
+                setMfaCode(text);
+                setMfaError(null);
+              }}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="000000"
+              leftIcon={
+                <Ionicons
+                  name="key-outline"
+                  size={20}
+                  color={colors.slate400}
+                />
+              }
+            />
+
+            {secondsLeft > 0 && (
+              <Text style={styles.countdown}>
+                Code expires in {Math.floor(secondsLeft / 60)}:
+                {String(secondsLeft % 60).padStart(2, "0")}
+              </Text>
+            )}
+
+            {secondsLeft <= 0 && mfaPending && mfaExpiresAt && (
+              <Text style={styles.error}>
+                Code expired. Please resend a new code.
+              </Text>
+            )}
+
+            {(mfaError || error) && (
+              <Text style={styles.error}>{mfaError || error}</Text>
+            )}
+
+            <Button
+              title="Verify"
+              onPress={onMfaSubmit}
+              loading={isLoading}
+              disabled={secondsLeft <= 0}
+              fullWidth
+              size="lg"
+            />
+
+            <TouchableOpacity
+              style={styles.resendButton}
+              onPress={handleResend}
+              disabled={resendCooldown > 0 || isLoading}
+            >
+              <Text
+                style={[
+                  styles.resendText,
+                  (resendCooldown > 0 || isLoading) &&
+                    styles.resendTextDisabled,
+                ]}
+              >
+                {resendCooldown > 0
+                  ? `Resend code (${resendCooldown}s)`
+                  : "Resend Code"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Ionicons name="car" size={48} color={colors.primary500} />
+          </View>
+          <Text style={styles.title}>FreightET Driver</Text>
+          <Text style={styles.subtitle}>Sign in to your driver account</Text>
+        </View>
+
+        {/* Form */}
+        <View style={styles.form}>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Email"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.email?.message}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                placeholder="you@example.com"
+                leftIcon={
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color={colors.slate400}
+                  />
+                }
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Password"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.password?.message}
+                isPassword
+                autoCapitalize="none"
+                autoComplete="password"
+                placeholder="Enter your password"
+                leftIcon={
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color={colors.slate400}
+                  />
+                }
+              />
+            )}
+          />
+
+          {error && <Text style={styles.error}>{error}</Text>}
+
+          <Button
+            title="Sign In"
+            onPress={handleSubmit(onSubmit)}
+            loading={isLoading}
+            fullWidth
+            size="lg"
+          />
+        </View>
+
+        {/* Footer — join-carrier instead of register */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Have an invite code? </Text>
+          <TouchableOpacity onPress={() => router.push("/(auth)/join-carrier")}>
+            <Text style={styles.footerLink}>Join Your Carrier</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: spacing["2xl"],
+  },
+  header: { alignItems: "center", marginBottom: spacing["3xl"] },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: colors.primary50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  title: {
+    ...typography.displaySmall,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: { ...typography.bodyLarge, color: colors.textSecondary },
+  form: { marginBottom: spacing["2xl"] },
+  error: {
+    ...typography.bodySmall,
+    color: colors.error,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.errorLight,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  countdown: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
+  resendButton: { alignItems: "center", marginTop: spacing.lg },
+  resendText: { ...typography.labelLarge, color: colors.primary600 },
+  resendTextDisabled: { color: colors.slate400 },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  footerText: { ...typography.bodyMedium, color: colors.textSecondary },
+  footerLink: { ...typography.labelLarge, color: colors.primary600 },
+});
