@@ -67,7 +67,7 @@ const ALL_GPS_ALLOWED_ROLES: UserRole[] = [
  * 4. State rule: Active trips (ASSIGNED, PICKUP_PENDING, IN_TRANSIT) only
  *    visible to assigned carrier until shipper explicitly subscribes
  */
-function checkTripSubscriptionPermission(
+async function checkTripSubscriptionPermission(
   session: SocketSessionData,
   load: {
     id: string;
@@ -76,7 +76,7 @@ function checkTripSubscriptionPermission(
     assignedTruck?: { carrierId: string } | null;
     trip?: { carrierId: string } | null;
   }
-): PermissionResult {
+): Promise<PermissionResult> {
   const { role, organizationId } = session;
 
   // Admin/Dispatcher can access any trip
@@ -114,6 +114,30 @@ function checkTripSubscriptionPermission(
     return {
       allowed: false,
       reason: "You can only track trips assigned to your organization",
+    };
+  }
+
+  // DRIVER: Can access trips they are personally assigned to via Trip.driverId.
+  // Unlike CARRIER (org-wide), DRIVER is scoped to the individual user.
+  // Fleet-wide GPS (subscribe-fleet) is blocked separately via
+  // ALL_GPS_ALLOWED_ROLES which does not include DRIVER.
+  if (role === "DRIVER") {
+    const assignedTrip = await db.trip.findFirst({
+      where: {
+        loadId: load.id,
+        driverId: session.userId,
+        status: {
+          in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"],
+        },
+      },
+      select: { id: true },
+    });
+    if (assignedTrip) {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      reason: "You can only track trips you are assigned to",
     };
   }
 
@@ -441,7 +465,10 @@ export async function initializeWebSocketServer(
       }
 
       // PERMISSION CHECK: Determine if user can access this trip
-      const permissionResult = checkTripSubscriptionPermission(session, load);
+      const permissionResult = await checkTripSubscriptionPermission(
+        session,
+        load
+      );
       if (!permissionResult.allowed) {
         socket.emit("error", {
           code: "PERMISSION_DENIED",
