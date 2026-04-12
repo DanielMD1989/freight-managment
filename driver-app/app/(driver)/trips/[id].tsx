@@ -40,6 +40,7 @@ import {
   useUploadPod,
   useTripPods,
 } from "../../../src/hooks/useTrips";
+import { useLocationTracking } from "../../../src/hooks/useTracking";
 import { formatDate, formatDistance } from "../../../src/utils/format";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -100,6 +101,9 @@ export default function DriverTripDetailScreen() {
   const updateStatus = useUpdateTripStatus();
   const uploadPod = useUploadPod();
   const { data: pods } = useTripPods(id);
+
+  // Task 25: GPS tracking — auto-starts on PICKUP_PENDING / IN_TRANSIT
+  const { isTracking, queueSize } = useLocationTracking(trip?.id, trip?.status);
 
   // Delivery modal state
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -233,6 +237,26 @@ export default function DriverTripDetailScreen() {
           <Text style={styles.updating}>Updating...</Text>
         )}
       </View>
+
+      {/* GPS tracking indicator */}
+      {Platform.OS !== "web" && (
+        <View style={styles.trackingBar}>
+          <View
+            style={[
+              styles.trackingDot,
+              {
+                backgroundColor: isTracking ? colors.success : colors.slate300,
+              },
+            ]}
+          />
+          <Text style={styles.trackingText}>
+            {isTracking ? "Tracking Active" : "Tracking Off"}
+          </Text>
+          {queueSize > 0 && (
+            <Text style={styles.queueText}>{queueSize} queued (offline)</Text>
+          )}
+        </View>
+      )}
 
       {/* Trip info */}
       <Card style={styles.card}>
@@ -476,6 +500,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   updating: { ...typography.bodySmall, color: colors.textTertiary },
+  trackingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+  },
+  trackingDot: { width: 8, height: 8, borderRadius: 4 },
+  trackingText: { ...typography.labelSmall, color: colors.textSecondary },
+  queueText: { ...typography.labelSmall, color: colors.warning },
   card: { marginHorizontal: spacing.lg, marginBottom: spacing.lg },
   sectionTitle: {
     ...typography.titleMedium,
