@@ -337,6 +337,30 @@ export function getNotificationRoute(
       return null;
     }
 
+    // ── Driver events (Task 16) ──────────────────────────────────────────
+    case "DRIVER_REGISTERED":
+    case "DRIVER_APPROVED":
+    case "DRIVER_REJECTED":
+    case "DRIVER_REASSIGNED":
+      // These are carrier-org notifications — the carrier's driver list
+      // is the natural landing page. Admin sees through admin/users.
+      if (isCarrier) return `/carrier/drivers`;
+      if (isAdmin) return `/admin/users`;
+      return null;
+
+    case "TRIP_DRIVER_ASSIGNED":
+    case "TRIP_DRIVER_UNASSIGNED": {
+      // Driver-targeted, but also visible to the carrier on the trip
+      // detail page. DRIVER role routes will be added with the driver app.
+      const entityId = m.tripId ?? m.loadId;
+      if (entityId) {
+        if (isCarrier) return `/carrier/trips/${entityId}`;
+        if (isAdmin) return `/admin/trips/${entityId}`;
+      }
+      if (isCarrier) return `/carrier/trips`;
+      return null;
+    }
+
     default:
       return null;
   }
