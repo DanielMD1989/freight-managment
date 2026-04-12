@@ -11,6 +11,10 @@ export default function SharedLayout() {
       <Stack.Screen name="account-rejected" />
       <Stack.Screen name="account-suspended" />
       <Stack.Screen name="profile" />
+      <Stack.Screen
+        name="chat/[tripId]"
+        options={{ title: "Messages", headerShown: true }}
+      />
     </Stack>
   );
 }
