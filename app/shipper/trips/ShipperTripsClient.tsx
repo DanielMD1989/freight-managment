@@ -28,6 +28,11 @@ interface Trip {
     licensePlate: string;
     truckType: string;
   } | null;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
   carrier: {
     id: string;
     name: string;
@@ -410,6 +415,24 @@ export default function ShipperTripsClient({
                   ) : (
                     <p className="text-sm text-slate-700 dark:text-slate-200/40">
                       -
+                    </p>
+                  )}
+                </div>
+
+                {/* Driver Info — Task 20 */}
+                <div>
+                  <p className="mb-1 text-xs tracking-wide text-slate-700 uppercase dark:text-slate-200/50">
+                    Driver
+                  </p>
+                  {trip.driver ? (
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                      {[trip.driver.firstName, trip.driver.lastName]
+                        .filter(Boolean)
+                        .join(" ") || "-"}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-700 dark:text-slate-200/40">
+                      Unassigned
                     </p>
                   )}
                 </div>

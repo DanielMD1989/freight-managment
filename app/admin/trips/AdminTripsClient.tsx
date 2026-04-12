@@ -43,6 +43,11 @@ interface Trip {
     id: string;
     licensePlate: string;
   } | null;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
 }
 
 interface TripSummary {
@@ -304,6 +309,9 @@ export default function AdminTripsClient() {
                   Truck
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+                  Driver
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                   Status
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
@@ -318,7 +326,7 @@ export default function AdminTripsClient() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                   >
                     Loading...
@@ -327,7 +335,7 @@ export default function AdminTripsClient() {
               ) : trips.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                   >
                     No trips found
@@ -360,6 +368,13 @@ export default function AdminTripsClient() {
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
                       {trip.truck?.licensePlate || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      {trip.driver
+                        ? [trip.driver.firstName, trip.driver.lastName]
+                            .filter(Boolean)
+                            .join(" ") || "-"
+                        : "-"}
                     </td>
                     <td className="px-4 py-3">
                       <span

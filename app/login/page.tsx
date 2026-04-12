@@ -66,6 +66,7 @@ function LoginForm() {
         DISPATCHER: "/dispatcher",
         ADMIN: "/admin",
         SUPER_ADMIN: "/admin",
+        DRIVER: "/driver",
       };
       const destination =
         redirect !== "/" ? redirect : roleRedirects[role] || "/";
@@ -124,6 +125,7 @@ function LoginForm() {
         DISPATCHER: "/dispatcher",
         ADMIN: "/admin",
         SUPER_ADMIN: "/admin",
+        DRIVER: "/driver",
       };
       const destination =
         redirect !== "/" ? redirect : roleRedirects[role] || "/";

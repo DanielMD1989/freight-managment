@@ -47,6 +47,16 @@ export interface TripDetail {
   } | null;
   carrier: { id: string; name: string } | null;
   truck: { id: string; licensePlate: string } | null;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    driverProfile?: {
+      cdlNumber: string | null;
+      isAvailable: boolean;
+    } | null;
+  } | null;
   // G-M33-4: Audit trail (admin-only)
   loadEvents?: LoadEventEntry[];
 }

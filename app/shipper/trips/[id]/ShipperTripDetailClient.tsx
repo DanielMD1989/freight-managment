@@ -81,6 +81,12 @@ interface Trip {
     truckType: string;
     capacity: number;
   } | null;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+  } | null;
   documents: {
     id: string;
     documentType: string;
@@ -962,6 +968,30 @@ export default function ShipperTripDetailClient({
               </div>
             </div>
           )}
+
+          {/* Driver Info — Task 20 */}
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 font-semibold text-slate-800">Driver</h3>
+            {trip.driver ? (
+              <div className="space-y-1">
+                <p className="font-semibold text-slate-800">
+                  {[trip.driver.firstName, trip.driver.lastName]
+                    .filter(Boolean)
+                    .join(" ") || "-"}
+                </p>
+                {trip.driver.phone && (
+                  <a
+                    href={`tel:${trip.driver.phone}`}
+                    className="text-sm text-teal-600 hover:underline"
+                  >
+                    {trip.driver.phone}
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">Not yet assigned</p>
+            )}
+          </div>
 
           {/* Timeline */}
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -25,6 +25,8 @@ export default async function Home() {
       redirect("/shipper");
     } else if (session.role === "ADMIN" || session.role === "SUPER_ADMIN") {
       redirect("/admin");
+    } else if (session.role === "DRIVER") {
+      redirect("/driver");
     } else {
       redirect("/login");
     }

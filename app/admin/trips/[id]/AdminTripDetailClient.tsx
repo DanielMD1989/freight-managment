@@ -128,7 +128,7 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div>
             <dt className="text-sm text-gray-500">Shipper</dt>
             <dd className="mt-1 text-sm font-medium text-gray-900">
@@ -146,6 +146,28 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
             <dd className="mt-1 text-sm font-medium text-gray-900">
               {trip.truck?.licensePlate || "—"}
             </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-gray-500">Driver</dt>
+            <dd className="mt-1 text-sm font-medium text-gray-900">
+              {trip.driver
+                ? [trip.driver.firstName, trip.driver.lastName]
+                    .filter(Boolean)
+                    .join(" ") || "—"
+                : "—"}
+            </dd>
+            {trip.driver?.phone && (
+              <dd className="text-xs text-gray-500">{trip.driver.phone}</dd>
+            )}
+            {trip.driver?.driverProfile && (
+              <dd className="text-xs text-gray-400">
+                {trip.driver.driverProfile.isAvailable
+                  ? "Available"
+                  : "Unavailable"}
+                {trip.driver.driverProfile.cdlNumber &&
+                  ` | CDL: ${trip.driver.driverProfile.cdlNumber}`}
+              </dd>
+            )}
           </div>
         </div>
       </div>
