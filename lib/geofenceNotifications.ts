@@ -164,6 +164,17 @@ async function sendPickupArrivalNotification(
     return;
   }
 
+  // Task 10: also target the assigned driver on the active trip (if any).
+  // The role filters above already exclude DRIVER from the org-wide fan-out,
+  // so this is additive — the driver gets a direct, personalized notification.
+  const trip = await db.trip.findFirst({
+    where: {
+      loadId: loadId,
+      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+    },
+    select: { driverId: true },
+  });
+
   // Send all notifications and emails in parallel
   await Promise.all([
     // Shipper notifications + emails
@@ -201,6 +212,22 @@ async function sendPickupArrivalNotification(
       })
     ),
   ]);
+
+  // Task 10: targeted driver notification (after org-level fan-out).
+  if (trip?.driverId) {
+    await createNotification({
+      userId: trip.driverId,
+      type: "TRUCK_AT_PICKUP",
+      title: `Arrived at pickup: Load #${load.id.slice(-8)}`,
+      message: `You have arrived at the pickup location for Load #${load.id.slice(-8)}. Please coordinate with the shipper.`,
+      metadata: {
+        loadId: load.id,
+        event: "ARRIVED_AT_PICKUP",
+        location: alert.location,
+        timestamp: alert.timestamp,
+      },
+    });
+  }
 }
 
 /**
@@ -261,6 +288,15 @@ async function sendDeliveryArrivalNotification(
     return;
   }
 
+  // Task 10: look up the active trip to find the assigned driver (if any).
+  const trip = await db.trip.findFirst({
+    where: {
+      loadId: loadId,
+      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+    },
+    select: { driverId: true },
+  });
+
   // Send all notifications and emails in parallel
   await Promise.all([
     // Shipper notifications + emails
@@ -298,6 +334,22 @@ async function sendDeliveryArrivalNotification(
       })
     ),
   ]);
+
+  // Task 10: targeted driver notification (after org-level fan-out).
+  if (trip?.driverId) {
+    await createNotification({
+      userId: trip.driverId,
+      type: "TRUCK_AT_DELIVERY",
+      title: `Arrived at delivery: Load #${load.id.slice(-8)}`,
+      message: `You have arrived at the delivery location for Load #${load.id.slice(-8)}. Please complete POD submission.`,
+      metadata: {
+        loadId: load.id,
+        event: "ARRIVED_AT_DESTINATION",
+        location: alert.location,
+        timestamp: alert.timestamp,
+      },
+    });
+  }
 }
 
 /**

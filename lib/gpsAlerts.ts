@@ -89,6 +89,18 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
     return; // No active load, skip alert
   }
 
+  // Task 10: look up the active trip for this truck to find the assigned driver.
+  // The role filters on the carrier/shipper user queries above already exclude
+  // DRIVER — this is an additive, targeted notification to only the driver on
+  // the currently-running trip.
+  const trip = await db.trip.findFirst({
+    where: {
+      truckId,
+      status: { in: ["PICKUP_PENDING", "IN_TRANSIT"] },
+    },
+    select: { driverId: true },
+  });
+
   const minutesOffline = truck.gpsLastSeenAt
     ? Math.floor((Date.now() - truck.gpsLastSeenAt.getTime()) / (1000 * 60))
     : 0;
@@ -155,6 +167,21 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
       },
     }),
   ]);
+
+  // Task 10: targeted driver notification (after org-level fan-out).
+  if (trip?.driverId) {
+    await createNotification({
+      userId: trip.driverId,
+      type: "GPS_OFFLINE",
+      title: `GPS signal issue on your truck`,
+      message: `The GPS signal on your assigned truck ${truck.licensePlate} has been lost. This may affect tracking. Contact your carrier if the issue persists.`,
+      metadata: {
+        truckId: truck.id,
+        loadId: truck.assignedLoad!.id,
+        minutesOffline,
+      },
+    });
+  }
 }
 
 /**
@@ -211,6 +238,15 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
     return;
   }
 
+  // Task 10: look up the active trip to find the assigned driver.
+  const trip = await db.trip.findFirst({
+    where: {
+      truckId,
+      status: { in: ["PICKUP_PENDING", "IN_TRANSIT"] },
+    },
+    select: { driverId: true },
+  });
+
   // Send all notifications and emails in parallel
   await Promise.all([
     // Carrier notifications + emails
@@ -244,6 +280,20 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
       })
     ),
   ]);
+
+  // Task 10: targeted driver notification (after org-level fan-out).
+  if (trip?.driverId) {
+    await createNotification({
+      userId: trip.driverId,
+      type: "GPS_BACK_ONLINE",
+      title: `GPS signal restored`,
+      message: `GPS tracking has been restored for your truck ${truck.licensePlate}.`,
+      metadata: {
+        truckId: truck.id,
+        loadId: truck.assignedLoad!.id,
+      },
+    });
+  }
 }
 
 /**
