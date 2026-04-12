@@ -75,6 +75,14 @@ export default function CarrierTripsScreen() {
           {item.estimatedDistanceKm && (
             <Text style={styles.metaText}>{item.estimatedDistanceKm} km</Text>
           )}
+          <Text style={styles.metaText}>
+            Driver:{" "}
+            {item.driver
+              ? [item.driver.firstName, item.driver.lastName]
+                  .filter(Boolean)
+                  .join(" ")
+              : "No driver"}
+          </Text>
         </View>
       </Card>
     </TouchableOpacity>

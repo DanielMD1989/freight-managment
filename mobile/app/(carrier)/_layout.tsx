@@ -165,6 +165,14 @@ export default function CarrierLayout() {
           tabBarItemStyle: { display: "none" },
         }}
       />
+      <Tabs.Screen
+        name="drivers"
+        options={{
+          title: "Drivers",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
     </Tabs>
   );
 }

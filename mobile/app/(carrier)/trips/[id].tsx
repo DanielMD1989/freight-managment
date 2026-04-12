@@ -31,6 +31,11 @@ import {
   useTripPods,
 } from "../../../src/hooks/useTrips";
 import { useTripRatings } from "../../../src/hooks/useRatings";
+import {
+  useDrivers,
+  useAssignDriver,
+  useUnassignDriver,
+} from "../../../src/hooks/useDrivers";
 import RatingModal from "../../../src/components/RatingModal";
 import { Card } from "../../../src/components/Card";
 import { Button } from "../../../src/components/Button";
@@ -54,11 +59,21 @@ import type { TripStatus } from "../../../src/types";
 export default function CarrierTripDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data: trip, isLoading } = useTrip(id);
+  const { data: trip, isLoading, refetch } = useTrip(id);
   const updateStatus = useUpdateTripStatus();
   const cancelTrip = useCancelTrip();
   const uploadPod = useUploadPod();
   const { data: pods } = useTripPods(id);
+
+  // Task 22: driver assignment
+  const assignDriver = useAssignDriver();
+  const unassignDriver = useUnassignDriver();
+  const canAssign =
+    trip?.status === "ASSIGNED" || trip?.status === "PICKUP_PENDING";
+  const { data: driversData } = useDrivers(
+    canAssign ? { available: "true", status: "ACTIVE", limit: 50 } : undefined
+  );
+  const [showDriverPicker, setShowDriverPicker] = useState(false);
 
   // Receiver info modal state
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -305,6 +320,18 @@ export default function CarrierTripDetailsScreen() {
           {trip.truck && (
             <DetailRow label="Truck" value={trip.truck.licensePlate ?? "N/A"} />
           )}
+          {trip.driver ? (
+            <DetailRow
+              label="Driver"
+              value={
+                [trip.driver.firstName, trip.driver.lastName]
+                  .filter(Boolean)
+                  .join(" ") || "—"
+              }
+            />
+          ) : (
+            <DetailRow label="Driver" value="Unassigned" />
+          )}
           {trip.receiverName && (
             <DetailRow label="Receiver" value={trip.receiverName} />
           )}
@@ -312,6 +339,113 @@ export default function CarrierTripDetailsScreen() {
             <DetailRow label="Receiver Phone" value={trip.receiverPhone} />
           )}
         </Card>
+
+        {/* Driver Assignment — Task 22 */}
+        {canAssign && (
+          <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>Driver Assignment</Text>
+            {trip.driver ? (
+              <>
+                <DetailRow
+                  label="Assigned"
+                  value={
+                    [trip.driver.firstName, trip.driver.lastName]
+                      .filter(Boolean)
+                      .join(" ") || "—"
+                  }
+                />
+                {trip.driver.phone && (
+                  <DetailRow label="Phone" value={trip.driver.phone} />
+                )}
+                {trip.status === "ASSIGNED" && (
+                  <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+                    <Button
+                      title="Reassign Driver"
+                      onPress={() => setShowDriverPicker(true)}
+                      variant="outline"
+                      size="sm"
+                    />
+                    <Button
+                      title="Unassign Driver"
+                      onPress={() => {
+                        Alert.alert(
+                          "Unassign Driver",
+                          "Remove driver from this trip?",
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Unassign",
+                              style: "destructive",
+                              onPress: () =>
+                                unassignDriver
+                                  .mutateAsync(trip.id)
+                                  .then(() => refetch()),
+                            },
+                          ]
+                        );
+                      }}
+                      variant="destructive"
+                      size="sm"
+                    />
+                  </View>
+                )}
+              </>
+            ) : (
+              <Button
+                title="Assign Driver"
+                onPress={() => setShowDriverPicker(true)}
+                variant="primary"
+                size="sm"
+              />
+            )}
+          </Card>
+        )}
+
+        {/* Driver Picker Modal */}
+        <Modal visible={showDriverPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.sectionTitle}>Select Driver</Text>
+              {(driversData?.drivers ?? []).length === 0 ? (
+                <Text style={styles.detailLabel}>No available drivers</Text>
+              ) : (
+                (driversData?.drivers ?? []).map((d) => (
+                  <TouchableOpacity
+                    key={d.id}
+                    style={styles.driverPickerRow}
+                    onPress={() => {
+                      setShowDriverPicker(false);
+                      assignDriver
+                        .mutateAsync({ tripId: trip.id, driverId: d.id })
+                        .then(() => refetch())
+                        .catch((err) =>
+                          Alert.alert(
+                            "Error",
+                            err instanceof Error
+                              ? err.message
+                              : "Failed to assign"
+                          )
+                        );
+                    }}
+                  >
+                    <Text style={styles.detailValue}>
+                      {[d.firstName, d.lastName].filter(Boolean).join(" ") ||
+                        "(no name)"}
+                    </Text>
+                    <Text style={styles.detailLabel}>{d.phone ?? ""}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+              <Button
+                title="Cancel"
+                onPress={() => setShowDriverPicker(false)}
+                variant="ghost"
+                size="sm"
+                style={{ marginTop: spacing.md }}
+              />
+            </View>
+          </View>
+        </Modal>
 
         {/* Shipper Contact */}
         {trip.shipper && (
@@ -806,5 +940,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     marginTop: spacing["2xl"],
+  },
+  driverPickerRow: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
 });

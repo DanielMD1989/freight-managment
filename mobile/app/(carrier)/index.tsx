@@ -143,6 +143,11 @@ export default function CarrierDashboard() {
       route: "/(carrier)/gps",
     },
     {
+      label: "Drivers",
+      icon: "person-outline" as const,
+      route: "/(carrier)/drivers",
+    },
+    {
       label: "Team",
       icon: "people-outline" as const,
       route: "/(shared)/team",
