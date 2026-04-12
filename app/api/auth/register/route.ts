@@ -22,7 +22,7 @@ const registerSchema = z.object({
     .max(128),
   firstName: z.string().min(1, "First name is required").max(100),
   lastName: z.string().min(1, "Last name is required").max(100),
-  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER"]),
+  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER"]), // DRIVER excluded — drivers use /api/drivers/accept-invite
   organizationId: z.string().max(50).optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
   // Organization fields
   companyName: z.string().max(200).optional(),
