@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         organizationId: invitation.organizationId,
         status: "INVITED",
       },
-      select: { id: true, firstName: true, lastName: true },
+      select: { id: true, firstName: true, lastName: true, email: true },
     });
 
     if (!user) {
@@ -197,6 +197,11 @@ export async function POST(request: NextRequest) {
         message:
           "Registration successful. Your account is pending carrier approval.",
         driverId: user.id,
+        // Task 21: surface the login email so the driver app can display it.
+        // If the carrier didn't supply a real email, this will be the
+        // placeholder (driver_abc123@placeholder.freight) — the driver
+        // needs to know what to type at the login screen.
+        loginEmail: user.email,
       },
       { status: 201 }
     );

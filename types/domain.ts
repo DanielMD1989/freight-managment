@@ -19,14 +19,16 @@ export type UserRole =
   | "CARRIER"
   | "DISPATCHER"
   | "ADMIN"
-  | "SUPER_ADMIN";
+  | "SUPER_ADMIN"
+  | "DRIVER";
 
 export type UserStatus =
   | "REGISTERED"
   | "PENDING_VERIFICATION"
   | "ACTIVE"
   | "SUSPENDED"
-  | "REJECTED";
+  | "REJECTED"
+  | "INVITED";
 
 export type LoadStatus =
   | "DRAFT"
@@ -365,6 +367,22 @@ export interface Trip {
   carrier?: Organization | null;
   shipperId: string;
   shipper?: Organization | null;
+
+  // Driver
+  driverId?: string | null;
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    driverProfile?: {
+      cdlNumber: string | null;
+      isAvailable: boolean;
+    } | null;
+  } | null;
+  previousDriverId?: string | null;
+  driverReassignedAt?: Date | null;
+  driverReassignReason?: string | null;
 
   // Current Location
   currentLat?: number | null;

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireActiveUser } from "@/lib/auth";
+import { requireActiveUser, requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/apiErrors";
@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireActiveUser();
+    // Task 21: use requireAuth (not requireActiveUser) so that
+    // PENDING_VERIFICATION drivers can register their FCM token and
+    // receive the "your account has been approved" push notification.
+    const session = await requireAuth();
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 
