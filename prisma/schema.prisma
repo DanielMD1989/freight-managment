@@ -490,6 +490,7 @@ model SecurityEvent {
 model Invitation {
   id         String           @id @default(cuid())
   email      String
+  phone      String?
   role       UserRole
   status     InvitationStatus @default(PENDING)
   token      String           @unique @default(cuid())
