@@ -109,6 +109,7 @@ export async function POST(
         status: true,
         shipperId: true,
         carrierId: true,
+        driverId: true,
         shipper: { select: { name: true } },
         carrier: { select: { name: true } },
         load: { select: { pickupCity: true, deliveryCity: true } },
@@ -132,11 +133,17 @@ export async function POST(
       );
     }
 
-    // Only shipper and carrier of THIS trip can send messages
+    // Only shipper, carrier, or assigned driver of THIS trip can send messages.
+    // Task 8: DRIVER check MUST run before the orgId checks — a driver shares
+    // the carrier's organizationId, so the old code would tag their messages
+    // as senderRole="CARRIER".
     let senderRole: string;
     let recipientOrgId: string;
 
-    if (session.organizationId === trip.shipperId) {
+    if (session.role === "DRIVER" && trip.driverId === session.userId) {
+      senderRole = "DRIVER";
+      recipientOrgId = trip.shipperId;
+    } else if (session.organizationId === trip.shipperId) {
       senderRole = "SHIPPER";
       recipientOrgId = trip.carrierId;
     } else if (session.organizationId === trip.carrierId) {
@@ -239,6 +246,7 @@ export async function GET(
         status: true,
         shipperId: true,
         carrierId: true,
+        driverId: true,
       },
     });
 
@@ -246,17 +254,21 @@ export async function GET(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // Access control: shipper, carrier, admin (read-only). Dispatcher blocked.
+    // Access control: shipper, carrier, assigned driver, admin (read-only).
+    // Dispatcher blocked.
     const isShipper = session.organizationId === trip.shipperId;
     const isCarrier = session.organizationId === trip.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     const isDispatcher = session.role === "DISPATCHER";
+    // Task 8: assigned driver can read their trip's conversation
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
     if (isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    if (!isShipper && !isCarrier && !isAdmin) {
+    if (!isShipper && !isCarrier && !isAdmin && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

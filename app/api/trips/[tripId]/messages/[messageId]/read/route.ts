@@ -27,18 +27,21 @@ export async function PUT(
     // Fetch trip for access control
     const trip = await db.trip.findUnique({
       where: { id: tripId },
-      select: { shipperId: true, carrierId: true },
+      select: { shipperId: true, carrierId: true, driverId: true },
     });
 
     if (!trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // Only shipper and carrier can mark messages as read
+    // Only shipper, carrier, and the assigned driver can mark messages as read
     const isShipper = session.organizationId === trip.shipperId;
     const isCarrier = session.organizationId === trip.carrierId;
+    // Task 8: assigned driver can mark their trip's messages as read
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isShipper && !isCarrier) {
+    if (!isShipper && !isCarrier && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
