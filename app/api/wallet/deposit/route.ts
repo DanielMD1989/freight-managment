@@ -174,6 +174,12 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireActiveUser();
 
+    // Task 6 (Gap 3): Drivers have no deposit history. POST already blocks
+    // DRIVER via its SHIPPER/CARRIER role guard.
+    if (session.role === "DRIVER") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     if (!session.organizationId) {
       return NextResponse.json(
         { error: "You must belong to an organization" },

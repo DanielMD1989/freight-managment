@@ -15,6 +15,31 @@ export async function GET() {
       );
     }
 
+    // Task 6 (Gap 13): Drivers get a stripped org card — no user list, no
+    // financial accounts, no counts. Just identity + contact fields so the
+    // driver app can show "You are with Acme Logistics".
+    if (session.role === "DRIVER") {
+      const org = await db.organization.findUnique({
+        where: { id: session.organizationId },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          contactPhone: true,
+          contactEmail: true,
+        },
+      });
+
+      if (!org) {
+        return NextResponse.json(
+          { error: "Organization not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ organization: org });
+    }
+
     const organization = await db.organization.findUnique({
       where: { id: session.organizationId },
       include: {

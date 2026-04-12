@@ -74,6 +74,30 @@ export async function GET(
       );
     }
 
+    // Task 6 (Gap 10): Drivers see a stripped-down org card — no user list,
+    // no financial/truck/load counts, no disputes. Just the public identity
+    // fields so the driver app can render "You are with Acme Logistics".
+    if (user?.role === "DRIVER" && isMember) {
+      const limitedOrg = await db.organization.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          contactPhone: true,
+          type: true,
+        },
+      });
+
+      if (!limitedOrg) {
+        return NextResponse.json(
+          { error: "Organization not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ organization: limitedOrg });
+    }
+
     const organization = await db.organization.findUnique({
       where: { id },
       include: {

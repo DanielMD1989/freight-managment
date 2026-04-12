@@ -34,6 +34,14 @@ export async function DELETE(
     const session = await requireAuth();
     const { id: memberId } = await params;
 
+    // Task 6 (Gap 4): Drivers cannot manage organization members.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot manage organization members" },
+        { status: 403 }
+      );
+    }
+
     // Prevent self-removal
     if (memberId === session.userId) {
       return NextResponse.json(
@@ -155,6 +163,14 @@ export async function PATCH(
 
     const session = await requireAuth();
     const { id: memberId } = await params;
+
+    // Task 6 (Gap 4): Drivers cannot manage organization members.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot manage organization members" },
+        { status: 403 }
+      );
+    }
 
     // Get current user's organization
     const currentUser = await db.user.findUnique({

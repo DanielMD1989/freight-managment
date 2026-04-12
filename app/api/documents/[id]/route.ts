@@ -80,6 +80,13 @@ export async function GET(
     // Require authentication
     const session = await requireActiveUser();
 
+    // Task 6 (Gap 8): Drivers cannot view organization/truck documents here.
+    // Their own CDL documents will be served via a dedicated /api/drivers/[id]
+    // endpoint once Task 13 lands. Cloak with 404.
+    if (session.role === "DRIVER") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     // Fetch document based on entity type
     if (entityType === "company") {
       const document = await db.companyDocument.findUnique({

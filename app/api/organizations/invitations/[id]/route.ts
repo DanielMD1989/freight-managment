@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, getSessionAny } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 
@@ -24,6 +24,17 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Task 6 (Gap 12): Public accept-invite flow must stay unauthenticated,
+    // but a logged-in DRIVER must never peek at invitations. Optional-session
+    // check: block only if a driver session is actually present.
+    const maybeSession = await getSessionAny();
+    if (maybeSession?.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot view invitations" },
+        { status: 403 }
+      );
+    }
 
     const invitation = await db.invitation.findUnique({
       where: { id },
@@ -89,6 +100,14 @@ export async function DELETE(
 
     const session = await requireAuth();
     const { id } = await params;
+
+    // Task 6 (Gap 12): Drivers cannot cancel org invitations.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot manage invitations" },
+        { status: 403 }
+      );
+    }
 
     // Get user's organization
     const user = await db.user.findUnique({

@@ -352,6 +352,13 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await requireActiveUser();
+
+    // Task 6 (Gap 6): Match proposals are a carrier/dispatcher/shipper
+    // coordination surface — drivers have no visibility here.
+    if (session.role === "DRIVER") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get("status");

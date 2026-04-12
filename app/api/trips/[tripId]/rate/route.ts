@@ -62,6 +62,16 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // Task 6 (Gap 7): Drivers are not a party to the §12 rating contract —
+    // ratings are between the shipper org and the carrier org. Block early
+    // with a user-friendly 403.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot submit ratings" },
+        { status: 403 }
+      );
+    }
+
     // Trip must be DELIVERED or COMPLETED
     if (!["DELIVERED", "COMPLETED"].includes(trip.status)) {
       return NextResponse.json(
@@ -174,21 +184,25 @@ export async function GET(
 
     const trip = await db.trip.findUnique({
       where: { id: tripId },
-      select: { shipperId: true, carrierId: true },
+      select: { shipperId: true, carrierId: true, driverId: true },
     });
 
     if (!trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // Trip parties + admin + dispatcher can view
+    // Trip parties + admin + dispatcher can view.
+    // Task 6 (Gap 7): the assigned driver can see ratings on their own trip,
+    // but never on trips they're not assigned to.
     const isParty =
       session.organizationId === trip.shipperId ||
       session.organizationId === trip.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     const isDispatcher = session.role === "DISPATCHER";
+    const isDriver =
+      session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isParty && !isAdmin && !isDispatcher) {
+    if (!isParty && !isAdmin && !isDispatcher && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

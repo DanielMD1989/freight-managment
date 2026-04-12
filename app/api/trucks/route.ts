@@ -305,6 +305,15 @@ export async function GET(request: NextRequest) {
 
     // PHASE 2: Get visibility rules based on role
 
+    // Task 6 (Gap 5): Drivers cannot browse truck fleet inventory.
+    // They only see trucks via their assigned trips (Trip.driverId).
+    if (user.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot browse truck fleet inventory" },
+        { status: 403 }
+      );
+    }
+
     // PHASE 2: SHIPPER cannot browse fleet inventory
     // Foundation Rule: SHIPPER_DEMAND_FOCUS
     // Shippers should use /api/truck-postings to search for available trucks

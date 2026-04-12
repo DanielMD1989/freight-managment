@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireActiveUser();
 
+    // Task 6 (Gap 2): Drivers have no wallet transaction history to view.
+    if (session.role === "DRIVER") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     // Get user's organization
     const user = await db.user.findUnique({
       where: { id: session.userId },

@@ -80,6 +80,16 @@ export async function POST(request: NextRequest) {
     const userId = session.userId;
     const userOrgId = session.organizationId;
 
+    // Task 6 (Gap 9): Drivers cannot upload organization/truck documents
+    // through this endpoint. Driver CDL uploads land on a dedicated
+    // endpoint built in Task 13.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot upload organization documents" },
+        { status: 403 }
+      );
+    }
+
     // Check CSRF token
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {

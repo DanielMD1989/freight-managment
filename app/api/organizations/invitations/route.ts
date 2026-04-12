@@ -54,6 +54,14 @@ export async function POST(request: NextRequest) {
 
     const session = await requireActiveUser();
 
+    // Task 6 (Gap 11): Drivers cannot manage org invitations.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot manage invitations" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const data = createInvitationSchema.parse(body);
 
@@ -170,6 +178,14 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await requireActiveUser();
+
+    // Task 6 (Gap 11): Drivers cannot manage or list org invitations.
+    if (session.role === "DRIVER") {
+      return NextResponse.json(
+        { error: "Drivers cannot manage invitations" },
+        { status: 403 }
+      );
+    }
 
     // Get user's organization
     const user = await db.user.findUnique({

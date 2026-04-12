@@ -454,9 +454,13 @@ export async function canAccessTracking(
   }
 
   // Carrier can access assigned loads
+  // Task 6 (Gap 14): explicitly exclude DRIVER — drivers share the carrier
+  // org ID but must only see GPS for trips where they are the assigned
+  // driver (checked via Trip.driverId on the trip endpoints, not here).
   if (
     load.assignedTruck &&
-    user.organizationId === load.assignedTruck.carrierId
+    user.organizationId === load.assignedTruck.carrierId &&
+    user.role !== "DRIVER"
   ) {
     return true;
   }
