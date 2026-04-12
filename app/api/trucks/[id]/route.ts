@@ -112,10 +112,12 @@ export async function GET(
     // Truck visibility: owner, admin, dispatcher
     // Carriers can only see their OWN trucks — not other carriers' fleet
     // Shippers must use /api/truck-postings (RULE_SHIPPER_DEMAND_FOCUS)
+    // Task 6 (Gap 32): scope the orgId match to CARRIER role so drivers
+    // (who share the carrier orgId) cannot view truck detail + GPS IMEI.
     const canView =
       user?.role === "SUPER_ADMIN" ||
       user?.role === "ADMIN" ||
-      truck.carrierId === user?.organizationId ||
+      (user?.role === "CARRIER" && truck.carrierId === user?.organizationId) ||
       user?.role === "DISPATCHER";
 
     if (!canView) {

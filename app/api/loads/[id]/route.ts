@@ -216,8 +216,12 @@ export async function GET(
     }
 
     // Authorization check - shipper, assigned carrier, dispatcher, admin, or public loadboard loads
+    // Task 6 (Gap 19): scope the carrier-org match to CARRIER role so drivers
+    // (who share the carrier orgId) don't see full load details by default —
+    // driver load visibility flows through Trip.driverId on trip endpoints.
     const isShipper = user.organizationId === load.shipperId;
     const isAssignedCarrier =
+      user.role === "CARRIER" &&
       load.assignedTruck?.carrier?.id === user.organizationId;
     const isDispatcher = user.role === "DISPATCHER";
     const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";

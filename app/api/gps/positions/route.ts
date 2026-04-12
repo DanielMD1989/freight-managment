@@ -37,8 +37,12 @@ async function getHandler(request: NextRequest) {
         select: { carrierId: true },
       });
 
+      // Task 6 (Gap 22): scope the carrier org match to CARRIER role so
+      // drivers (who share the carrier orgId) don't get blanket GPS access
+      // via the truckId query param.
       const canView =
-        user?.organizationId === truck?.carrierId ||
+        (user?.role === "CARRIER" &&
+          user?.organizationId === truck?.carrierId) ||
         session.role === "ADMIN" ||
         session.role === "SUPER_ADMIN" ||
         session.role === "PLATFORM_OPS";

@@ -40,8 +40,11 @@ export async function GET(
     }
 
     // H5 FIX: Only shipper, assigned carrier, dispatcher, or admin can access
+    // Task 6 (Gap 17): scope carrier match to CARRIER role so drivers don't
+    // pull next-load suggestions (a carrier-ops feature).
     const isShipper = user?.organizationId === load.shipperId;
     const isAssignedCarrier =
+      user?.role === "CARRIER" &&
       load.assignedTruck?.carrierId === user?.organizationId;
     const isDispatcher = user?.role === "DISPATCHER";
     const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";

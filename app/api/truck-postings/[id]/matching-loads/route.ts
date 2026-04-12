@@ -136,8 +136,11 @@ export async function GET(
     // Verify ownership - only the carrier who owns this truck posting can see matches
     // Per RULE_CARRIER_OWNS_TRUCKS: Carrier is sole owner of trucks
     // Dispatchers can also view matches to facilitate load matching
+    // Task 6 (Gap 33): scope the orgId match to CARRIER role so drivers
+    // (who share the carrier orgId) cannot run the matching engine.
     const hasAccess =
-      truckPosting.carrierId === session.organizationId ||
+      (session.role === "CARRIER" &&
+        truckPosting.carrierId === session.organizationId) ||
       session.role === "ADMIN" ||
       session.role === "SUPER_ADMIN" ||
       session.role === "DISPATCHER";

@@ -549,7 +549,14 @@ interface NavItem {
   label: string;
   href: string;
   icon: string;
-  roles: ("ADMIN" | "SUPER_ADMIN" | "CARRIER" | "SHIPPER" | "DISPATCHER")[];
+  roles: (
+    | "ADMIN"
+    | "SUPER_ADMIN"
+    | "CARRIER"
+    | "SHIPPER"
+    | "DISPATCHER"
+    | "DRIVER"
+  )[];
   children?: NavItem[];
 }
 

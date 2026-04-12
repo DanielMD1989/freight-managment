@@ -51,12 +51,15 @@ export async function GET(
     }
 
     // Check access - must be shipper, carrier, or admin
+    // Task 6 (Gap 15): scope the carrier org check to CARRIER role so drivers
+    // (who share the carrier orgId) don't pass through this fast path.
     const hasAccess =
       session.role === "ADMIN" ||
       session.role === "SUPER_ADMIN" ||
       session.role === "DISPATCHER" ||
       session.organizationId === load.shipperId ||
-      session.organizationId === load.assignedTruck?.carrierId;
+      (session.role === "CARRIER" &&
+        session.organizationId === load.assignedTruck?.carrierId);
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

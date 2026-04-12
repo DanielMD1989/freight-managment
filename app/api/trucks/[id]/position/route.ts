@@ -61,7 +61,11 @@ export async function GET(
       select: { organizationId: true, role: true },
     });
 
-    const isOwner = user?.organizationId === truck.carrierId;
+    // Task 6 (Gap 21): scope the owner check to CARRIER role so drivers
+    // (who share the carrier orgId) cannot pull the truck's live position.
+    // isOrgDispatcher already has an explicit DISPATCHER role check.
+    const isOwner =
+      user?.role === "CARRIER" && user?.organizationId === truck.carrierId;
     const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
     const isOrgDispatcher =
       user?.role === "DISPATCHER" && user?.organizationId === truck.carrierId;

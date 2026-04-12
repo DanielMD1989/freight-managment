@@ -58,15 +58,18 @@ export async function GET(
     }
 
     // H15 FIX: Proper authorization - shipper, assigned carrier, dispatcher, or admin
+    // Task 6 (Gap 18): scope carrier match to CARRIER role so drivers don't
+    // hit the matching engine for other loads.
     const isShipper = load.shipperId === user.organizationId;
-    const isAssignedCarrier = load.assignedTruckId
-      ? await db.truck
-          .findUnique({
-            where: { id: load.assignedTruckId },
-            select: { carrierId: true },
-          })
-          .then((t) => t?.carrierId === user.organizationId)
-      : false;
+    const isAssignedCarrier =
+      user.role === "CARRIER" && load.assignedTruckId
+        ? await db.truck
+            .findUnique({
+              where: { id: load.assignedTruckId },
+              select: { carrierId: true },
+            })
+            .then((t) => t?.carrierId === user.organizationId)
+        : false;
     const isDispatcher = user.role === "DISPATCHER";
     const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 

@@ -55,7 +55,11 @@ export async function GET(
     });
 
     const isShipper = user?.organizationId === load.shipperId;
-    const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
+    // Task 6 (Gap 16): scope the org check to CARRIER role so drivers
+    // (who share the carrier orgId) don't get load-wide GPS history.
+    const isCarrier =
+      user?.role === "CARRIER" &&
+      user?.organizationId === load.assignedTruck?.carrierId;
     const isAdmin =
       session.role === "ADMIN" ||
       session.role === "SUPER_ADMIN" ||
