@@ -625,6 +625,12 @@ const navigationSections: Record<string, NavSection[]> = {
           roles: ["CARRIER", "ADMIN", "SUPER_ADMIN"],
         },
         {
+          label: "Drivers",
+          href: "/carrier/drivers",
+          icon: "👤",
+          roles: ["CARRIER", "ADMIN", "SUPER_ADMIN"],
+        },
+        {
           label: "GPS Tracking",
           href: "/carrier/gps",
           icon: "📍",
