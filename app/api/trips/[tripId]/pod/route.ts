@@ -321,6 +321,32 @@ export async function POST(
         });
       }
 
+      // Auto-availability: restore driver if no other active trips
+      // Mirrors the truck availability pattern above.
+      if (trip.driverId) {
+        const otherDriverTrips = await tx.trip.count({
+          where: {
+            driverId: trip.driverId,
+            id: { not: tripId },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
+          },
+        });
+        if (otherDriverTrips === 0) {
+          await tx.driverProfile.update({
+            where: { userId: trip.driverId },
+            data: { isAvailable: true },
+          });
+        }
+      }
+
       // Settlement status
       const feeActuallySettled =
         serviceFeeResult?.success &&

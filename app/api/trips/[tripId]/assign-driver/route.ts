@@ -155,6 +155,37 @@ export async function POST(
       data: updateData,
     });
 
+    // Auto-availability: new driver becomes unavailable
+    await db.driverProfile.update({
+      where: { userId: driverId },
+      data: { isAvailable: false },
+    });
+
+    // Auto-availability: if replacing, restore old driver if no other active trips
+    if (isReplacing && previousDriverId) {
+      const oldDriverActiveTrips = await db.trip.count({
+        where: {
+          driverId: previousDriverId,
+          id: { not: tripId },
+          status: {
+            in: [
+              "ASSIGNED",
+              "PICKUP_PENDING",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
+          },
+        },
+      });
+      if (oldDriverActiveTrips === 0) {
+        await db.driverProfile.update({
+          where: { userId: previousDriverId },
+          data: { isAvailable: true },
+        });
+      }
+    }
+
     // Notify new driver
     const route =
       trip.load?.pickupCity && trip.load?.deliveryCity

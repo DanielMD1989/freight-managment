@@ -77,6 +77,29 @@ export async function POST(
       data: { driverId: null },
     });
 
+    // Auto-availability: restore driver if no other active trips
+    const otherDriverTrips = await db.trip.count({
+      where: {
+        driverId: removedDriverId,
+        id: { not: tripId },
+        status: {
+          in: [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+            "DELIVERED",
+            "EXCEPTION",
+          ],
+        },
+      },
+    });
+    if (otherDriverTrips === 0) {
+      await db.driverProfile.update({
+        where: { userId: removedDriverId },
+        data: { isAvailable: true },
+      });
+    }
+
     // Notify removed driver
     const route =
       trip.load?.pickupCity && trip.load?.deliveryCity

@@ -631,6 +631,36 @@ export async function PATCH(
           });
         }
 
+        // Auto-availability: restore driver if no other active trips
+        // Mirrors the truck availability pattern above.
+        if (
+          (validatedData.status === "COMPLETED" ||
+            validatedData.status === "CANCELLED") &&
+          trip.driverId
+        ) {
+          const otherDriverTrips = await tx.trip.count({
+            where: {
+              driverId: trip.driverId,
+              id: { not: tripId },
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
+            },
+          });
+          if (otherDriverTrips === 0) {
+            await tx.driverProfile.update({
+              where: { userId: trip.driverId },
+              data: { isAvailable: true },
+            });
+          }
+        }
+
         // G-A14-2 + G-A15-1: Mark settlement PAID only when fees were actually
         // collected (platformRevenue > 0) or the load is fee-waived (totalPlatformFee = 0).
         // Skips if fees were already deducted by a prior path.

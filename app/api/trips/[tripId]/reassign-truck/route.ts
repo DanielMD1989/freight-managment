@@ -269,6 +269,41 @@ export async function POST(
         data: { status: "MATCHED" },
       });
 
+      // d2) Auto-availability: driver swap (mirrors truck pattern above)
+      if (newDriverId) {
+        // New driver becomes unavailable
+        await tx.driverProfile.update({
+          where: { userId: newDriverId },
+          data: { isAvailable: false },
+        });
+
+        // Old driver restored if no other active trips
+        const driverChanged = newDriverId !== trip.driverId;
+        if (driverChanged && trip.driverId) {
+          const oldDriverTrips = await tx.trip.count({
+            where: {
+              driverId: trip.driverId,
+              id: { not: tripId },
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
+            },
+          });
+          if (oldDriverTrips === 0) {
+            await tx.driverProfile.update({
+              where: { userId: trip.driverId },
+              data: { isAvailable: true },
+            });
+          }
+        }
+      }
+
       // e) Sync load back to IN_TRANSIT + update assignedTruckId
       await tx.load.update({
         where: { id: trip.load!.id },

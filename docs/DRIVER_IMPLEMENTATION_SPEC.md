@@ -325,6 +325,29 @@ DRIVER shares carrier's `organizationId`. Routes that checked `orgId === carrier
 
 ---
 
+## PHASE 2 — Post-Launch Enhancements
+
+### Auto-Availability Toggle ✅
+
+**Commit:** _(this commit)_
+**Files:** 5 modified
+
+Mirrors the truck availability pattern: driver `isAvailable` is automatically managed by the trip lifecycle.
+
+| File                                              | Trigger                                  | Action                                                                                      |
+| ------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `app/api/trips/[tripId]/assign-driver/route.ts`   | Driver assigned                          | Set `isAvailable: false`. If replacing old driver, count other active trips → restore if 0. |
+| `app/api/trips/[tripId]/unassign-driver/route.ts` | Driver unassigned                        | Count other active trips → restore `isAvailable: true` if 0.                                |
+| `app/api/trips/[tripId]/route.ts` (PATCH)         | Trip COMPLETED or CANCELLED              | Inside `$transaction`, count other active trips → restore if 0.                             |
+| `app/api/trips/[tripId]/reassign-truck/route.ts`  | Driver swapped during truck reassignment | Inside `$transaction`, new driver unavailable, old driver restored if 0 active.             |
+| `app/api/trips/[tripId]/pod/route.ts`             | POD upload auto-completes trip           | Inside `$transaction`, count other active trips → restore if 0.                             |
+
+Active trip statuses for the count query: `ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, EXCEPTION` (same set as the truck pattern).
+
+Manual toggle via `PUT /api/drivers/[id]` still works as a carrier/driver override.
+
+---
+
 ## REMAINING WORK
 
 These items are NOT security issues — they are future feature enhancements.
