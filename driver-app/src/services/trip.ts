@@ -4,6 +4,7 @@
  */
 import apiClient, { getErrorMessage } from "../api/client";
 import type { Trip, TripsResponse, TripPod } from "../types";
+import { queueStatusChange } from "./status-queue";
 
 class TripService {
   /** Get trips */
@@ -30,7 +31,7 @@ class TripService {
     }
   }
 
-  /** Update trip status */
+  /** Update trip status — queues offline if network unavailable */
   async updateTripStatus(
     id: string,
     status: string,
@@ -38,8 +39,9 @@ class TripService {
       receiverName?: string;
       receiverPhone?: string;
       deliveryNotes?: string;
+      exceptionReason?: string;
     }
-  ): Promise<Trip> {
+  ): Promise<Trip & { _queued?: boolean }> {
     try {
       const response = await apiClient.patch(`/api/trips/${id}`, {
         status,
@@ -47,8 +49,31 @@ class TripService {
       });
       return response.data.trip ?? response.data;
     } catch (error) {
+      if (this.isNetworkError(error)) {
+        await queueStatusChange({
+          tripId: id,
+          status,
+          extra,
+          queuedAt: Date.now(),
+        });
+        return { id, status, _queued: true } as Trip & { _queued?: boolean };
+      }
       throw new Error(getErrorMessage(error));
     }
+  }
+
+  private isNetworkError(error: unknown): boolean {
+    if (error && typeof error === "object") {
+      const e = error as {
+        response?: unknown;
+        code?: string;
+        message?: string;
+      };
+      if (!e.response) return true;
+      if (e.code === "ERR_NETWORK" || e.code === "ECONNABORTED") return true;
+      if (e.message?.includes("Network Error")) return true;
+    }
+    return false;
   }
 
   /** Cancel trip */

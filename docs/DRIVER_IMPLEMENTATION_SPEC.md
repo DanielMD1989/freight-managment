@@ -410,6 +410,18 @@ Full driver lifecycle test: invite → accept → approve → assign → status 
 
 `driver-app/eas.json` with dev/staging/prod build profiles. API base URL sourced from `EXPO_PUBLIC_API_BASE_URL` env var per profile. Removed hardcoded `apiBaseUrl` from `app.json` — the API client already reads the env var first with localhost fallback.
 
+### Offline Trip Status Queue ✅
+
+**Commit:** `(this commit)`
+**Files:** 1 new + 3 modified
+
+Trip status changes queued in MMKV when offline. Auto-flush on connectivity restore via NetInfo (same pattern as GPS queue). Status changes flush in order (oldest first) to respect the trip state machine. UI shows pending count when changes are queued.
+
+- `driver-app/src/services/status-queue.ts` — new queue service (MMKV, 50-item cap, 24h TTL, NetInfo auto-flush)
+- `driver-app/src/services/trip.ts` — `updateTripStatus` queues on network error, returns optimistic result
+- `driver-app/app/(driver)/trips/[id].tsx` — pending count indicator below status buttons
+- `driver-app/app/(driver)/index.tsx` — flush queue on mount
+
 ---
 
 ## REMAINING WORK

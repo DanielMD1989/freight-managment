@@ -1,7 +1,7 @@
 /**
  * My Trips — Driver's trip list with availability toggle
  */
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { useMyProfile, useToggleAvailability } from "../../src/hooks/useDriver";
 import { useNotificationUnreadCount } from "../../src/hooks/useNotifications";
 import { useAuthStore } from "../../src/stores/auth";
 import { formatDate } from "../../src/utils/format";
+import { flushStatusQueue } from "../../src/services/status-queue";
 import type { Trip } from "../../src/types";
 
 const STATUSES = [
@@ -44,6 +45,11 @@ export default function DriverTripsScreen() {
   const user = useAuthStore((s) => s.user);
   const unreadCount = useNotificationUnreadCount();
   const [activeFilter, setActiveFilter] = useState("ALL");
+
+  // Flush any queued offline status changes on mount
+  useEffect(() => {
+    flushStatusQueue().catch(() => {});
+  }, []);
 
   const {
     data: allData,

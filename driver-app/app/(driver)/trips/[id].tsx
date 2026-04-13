@@ -4,7 +4,7 @@
  * DRIVER transitions: PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED,
  * EXCEPTION. NO CANCELLED.
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -42,6 +42,7 @@ import {
 } from "../../../src/hooks/useTrips";
 import { useLocationTracking } from "../../../src/hooks/useTracking";
 import { formatDate, formatDistance } from "../../../src/utils/format";
+import { getQueueSize } from "../../../src/services/status-queue";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -114,6 +115,13 @@ export default function DriverTripDetailScreen() {
   // Exception modal
   const [showExceptionModal, setShowExceptionModal] = useState(false);
   const [exceptionReason, setExceptionReason] = useState("");
+
+  // Offline status queue indicator
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    getQueueSize().then(setPendingCount);
+  }, [trip?.status]);
 
   if (isLoading || !trip) {
     return <LoadingSpinner fullScreen message="Loading trip..." />;
@@ -328,6 +336,13 @@ export default function DriverTripDetailScreen() {
               fullWidth
               size="md"
             />
+          )}
+          {pendingCount > 0 && (
+            <Text style={styles.pendingText}>
+              <Text style={styles.pendingCount}>{pendingCount}</Text> status
+              update{pendingCount > 1 ? "s" : ""} pending — will sync when
+              online
+            </Text>
           )}
         </Card>
       )}
@@ -556,6 +571,16 @@ const styles = StyleSheet.create({
     ...typography.labelSmall,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  pendingText: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: spacing.md,
+  },
+  pendingCount: {
+    color: colors.warning,
+    fontWeight: "600",
   },
   podHint: { ...typography.bodySmall, color: colors.textTertiary },
   modalOverlay: {
