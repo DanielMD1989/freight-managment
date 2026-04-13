@@ -14,7 +14,6 @@
       "backgroundColor": "#0EA5E9"
     },
     "extra": {
-      "apiBaseUrl": "https://api.freightethiopia.com",
       "eas": {
         "projectId": "your-eas-project-id"
       }
