@@ -412,7 +412,7 @@ Full driver lifecycle test: invite → accept → approve → assign → status 
 
 ### Offline Trip Status Queue ✅
 
-**Commit:** `(this commit)`
+**Commit:** `214d8274`
 **Files:** 1 new + 3 modified
 
 Trip status changes queued in MMKV when offline. Auto-flush on connectivity restore via NetInfo (same pattern as GPS queue). Status changes flush in order (oldest first) to respect the trip state machine. UI shows pending count when changes are queued.
