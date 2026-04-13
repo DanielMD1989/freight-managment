@@ -329,7 +329,7 @@ DRIVER shares carrier's `organizationId`. Routes that checked `orgId === carrier
 
 ### Auto-Availability Toggle ✅
 
-**Commit:** _(this commit)_
+**Commit:** `51f12ed4`
 **Files:** 5 modified
 
 Mirrors the truck availability pattern: driver `isAvailable` is automatically managed by the trip lifecycle.
