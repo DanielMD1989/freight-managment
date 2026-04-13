@@ -32,6 +32,7 @@ interface RatingModalProps {
   tripId: string;
   ratedOrgName: string;
   raterLabel: string; // "Rate Carrier" or "Rate Shipper"
+  driverName?: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -43,6 +44,7 @@ export default function RatingModal({
   tripId,
   ratedOrgName,
   raterLabel,
+  driverName,
   onClose,
   onSuccess,
 }: RatingModalProps) {
@@ -106,6 +108,9 @@ export default function RatingModal({
           </View>
 
           <Text style={styles.subtitle}>{ratedOrgName}</Text>
+          {driverName && (
+            <Text style={styles.driverName}>Driver: {driverName}</Text>
+          )}
 
           <View style={styles.starRow}>
             <StarRating value={stars} onChange={setStars} size={40} />
@@ -187,7 +192,12 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.textSecondary,
     marginTop: spacing.xs,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  driverName: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    marginBottom: spacing.sm,
   },
   starRow: {
     alignItems: "center",

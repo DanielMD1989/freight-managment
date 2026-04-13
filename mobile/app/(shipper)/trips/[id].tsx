@@ -142,6 +142,11 @@ export default function ShipperTripDetailsScreen() {
         tripId={id!}
         ratedOrgName={trip.carrier?.name ?? "Carrier"}
         raterLabel="Rate Carrier"
+        driverName={
+          [trip.driver?.firstName, trip.driver?.lastName]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
         onClose={() => setShowRatingModal(false)}
       />
 

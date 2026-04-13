@@ -932,6 +932,11 @@ export default function ShipperTripDetailClient({
             tripId={trip.id}
             ratedOrgName={trip.carrier?.name || "Carrier"}
             raterLabel="Rate Carrier"
+            driverName={
+              [trip.driver?.firstName, trip.driver?.lastName]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
             onSuccess={() => {
               fetch(`/api/trips/${trip.id}/rate`, { credentials: "include" })
                 .then((res) => (res.ok ? res.json() : null))

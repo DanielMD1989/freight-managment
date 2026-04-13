@@ -16,6 +16,7 @@ interface RatingModalProps {
   tripId: string;
   ratedOrgName: string;
   raterLabel: string; // "Rate Carrier" or "Rate Shipper"
+  driverName?: string;
   onSuccess: () => void;
 }
 
@@ -25,6 +26,7 @@ export default function RatingModal({
   tripId,
   ratedOrgName,
   raterLabel,
+  driverName,
   onSuccess,
 }: RatingModalProps) {
   const [stars, setStars] = useState(0);
@@ -77,6 +79,11 @@ export default function RatingModal({
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4">
           <h3 className="text-lg font-semibold text-white">{raterLabel}</h3>
           <p className="mt-0.5 text-sm text-slate-300">{ratedOrgName}</p>
+          {driverName && (
+            <p className="mt-0.5 text-xs text-slate-400">
+              Driver: {driverName}
+            </p>
+          )}
         </div>
 
         {/* Body */}

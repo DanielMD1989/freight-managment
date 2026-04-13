@@ -358,6 +358,21 @@ POD upload restricted to DRIVER + ADMIN only. Carrier can view PODs but cannot u
 - Carrier mobile: replaced upload buttons with read-only status text
 - Driver-app: unchanged (already has POD upload from Task 24)
 
+### Driver Name on Rating Form ✅
+
+**Commit:** `(this commit)`
+**Files:** 4 modified
+
+Shipper rating modal shows driver name as context below the carrier org name.
+Display-only — Rating model unchanged (rates organization, not driver).
+
+- `components/RatingModal.tsx` — added optional `driverName` prop, renders muted line in header
+- `app/shipper/trips/[id]/ShipperTripDetailClient.tsx` — passes `driverName` from `trip.driver`
+- `mobile/src/components/RatingModal.tsx` — added optional `driverName` prop + style
+- `mobile/app/(shipper)/trips/[id].tsx` — passes `driverName` from `trip.driver`
+
+When trip has no driver (old trips), prop is `undefined` and the line doesn't render.
+
 ---
 
 ## REMAINING WORK
