@@ -348,7 +348,7 @@ Manual toggle via `PUT /api/drivers/[id]` still works as a carrier/driver overri
 
 ### POD Upload — Driver-Only ✅
 
-**Commit:** _(this commit)_
+**Commit:** `def9bb5a`
 **Files:** 3 modified
 
 POD upload restricted to DRIVER + ADMIN only. Carrier can view PODs but cannot upload. Every trip has a driver assigned.
