@@ -396,7 +396,7 @@ Separate from `/api/documents` (which remains blocked for DRIVER role). No Docum
 
 ### E2E Flow Test ✅
 
-**Commit:** `(this commit)`
+**Commit:** `20e37fec`
 **File:** `__tests__/e2e/driver-full-flow.test.ts`
 
 Full driver lifecycle test: invite → accept → approve → assign → status transitions (ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED) → POD upload → auto-complete → auto-availability restore. Also verifies carrier cannot upload POD (gets 404).
