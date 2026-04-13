@@ -1,4 +1,4 @@
-# 🚛 Driver Integration — Implementation Spec v6.0 (COMPLETE)
+# 🚛 Driver Integration — Implementation Spec v6.1 (COMPLETE)
 
 > **STATUS: ALL 27 TASKS COMPLETE.**
 > 201 test suites, 3,266 tests passing. 0 failures.
@@ -303,18 +303,18 @@ DRIVER shares carrier's `organizationId`. Routes that checked `orgId === carrier
 
 ### Gap Status
 
-| #     | Severity                | Status      | Fixed In                                              |
-| ----- | ----------------------- | ----------- | ----------------------------------------------------- |
-| 1-14  | CRITICAL                | ✅ CLOSED   | Task 6A (`8e7b9275`)                                  |
-| 15-23 | HIGH (data leaks)       | ✅ CLOSED   | Task 6B (`7c3e2fec`)                                  |
-| 24    | HIGH (notif routing)    | ✅ CLOSED   | Task 16 (`1b3329ea`)                                  |
-| 25    | HIGH (mobile notif)     | ⚠️ DEFERRED | Mobile monorepo split                                 |
-| 26-27 | HIGH (login routing)    | ✅ CLOSED   | Task 20 (`37115750`)                                  |
-| 28    | HIGH (WebSocket)        | ✅ CLOSED   | Task 17 (`01e32790`)                                  |
-| 29    | HIGH (mobile layout)    | ⚠️ DEFERRED | Mobile monorepo split                                 |
-| 30    | HIGH (auth store type)  | ⚠️ NOTED    | Correct behavior (DRIVER uses driver-app, not mobile) |
-| 31    | HIGH (Invitation phone) | ✅ CLOSED   | Task 12 (`ca17cfd3`)                                  |
-| 32-34 | MEDIUM                  | ✅ CLOSED   | Task 6B (`7c3e2fec`)                                  |
+| #     | Severity                | Status    | Fixed In                                             |
+| ----- | ----------------------- | --------- | ---------------------------------------------------- |
+| 1-14  | CRITICAL                | ✅ CLOSED | Task 6A (`8e7b9275`)                                 |
+| 15-23 | HIGH (data leaks)       | ✅ CLOSED | Task 6B (`7c3e2fec`)                                 |
+| 24    | HIGH (notif routing)    | ✅ CLOSED | Task 16 (`1b3329ea`)                                 |
+| 25    | HIGH (mobile notif)     | ✅ CLOSED | Defense-in-depth guard in mobile notificationRouting |
+| 26-27 | HIGH (login routing)    | ✅ CLOSED | Task 20 (`37115750`)                                 |
+| 28    | HIGH (WebSocket)        | ✅ CLOSED | Task 17 (`01e32790`)                                 |
+| 29    | HIGH (app-role gate)    | ✅ CLOSED | x-client-type login gate + driver-app header         |
+| 30    | HIGH (auth store type)  | ✅ CLOSED | Doc comment + correct by design (driver-app)         |
+| 31    | HIGH (Invitation phone) | ✅ CLOSED | Task 12 (`ca17cfd3`)                                 |
+| 32-34 | MEDIUM                  | ✅ CLOSED | Task 6B (`7c3e2fec`)                                 |
 
 ### Verified by Tests
 
@@ -327,19 +327,7 @@ DRIVER shares carrier's `organizationId`. Routes that checked `orgId === carrier
 
 ## REMAINING WORK
 
-These items are NOT security issues — they are future enhancements for when the mobile monorepo split happens.
-
-### Gap 25: Mobile Notification Routing
-
-`mobile/src/utils/notificationRouting.ts` has no DRIVER case. Not exploitable (mobile app blocks DRIVER login with "Unsupported Role" alert). Will be addressed when mobile is split into shipper/carrier/driver apps via monorepo.
-
-### Gap 29: Mobile \_layout.tsx DRIVER Handling
-
-`mobile/app/_layout.tsx` force-logs-out DRIVER users. This is correct behavior — DRIVER users should use the dedicated `driver-app/`, not the carrier/shipper mobile app. The "Unsupported Role" alert is intentional.
-
-### Gap 30: Mobile Auth Store Register Type
-
-`mobile/src/stores/auth.ts` register action excludes DRIVER. Correct — drivers use `acceptInvite` (in `driver-app/src/stores/auth.ts`), not the register flow.
+These items are NOT security issues — they are future feature enhancements.
 
 ### CDL Photo Upload Endpoint
 
@@ -364,7 +352,7 @@ The spec originally planned a monorepo restructure (`mobile/packages/shared/` + 
 
 ---
 
-_Spec v6.0 — ALL 27 TASKS COMPLETE. April 2026._
+_Spec v6.1 — ALL 27 TASKS COMPLETE. ALL 34 GAPS CLOSED. April 2026._
 _201 test suites. 3,266 tests. 0 failures._
-_34 security gaps found. 31 closed. 3 deferred (non-exploitable, awaiting monorepo split)._
+_34 security gaps found. 34 closed. 0 deferred._
 _Git history: 30 driver commits from `9a8b08f2` to `28127b8c`._

@@ -56,6 +56,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<AuthResponse>;
   verifyMfa: (code: string) => Promise<void>;
   resendMfa: () => Promise<void>;
+  // DRIVER role not included — drivers register via acceptInvite
+  // in driver-app/src/stores/auth.ts, not this register flow.
   register: (payload: {
     email: string;
     password: string;

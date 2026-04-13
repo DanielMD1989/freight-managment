@@ -299,6 +299,30 @@ export async function POST(request: NextRequest) {
     await resetFailedAttempts(bruteForceKey);
     await resetFailedAttempts(`login:ip:${clientIp}`);
 
+    // Gap 29: App-role gate — prevent cross-app login.
+    // driver-app sends x-client-type: "driver-app"; only DRIVER may log in.
+    // carrier/shipper mobile sends x-client-type: "mobile"; DRIVER may NOT.
+    // Web clients (no header) are unrestricted — all roles work on web.
+    const clientType = request.headers.get("x-client-type");
+    if (clientType === "driver-app" && user.role !== "DRIVER") {
+      return addCorsHeaders(
+        NextResponse.json(
+          { error: "Invalid email or password" },
+          { status: 401 }
+        ),
+        request
+      );
+    }
+    if (clientType === "mobile" && user.role === "DRIVER") {
+      return addCorsHeaders(
+        NextResponse.json(
+          { error: "Invalid email or password" },
+          { status: 401 }
+        ),
+        request
+      );
+    }
+
     // Check if user has MFA enabled
     const userMFA = await db.userMFA.findUnique({
       where: { userId: user.id },

@@ -115,8 +115,8 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Mark as mobile client
-    config.headers["x-client-type"] = "mobile";
+    // Mark as driver-app client (distinct from carrier/shipper "mobile")
+    config.headers["x-client-type"] = "driver-app";
 
     // Add CSRF token for state-changing requests
     if (["post", "put", "patch", "delete"].includes(config.method ?? "")) {

@@ -35,6 +35,10 @@ export function getNotificationRoute(
 ): string | null {
   if (!type) return null;
 
+  // Gap 25: DRIVER should never reach this code path (mobile app blocks
+  // DRIVER login), but defense-in-depth: return null so no route resolves.
+  if (userRole === "DRIVER") return null;
+
   const isCarrier = userRole === "CARRIER";
   const isShipper = userRole === "SHIPPER";
   const isDispatcher = userRole === "DISPATCHER";
