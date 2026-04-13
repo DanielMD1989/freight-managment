@@ -424,7 +424,7 @@ Trip status changes queued in MMKV when offline. Auto-flush on connectivity rest
 
 ### CDL Expiry Warning Cron ✅
 
-**Commit:** `(this commit)`
+**Commit:** `24eda57f`
 **Files:** 1 new + 1 modified
 
 New `POST /api/cron/cdl-expiry` endpoint. Checks DriverProfile `cdlExpiry` and `medicalCertExp`, notifies driver + carrier org at 30/14/7/0 day brackets. Mirrors insurance-monitor pattern. Also removed dead POD upload code (`handleUploadPod`, `handleTakePhoto`, `useUploadPod`, `ImagePicker`) from carrier mobile trip detail.
