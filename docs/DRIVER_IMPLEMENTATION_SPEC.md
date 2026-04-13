@@ -375,7 +375,7 @@ When trip has no driver (old trips), prop is `undefined` and the line doesn't re
 
 ### CDL Photo Upload ✅
 
-**Commit:** `(this commit)`
+**Commit:** `a00fb5a0`
 **Files:** 1 new + 3 modified (+ 3 driver-app support files)
 
 New `POST /api/drivers/[id]/cdl-upload` endpoint. Driver or carrier uploads CDL front/back photos and medical certificate via multipart form. Files validated (MIME + magic bytes + size) and stored via `lib/fileStorage.ts`; URLs saved to DriverProfile fields (`cdlFrontUrl`, `cdlBackUrl`, `medicalCertUrl`). Rate limited: 10 uploads/hour per driver. CSRF validated.
