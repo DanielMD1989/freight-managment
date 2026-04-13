@@ -56,6 +56,36 @@ class DriverService {
       throw new Error(getErrorMessage(error));
     }
   }
+
+  async uploadCdlPhoto(
+    driverId: string,
+    fieldName: "cdlFront" | "cdlBack" | "medicalCert",
+    uri: string,
+    fileName: string,
+    mimeType: string
+  ): Promise<{
+    cdlFrontUrl: string | null;
+    cdlBackUrl: string | null;
+    medicalCertUrl: string | null;
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append(fieldName, {
+        uri,
+        name: fileName,
+        type: mimeType,
+      } as unknown as Blob);
+
+      const response = await apiClient.post(
+        `/api/drivers/${driverId}/cdl-upload`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      return response.data.updated;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
 }
 
 export const driverService = new DriverService();

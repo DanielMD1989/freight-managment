@@ -1,5 +1,5 @@
 /**
- * Driver Profile Screen — CDL info, availability toggle, edit profile
+ * Driver Profile Screen — CDL info, availability toggle, edit profile, CDL photos
  */
 import React, { useState } from "react";
 import {
@@ -9,8 +9,12 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { Card, Button, Input, LoadingSpinner } from "../../src/components";
 import { colors, spacing, typography } from "../../src/theme";
 import { useAuthStore } from "../../src/stores/auth";
@@ -18,6 +22,7 @@ import {
   useMyProfile,
   useToggleAvailability,
   useUpdateDriverProfile,
+  useUploadCdlPhoto,
 } from "../../src/hooks/useDriver";
 import { formatDate } from "../../src/utils/format";
 
@@ -27,6 +32,8 @@ export default function DriverProfileScreen() {
   const toggleAvailability = useToggleAvailability();
   const updateProfile = useUpdateDriverProfile();
 
+  const uploadCdlPhoto = useUploadCdlPhoto();
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [cdlNumber, setCdlNumber] = useState("");
   const [cdlState, setCdlState] = useState("");
@@ -83,6 +90,38 @@ export default function DriverProfileScreen() {
       isAvailable: !isAvailable,
     });
     refetch();
+  };
+
+  const pickAndUpload = async (
+    fieldName: "cdlFront" | "cdlBack" | "medicalCert"
+  ) => {
+    if (!user?.id) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+      setUploadingField(fieldName);
+      await uploadCdlPhoto.mutateAsync({
+        driverId: user.id,
+        fieldName,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `${fieldName}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+      });
+      refetch();
+      Alert.alert("Success", "Photo uploaded.");
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        err instanceof Error ? err.message : "Upload failed"
+      );
+    } finally {
+      setUploadingField(null);
+    }
   };
 
   return (
@@ -209,6 +248,59 @@ export default function DriverProfileScreen() {
         )}
       </Card>
 
+      {/* CDL Photos */}
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>CDL Documents</Text>
+        {[
+          {
+            field: "cdlFront" as const,
+            label: "CDL Front",
+            url: profile?.cdlFrontUrl,
+          },
+          {
+            field: "cdlBack" as const,
+            label: "CDL Back",
+            url: profile?.cdlBackUrl,
+          },
+          {
+            field: "medicalCert" as const,
+            label: "Medical Certificate",
+            url: profile?.medicalCertUrl,
+          },
+        ].map(({ field, label, url }) => (
+          <View key={field} style={styles.photoRow}>
+            <View style={styles.photoInfo}>
+              <Text style={styles.detailLabel}>{label}</Text>
+              {url ? (
+                <Image source={{ uri: url }} style={styles.thumbnail} />
+              ) : (
+                <Text style={styles.notUploaded}>Not uploaded</Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={() => pickAndUpload(field)}
+              disabled={uploadingField === field}
+            >
+              {uploadingField === field ? (
+                <ActivityIndicator size="small" color={colors.primary600} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={16}
+                    color={colors.primary600}
+                  />
+                  <Text style={styles.uploadText}>
+                    {url ? "Replace" : "Upload"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        ))}
+      </Card>
+
       {/* Logout */}
       <View style={styles.logoutSection}>
         <Button
@@ -277,6 +369,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     marginTop: spacing.md,
+  },
+  photoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  photoInfo: {
+    flex: 1,
+  },
+  thumbnail: {
+    width: 80,
+    height: 56,
+    borderRadius: 6,
+    marginTop: spacing.xs,
+    backgroundColor: colors.surface,
+  },
+  notUploaded: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary200,
+    backgroundColor: colors.primary50,
+  },
+  uploadText: {
+    ...typography.labelLarge,
+    color: colors.primary600,
   },
   logoutSection: {
     paddingHorizontal: spacing.lg,

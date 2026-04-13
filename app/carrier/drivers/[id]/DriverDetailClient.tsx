@@ -296,6 +296,42 @@ export default function DriverDetailClient({
               </dd>
             </div>
           </dl>
+
+          {/* CDL Photos */}
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-700">
+              CDL Documents
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              {(
+                [
+                  { label: "CDL Front", url: driver.driverProfile.cdlFrontUrl },
+                  { label: "CDL Back", url: driver.driverProfile.cdlBackUrl },
+                  {
+                    label: "Medical Cert",
+                    url: driver.driverProfile.medicalCertUrl,
+                  },
+                ] as const
+              ).map(({ label, url }) => (
+                <div key={label} className="text-center">
+                  <p className="mb-1 text-xs text-slate-500">{label}</p>
+                  {url ? (
+                    <img
+                      src={url}
+                      alt={label}
+                      className="h-24 w-full rounded-lg border border-slate-200 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
+                      <span className="text-xs text-slate-400">
+                        Not uploaded
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

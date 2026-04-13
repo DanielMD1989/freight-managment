@@ -75,5 +75,8 @@ export interface DriverProfile {
   cdlExpiry: string | null;
   medicalCertExp: string | null;
   endorsements: unknown;
+  cdlFrontUrl: string | null;
+  cdlBackUrl: string | null;
+  medicalCertUrl: string | null;
   isAvailable: boolean;
 }

@@ -373,15 +373,28 @@ Display-only — Rating model unchanged (rates organization, not driver).
 
 When trip has no driver (old trips), prop is `undefined` and the line doesn't render.
 
+### CDL Photo Upload ✅
+
+**Commit:** `(this commit)`
+**Files:** 1 new + 3 modified (+ 3 driver-app support files)
+
+New `POST /api/drivers/[id]/cdl-upload` endpoint. Driver or carrier uploads CDL front/back photos and medical certificate via multipart form. Files validated (MIME + magic bytes + size) and stored via `lib/fileStorage.ts`; URLs saved to DriverProfile fields (`cdlFrontUrl`, `cdlBackUrl`, `medicalCertUrl`). Rate limited: 10 uploads/hour per driver. CSRF validated.
+
+Separate from `/api/documents` (which remains blocked for DRIVER role). No Document model records created.
+
+- `app/api/drivers/[id]/cdl-upload/route.ts` — new endpoint
+- `driver-app/app/(driver)/profile.tsx` — CDL photo section with expo-image-picker upload
+- `driver-app/src/services/driver.ts` — `uploadCdlPhoto` method
+- `driver-app/src/hooks/useDriver.ts` — `useUploadCdlPhoto` hook
+- `driver-app/src/types/index.ts` — added CDL URL fields to DriverProfile type
+- `app/carrier/drivers/[id]/DriverDetailClient.tsx` — CDL photo display (web)
+- `mobile/app/(carrier)/drivers/[id].tsx` — CDL photo display (mobile)
+
 ---
 
 ## REMAINING WORK
 
 These items are NOT security issues — they are future feature enhancements.
-
-### CDL Photo Upload Endpoint
-
-`app/api/drivers/[id]/documents/route.ts` — dedicated endpoint for drivers to upload CDL front/back photos and medical certificate. Currently drivers can update CDL text fields via PUT /api/drivers/[id], but photo upload uses the general documents endpoint (which is blocked for DRIVER role). A dedicated driver-documents endpoint is needed.
 
 ### Mobile Monorepo Split
 

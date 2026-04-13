@@ -44,3 +44,32 @@ export function useUpdateDriverProfile() {
     },
   });
 }
+
+export function useUploadCdlPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      driverId,
+      fieldName,
+      uri,
+      fileName,
+      mimeType,
+    }: {
+      driverId: string;
+      fieldName: "cdlFront" | "cdlBack" | "medicalCert";
+      uri: string;
+      fileName: string;
+      mimeType: string;
+    }) =>
+      driverService.uploadCdlPhoto(
+        driverId,
+        fieldName,
+        uri,
+        fileName,
+        mimeType
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
+    },
+  });
+}

@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
   StyleSheet,
+  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -143,6 +144,29 @@ export default function DriverDetailScreen() {
         </Card>
       )}
 
+      {/* CDL Photos */}
+      {profile && (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>CDL Documents</Text>
+          {(
+            [
+              { label: "CDL Front", url: profile.cdlFrontUrl },
+              { label: "CDL Back", url: profile.cdlBackUrl },
+              { label: "Medical Certificate", url: profile.medicalCertUrl },
+            ] as { label: string; url?: string | null }[]
+          ).map(({ label, url }) => (
+            <View key={label} style={styles.photoRow}>
+              <Text style={styles.detailLabel}>{label}</Text>
+              {url ? (
+                <Image source={{ uri: url }} style={styles.thumbnail} />
+              ) : (
+                <Text style={styles.notUploaded}>Not uploaded</Text>
+              )}
+            </View>
+          ))}
+        </Card>
+      )}
+
       {/* Active Trips */}
       {driver.activeTrips && driver.activeTrips.length > 0 && (
         <Card style={styles.card}>
@@ -232,6 +256,23 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   tripRoute: { ...typography.bodyMedium, color: colors.textPrimary },
+  photoRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  thumbnail: {
+    width: 80,
+    height: 56,
+    borderRadius: 6,
+    marginTop: spacing.xs,
+    backgroundColor: colors.surface,
+  },
+  notUploaded: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
   actions: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
