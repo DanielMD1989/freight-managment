@@ -12,22 +12,14 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
-  Platform,
   Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-// expo-image-picker only works on iOS/Android — lazy-load to avoid web crashes
-let ImagePicker: typeof import("expo-image-picker") | null = null;
-if (Platform.OS !== "web") {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  ImagePicker = require("expo-image-picker");
-}
 import {
   useTrip,
   useUpdateTripStatus,
   useCancelTrip,
-  useUploadPod,
   useTripPods,
 } from "../../../src/hooks/useTrips";
 import { useTripRatings } from "../../../src/hooks/useRatings";
@@ -62,7 +54,6 @@ export default function CarrierTripDetailsScreen() {
   const { data: trip, isLoading, refetch } = useTrip(id);
   const updateStatus = useUpdateTripStatus();
   const cancelTrip = useCancelTrip();
-  const uploadPod = useUploadPod();
   const { data: pods } = useTripPods(id);
 
   // Task 22: driver assignment
@@ -161,88 +152,6 @@ export default function CarrierTripDetailsScreen() {
         },
       },
     ]);
-  };
-
-  const handleUploadPod = async () => {
-    if (!ImagePicker) {
-      Alert.alert(
-        "Not Available",
-        "Image picker is only available on mobile devices"
-      );
-      return;
-    }
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        quality: 0.8,
-      });
-
-      if (result.canceled || !result.assets?.[0]) return;
-
-      const asset = result.assets[0];
-      const formData = new FormData();
-      formData.append("file", {
-        uri: asset.uri,
-        name: asset.fileName ?? `pod_${Date.now()}.jpg`,
-        type: asset.mimeType ?? "image/jpeg",
-      } as unknown as Blob);
-
-      uploadPod.mutate(
-        { tripId: id!, formData },
-        {
-          onSuccess: () => Alert.alert("Success", "POD uploaded successfully"),
-          onError: (err) =>
-            Alert.alert("Error", err.message ?? "Upload failed"),
-        }
-      );
-    } catch {
-      Alert.alert("Error", "Could not pick image");
-    }
-  };
-
-  const handleTakePhoto = async () => {
-    if (!ImagePicker) {
-      Alert.alert(
-        "Not Available",
-        "Camera is only available on mobile devices"
-      );
-      return;
-    }
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          "Permission Required",
-          "Camera access is needed to take POD photos"
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        quality: 0.8,
-      });
-
-      if (result.canceled || !result.assets?.[0]) return;
-
-      const asset = result.assets[0];
-      const formData = new FormData();
-      formData.append("file", {
-        uri: asset.uri,
-        name: `pod_${Date.now()}.jpg`,
-        type: "image/jpeg",
-      } as unknown as Blob);
-
-      uploadPod.mutate(
-        { tripId: id!, formData },
-        {
-          onSuccess: () => Alert.alert("Success", "POD uploaded successfully"),
-          onError: (err) =>
-            Alert.alert("Error", err.message ?? "Upload failed"),
-        }
-      );
-    } catch {
-      Alert.alert("Error", "Could not take photo");
-    }
   };
 
   const statusActionMap: Record<
@@ -851,9 +760,6 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textTertiary,
     fontSize: 11,
-  },
-  podActions: {
-    marginTop: spacing.sm,
   },
   podWaiting: {
     ...typography.bodySmall,
