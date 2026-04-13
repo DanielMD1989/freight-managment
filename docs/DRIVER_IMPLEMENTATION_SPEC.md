@@ -405,7 +405,7 @@ Full driver lifecycle test: invite → accept → approve → assign → status 
 
 ### EAS Build Config ✅
 
-**Commit:** `(this commit)`
+**Commit:** `48148d9a`
 **Files:** 1 new + 1 modified
 
 `driver-app/eas.json` with dev/staging/prod build profiles. API base URL sourced from `EXPO_PUBLIC_API_BASE_URL` env var per profile. Removed hardcoded `apiBaseUrl` from `app.json` — the API client already reads the env var first with localhost fallback.
