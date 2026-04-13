@@ -132,6 +132,15 @@ describe("POD Management", () => {
     organizationId: "admin-org-1",
   });
 
+  // POD upload is now driver-only (+ admin). Carrier cannot upload.
+  const driverSession = createMockSession({
+    userId: "driver-pod-1",
+    email: "driver-pod@test.com",
+    role: "DRIVER",
+    status: "ACTIVE",
+    organizationId: "carrier-org-1",
+  });
+
   // Helper to create a mock FormData request with a file
   function createFormDataRequest(
     url: string,
@@ -699,6 +708,21 @@ describe("POD Management", () => {
     let deliveredTrip: { id: string };
 
     beforeAll(async () => {
+      // Create driver user for POD upload (driver-only since Phase 2)
+      await db.user.create({
+        data: {
+          id: "driver-pod-1",
+          email: "driver-pod@test.com",
+          passwordHash: "hashed_Test1234!",
+          firstName: "POD",
+          lastName: "Driver",
+          phone: "+251911440001",
+          role: "DRIVER",
+          status: "ACTIVE",
+          organizationId: "carrier-org-1",
+        },
+      });
+
       deliveredTrip = await db.trip.create({
         data: {
           id: "trip-pod-test",
@@ -706,6 +730,7 @@ describe("POD Management", () => {
           truckId: seed.truck.id,
           carrierId: seed.carrierOrg.id,
           shipperId: seed.shipperOrg.id,
+          driverId: "driver-pod-1",
           status: "DELIVERED",
           trackingEnabled: true,
         },
@@ -751,13 +776,14 @@ describe("POD Management", () => {
 
     describe("Status guards", () => {
       it("trip not DELIVERED → 400", async () => {
-        setAuthSession(carrierSession);
+        setAuthSession(driverSession);
         const inTransitTrip = await db.trip.create({
           data: {
             id: "trip-pod-intransit",
             loadId: seed.load.id,
             truckId: seed.truck.id,
             carrierId: seed.carrierOrg.id,
+            driverId: "driver-pod-1",
             status: "IN_TRANSIT",
             trackingEnabled: true,
           },
@@ -775,7 +801,7 @@ describe("POD Management", () => {
 
     describe("File validation", () => {
       it("no file in formData → 400", async () => {
-        setAuthSession(carrierSession);
+        setAuthSession(driverSession);
         const req = createFormDataRequest(
           `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
           null // no file
@@ -787,7 +813,7 @@ describe("POD Management", () => {
       });
 
       it("invalid file type (text/plain) → 400", async () => {
-        setAuthSession(carrierSession);
+        setAuthSession(driverSession);
         const req = createFormDataRequest(
           `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
           { name: "doc.txt", type: "text/plain", size: 512 }
@@ -799,7 +825,7 @@ describe("POD Management", () => {
       });
 
       it("file too large (>10MB) → 400", async () => {
-        setAuthSession(carrierSession);
+        setAuthSession(driverSession);
         const req = createFormDataRequest(
           `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
           {
@@ -816,8 +842,8 @@ describe("POD Management", () => {
     });
 
     describe("Upload success", () => {
-      it("carrier uploads JPEG POD → 200 with tripPod data", async () => {
-        setAuthSession(carrierSession);
+      it("driver uploads JPEG POD → 200 with tripPod data", async () => {
+        setAuthSession(driverSession);
         const { uploadPOD } = require("@/lib/storage");
         uploadPOD.mockResolvedValueOnce({
           success: true,

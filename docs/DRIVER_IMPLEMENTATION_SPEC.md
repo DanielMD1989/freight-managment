@@ -346,6 +346,18 @@ Active trip statuses for the count query: `ASSIGNED, PICKUP_PENDING, IN_TRANSIT,
 
 Manual toggle via `PUT /api/drivers/[id]` still works as a carrier/driver override.
 
+### POD Upload — Driver-Only ✅
+
+**Commit:** _(this commit)_
+**Files:** 3 modified
+
+POD upload restricted to DRIVER + ADMIN only. Carrier can view PODs but cannot upload. Every trip has a driver assigned.
+
+- Backend: removed CARRIER from POST /api/trips/[tripId]/pod auth check
+- Carrier web: replaced upload modal with read-only POD status ("POD uploaded by driver" / "Waiting for driver")
+- Carrier mobile: replaced upload buttons with read-only status text
+- Driver-app: unchanged (already has POD upload from Task 24)
+
 ---
 
 ## REMAINING WORK

@@ -106,13 +106,7 @@ export default function TripDetailClient({
   const [trip, setTrip] = useState(initialTrip);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPodUpload, setShowPodUpload] = useState(false);
-  const [podFile, setPodFile] = useState<File | null>(null);
-  const [podNotes, setPodNotes] = useState("");
-  const [uploadingPod, setUploadingPod] = useState(false);
-  const [uploadedPods, setUploadedPods] = useState<
-    Array<{ id: string; fileName: string; fileUrl: string }>
-  >([]);
+  // POD upload removed — driver-only. Carrier views PODs via read-only section.
 
   // Delivery form state
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -188,15 +182,7 @@ export default function TripDetailClient({
   }, [isActiveTrip, fetchTripProgress]);
 
   // Auto-open POD upload modal if query param is present (only if POD not already submitted)
-  useEffect(() => {
-    if (
-      searchParams.get("uploadPod") === "true" &&
-      trip.status === "DELIVERED" &&
-      !trip.podSubmitted
-    ) {
-      setShowPodUpload(true);
-    }
-  }, [searchParams, trip.status, trip.podSubmitted]);
+  // POD auto-open removed — driver handles POD upload now.
 
   const handleStatusChange = async (
     newStatus: string,
@@ -227,7 +213,7 @@ export default function TripDetailClient({
         router.push("/carrier/trips?tab=active");
       } else if (newStatus === "DELIVERED") {
         setShowDeliveryModal(false);
-        setShowPodUpload(true);
+        // POD upload is driver-only now — carrier just waits
       } else if (newStatus === "COMPLETED") {
         router.push("/carrier/trips?tab=completed");
       }
@@ -282,62 +268,7 @@ export default function TripDetailClient({
     }
   };
 
-  const handlePodUpload = async () => {
-    if (!podFile) {
-      setError("Please select a POD file to upload");
-      return;
-    }
-
-    setUploadingPod(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", podFile);
-      if (podNotes) {
-        formData.append("notes", podNotes);
-      }
-
-      // Use the new Trip POD endpoint
-      const response = await csrfFetch(`/api/trips/${trip.id}/pod`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to upload POD");
-      }
-
-      const data = await response.json();
-
-      // Add to uploaded PODs list
-      setUploadedPods((prev) => [
-        ...prev,
-        {
-          id: data.pod.id,
-          fileName: data.pod.fileName,
-          fileUrl: data.pod.fileUrl,
-        },
-      ]);
-
-      // Clear file state but keep modal open for additional uploads
-      setPodFile(null);
-      setPodNotes("");
-
-      router.refresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setUploadingPod(false);
-    }
-  };
-
-  const finishPodUpload = () => {
-    setShowPodUpload(false);
-    setUploadedPods([]);
-    router.push("/carrier/trips?tab=active&podUploaded=true");
-  };
+  // handlePodUpload + finishPodUpload removed — driver-only POD upload.
 
   const getStatusBadge = (status: string) => {
     // For DELIVERED status, check POD sub-states
@@ -577,12 +508,9 @@ export default function TripDetailClient({
             </span>
           )}
           {trip.status === "DELIVERED" && !trip.podSubmitted && (
-            <button
-              onClick={() => setShowPodUpload(true)}
-              className="rounded-lg bg-purple-600 px-6 py-2 font-medium text-white hover:bg-purple-700"
-            >
-              Upload POD
-            </button>
+            <span className="rounded-lg border border-slate-300 bg-slate-50 px-6 py-2 text-sm text-slate-500">
+              Waiting for driver to upload POD
+            </span>
           )}
           {trip.status === "DELIVERED" &&
             trip.podSubmitted &&
@@ -613,107 +541,23 @@ export default function TripDetailClient({
         </div>
       )}
 
-      {/* POD Upload Modal */}
-      {showPodUpload && (
-        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Upload Proof of Delivery
-            </h2>
-            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-              Upload photos or scans of the signed delivery receipt. You can
-              upload multiple files. The shipper will verify before the trip
-              completes.
+      {/* POD Status — read-only (driver uploads POD, carrier views) */}
+      {(trip.status === "DELIVERED" || trip.status === "COMPLETED") && (
+        <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+          <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
+            Proof of Delivery
+          </h2>
+          {trip.podSubmitted ? (
+            <div className="text-green-700 dark:text-green-300">
+              <p className="flex items-center gap-2 font-medium">
+                <span>&#x2713;</span> POD uploaded by driver
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Waiting for driver to upload POD
             </p>
-
-            {/* Show uploaded PODs */}
-            {uploadedPods.length > 0 && (
-              <div className="mb-4 rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
-                <p className="mb-2 text-sm font-medium text-green-800 dark:text-green-200">
-                  Uploaded ({uploadedPods.length})
-                </p>
-                {uploadedPods.map((pod) => (
-                  <div
-                    key={pod.id}
-                    className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300"
-                  >
-                    <span>✓</span> {pod.fileName}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mb-4 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center dark:border-slate-600">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/jpg,application/pdf"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  if (file && file.size > 10 * 1024 * 1024) {
-                    setError("File size must be less than 10MB");
-                    e.target.value = "";
-                    return;
-                  }
-                  setPodFile(file);
-                  setError(null);
-                }}
-                className="hidden"
-                id="pod-upload"
-              />
-              <label htmlFor="pod-upload" className="cursor-pointer">
-                {podFile ? (
-                  <div className="text-green-600">
-                    <span className="text-2xl">✓</span>
-                    <p className="mt-2 font-medium">{podFile.name}</p>
-                    <p className="text-sm text-gray-500">Click to change</p>
-                  </div>
-                ) : (
-                  <div className="text-gray-500">
-                    <span className="text-3xl">📄</span>
-                    <p className="mt-2">Click to select POD file</p>
-                    <p className="text-sm">
-                      Accepted: JPG, PNG, PDF · Max 10MB
-                    </p>
-                  </div>
-                )}
-              </label>
-            </div>
-
-            {/* Notes field */}
-            <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Notes (optional)
-              </label>
-              <input
-                type="text"
-                value={podNotes}
-                onChange={(e) => setPodNotes(e.target.value)}
-                placeholder="e.g., Signed by warehouse manager"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={finishPodUpload}
-                disabled={uploadedPods.length === 0}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
-              >
-                {uploadedPods.length > 0 ? "Done" : "Cancel"}
-              </button>
-              <button
-                onClick={handlePodUpload}
-                disabled={!podFile || uploadingPod}
-                className="flex-1 rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:opacity-50"
-              >
-                {uploadingPod
-                  ? "Uploading..."
-                  : uploadedPods.length > 0
-                    ? "Add Another"
-                    : "Upload POD"}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       )}
 

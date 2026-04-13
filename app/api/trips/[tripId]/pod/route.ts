@@ -115,7 +115,8 @@ export async function POST(
     const isDriver =
       session.role === "DRIVER" && trip.driverId === session.userId;
 
-    if (!isCarrier && !isAdmin && !isDriver) {
+    // POD upload is driver-only (+ admin override). Carriers view PODs via GET.
+    if (!isAdmin && !isDriver) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -399,7 +400,7 @@ export async function POST(
         userId: u.id,
         type: NotificationType.DELIVERY_CONFIRMED,
         title: "Trip Completed — POD Uploaded",
-        message: `Carrier has uploaded POD for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Trip is now COMPLETED.`,
+        message: `POD has been uploaded for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Trip is now COMPLETED.`,
         metadata: { tripId, loadId: tripLoadId },
       }).catch((err) =>
         console.error("Failed to notify shipper of POD completion:", err)

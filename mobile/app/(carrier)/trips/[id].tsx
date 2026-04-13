@@ -571,43 +571,11 @@ export default function CarrierTripDetailsScreen() {
               </View>
             )}
 
-            {/* Upload POD buttons */}
-            {isDelivered && (
-              <View style={styles.podActions}>
-                <Button
-                  title="Upload POD Image"
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  onPress={handleUploadPod}
-                  loading={uploadPod.isPending}
-                  icon={
-                    <Ionicons
-                      name="image-outline"
-                      size={18}
-                      color={colors.white}
-                    />
-                  }
-                />
-                {Platform.OS !== "web" && (
-                  <Button
-                    title="Take Photo"
-                    variant="outline"
-                    size="md"
-                    fullWidth
-                    onPress={handleTakePhoto}
-                    loading={uploadPod.isPending}
-                    icon={
-                      <Ionicons
-                        name="camera-outline"
-                        size={18}
-                        color={colors.primary600}
-                      />
-                    }
-                    style={{ marginTop: spacing.sm }}
-                  />
-                )}
-              </View>
+            {/* POD upload removed — driver-only. Show read-only status. */}
+            {isDelivered && !podSubmitted && (
+              <Text style={styles.podWaiting}>
+                Waiting for driver to upload POD
+              </Text>
             )}
           </Card>
         )}
@@ -886,6 +854,12 @@ const styles = StyleSheet.create({
   },
   podActions: {
     marginTop: spacing.sm,
+  },
+  podWaiting: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+    textAlign: "center" as const,
   },
 
   // Modal styles
