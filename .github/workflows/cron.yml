@@ -39,3 +39,45 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             || echo "Saved search monitor failed (non-fatal)"
+
+      - name: Aggregate SLA (daily metrics)
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/aggregate-sla" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            || echo "aggregate-sla failed (non-fatal)"
+
+      - name: Auto-Settle (completed loads)
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/auto-settle" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            || echo "auto-settle failed (non-fatal)"
+
+      - name: CDL Expiry (driver license alerts)
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/cdl-expiry" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            || echo "cdl-expiry failed (non-fatal)"
+
+      - name: Expire Loads (old unmatched)
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/expire-loads" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            || echo "expire-loads failed (non-fatal)"
+
+      - name: Expire Postings (old truck postings)
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/expire-postings" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            || echo "expire-postings failed (non-fatal)"
+
+      - name: GPS Cleanup (purge old positions)
+        run: |
+          curl -sf -X POST "${{ secrets.APP_URL }}/api/cron/gps-cleanup" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            || echo "gps-cleanup failed (non-fatal)"
