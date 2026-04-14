@@ -9,13 +9,13 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Card, Button, Input, LoadingSpinner } from "../../src/components";
+import { AuthenticatedImage } from "../../src/components/AuthenticatedImage";
 import { colors, spacing, typography } from "../../src/theme";
 import { useAuthStore } from "../../src/stores/auth";
 import {
@@ -272,7 +272,7 @@ export default function DriverProfileScreen() {
             <View style={styles.photoInfo}>
               <Text style={styles.detailLabel}>{label}</Text>
               {url ? (
-                <Image source={{ uri: url }} style={styles.thumbnail} />
+                <AuthenticatedImage uri={url} style={styles.thumbnail} />
               ) : (
                 <Text style={styles.notUploaded}>Not uploaded</Text>
               )}

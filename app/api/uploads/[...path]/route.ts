@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { readFileFromStorage } from "@/lib/fileStorage";
 import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { existsSync } from "fs";
 import { join } from "path";
 import { checkRateLimit, RATE_LIMIT_FILE_DOWNLOAD } from "@/lib/rateLimit";
@@ -77,9 +78,12 @@ export async function GET(
       );
     }
 
-    // Extract organization ID from path
-    // Expected path format: documents/{organizationId}/{filename}
-    // or: documents/{organizationId}/{subfolder}/{filename}
+    // Path-aware access control.
+    // Expected path formats:
+    //   documents/{orgId}/{filename}         — org-scoped (CDL photos, company docs)
+    //   pod/{loadId}/{filename}              — trip-scoped (POD photos)
+    //   loads/{loadId}/{filename}            — shipper-scoped (load documents)
+    //   profiles/{userId}/{filename}         — user-scoped (profile photos)
     if (path.length < 2) {
       return NextResponse.json(
         { error: "Invalid file path format" },
@@ -87,18 +91,82 @@ export async function GET(
       );
     }
 
-    const organizationId = path[1]; // organization ID
+    const prefix = path[0];
 
-    // Verify user has access to this organization's files
-    if (
-      session.organizationId !== organizationId &&
-      session.role !== "ADMIN" &&
-      session.role !== "SUPER_ADMIN"
-    ) {
-      return NextResponse.json(
-        { error: "You do not have permission to access this file" },
-        { status: 403 }
-      );
+    if (prefix === "documents") {
+      const orgId = path[1];
+      if (
+        session.organizationId !== orgId &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
+      ) {
+        return NextResponse.json(
+          { error: "You do not have permission to access this file" },
+          { status: 403 }
+        );
+      }
+    } else if (prefix === "pod") {
+      const loadId = path[1];
+      const trip = await db.trip.findFirst({
+        where: { loadId },
+        select: { carrierId: true, shipperId: true, driverId: true },
+      });
+      if (!trip) {
+        return NextResponse.json({ error: "File not found" }, { status: 404 });
+      }
+      const hasAccess =
+        session.role === "ADMIN" ||
+        session.role === "SUPER_ADMIN" ||
+        session.role === "DISPATCHER" ||
+        session.organizationId === trip.carrierId ||
+        session.organizationId === trip.shipperId ||
+        (session.role === "DRIVER" && trip.driverId === session.userId);
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: "You do not have permission to access this file" },
+          { status: 403 }
+        );
+      }
+    } else if (prefix === "loads") {
+      const loadId = path[1];
+      const load = await db.load.findUnique({
+        where: { id: loadId },
+        select: { shipperId: true },
+      });
+      if (!load) {
+        return NextResponse.json({ error: "File not found" }, { status: 404 });
+      }
+      if (
+        session.organizationId !== load.shipperId &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN" &&
+        session.role !== "DISPATCHER"
+      ) {
+        return NextResponse.json(
+          { error: "You do not have permission to access this file" },
+          { status: 403 }
+        );
+      }
+    } else if (prefix === "profiles") {
+      const userId = path[1];
+      if (
+        session.userId !== userId &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
+      ) {
+        return NextResponse.json(
+          { error: "You do not have permission to access this file" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Unknown prefix — require admin
+      if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
+        return NextResponse.json(
+          { error: "You do not have permission to access this file" },
+          { status: 403 }
+        );
+      }
     }
 
     // Audit log file access

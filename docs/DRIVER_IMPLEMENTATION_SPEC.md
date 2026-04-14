@@ -429,6 +429,15 @@ Trip status changes queued in MMKV when offline. Auto-flush on connectivity rest
 
 New `POST /api/cron/cdl-expiry` endpoint. Checks DriverProfile `cdlExpiry` and `medicalCertExp`, notifies driver + carrier org at 30/14/7/0 day brackets. Mirrors insurance-monitor pattern. Also removed dead POD upload code (`handleUploadPod`, `handleTakePhoto`, `useUploadPod`, `ImagePicker`) from carrier mobile trip detail.
 
+### Production File Serving Fixes ✅
+
+**Commit:** `(this commit)`
+**Files:** 1 new component (2 copies) + 4 modified
+
+- `/api/uploads/[...path]/route.ts`: path-aware access control. `documents/` is org-scoped, `pod/` is trip-scoped (carrier/shipper/driver/dispatcher/admin), `loads/` is shipper-scoped, `profiles/` is user-scoped, unknown prefixes require admin. Previously assumed path[1] was always an orgId, which broke POD access for everyone.
+- `AuthenticatedImage` component (new, in `driver-app/src/components/` and `mobile/src/components/`): loads images via the authenticated apiClient, converts to base64 data URI. Used for POD thumbnails and CDL photos since React Native's `<Image>` can't send Bearer tokens.
+- Replaced `<Image>` with `<AuthenticatedImage>` in: `driver-app/app/(driver)/trips/[id].tsx`, `driver-app/app/(driver)/profile.tsx`, `mobile/app/(carrier)/drivers/[id].tsx`.
+
 ---
 
 ## REMAINING WORK

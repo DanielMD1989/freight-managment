@@ -16,7 +16,6 @@ import {
   TouchableOpacity,
   Platform,
   Linking,
-  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -43,6 +42,7 @@ import {
 import { useLocationTracking } from "../../../src/hooks/useTracking";
 import { formatDate, formatDistance } from "../../../src/utils/format";
 import { getQueueSize } from "../../../src/services/status-queue";
+import { AuthenticatedImage } from "../../../src/components/AuthenticatedImage";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -378,8 +378,8 @@ export default function DriverTripDetailScreen() {
             <View style={styles.podGrid}>
               {podList.map((p) => (
                 <View key={p.id} style={styles.podItem}>
-                  <Image
-                    source={{ uri: p.fileUrl }}
+                  <AuthenticatedImage
+                    uri={p.fileUrl}
                     style={styles.podThumb}
                     resizeMode="cover"
                   />

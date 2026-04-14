@@ -9,7 +9,6 @@ import {
   RefreshControl,
   Alert,
   StyleSheet,
-  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -18,6 +17,7 @@ import {
   Button,
   LoadingSpinner,
 } from "../../../src/components";
+import { AuthenticatedImage } from "../../../src/components/AuthenticatedImage";
 import { colors, spacing, typography } from "../../../src/theme";
 import {
   useDriver,
@@ -158,7 +158,7 @@ export default function DriverDetailScreen() {
             <View key={label} style={styles.photoRow}>
               <Text style={styles.detailLabel}>{label}</Text>
               {url ? (
-                <Image source={{ uri: url }} style={styles.thumbnail} />
+                <AuthenticatedImage uri={url} style={styles.thumbnail} />
               ) : (
                 <Text style={styles.notUploaded}>Not uploaded</Text>
               )}
