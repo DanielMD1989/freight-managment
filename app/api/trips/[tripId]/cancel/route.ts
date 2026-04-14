@@ -11,7 +11,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { notifyOrganization, NotificationType } from "@/lib/notifications";
+import {
+  createNotification,
+  notifyOrganization,
+  NotificationType,
+} from "@/lib/notifications";
 import { z } from "zod";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
@@ -352,6 +356,19 @@ export async function POST(
         message: cancelMsg,
         metadata: cancelMeta,
       });
+    }
+
+    // Notify assigned driver: their trip is gone, they should know
+    if (trip.driverId) {
+      await createNotification({
+        userId: trip.driverId,
+        type: NotificationType.TRIP_CANCELLED,
+        title: "Trip Cancelled",
+        message: cancelMsg,
+        metadata: cancelMeta,
+      }).catch((err) =>
+        console.warn("Driver cancel notification failed:", err?.message)
+      );
     }
 
     return NextResponse.json({

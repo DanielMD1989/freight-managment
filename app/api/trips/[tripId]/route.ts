@@ -804,6 +804,18 @@ export async function PATCH(
           })
         );
       }
+      // Notify assigned driver
+      if (trip.driverId) {
+        cancelPromises.push(
+          createNotification({
+            userId: trip.driverId,
+            type: NotificationType.TRIP_CANCELLED,
+            title: "Trip Cancelled",
+            message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been cancelled.`,
+            metadata: { tripId, loadId: tripLoadId },
+          })
+        );
+      }
       Promise.all(cancelPromises).catch((err) =>
         console.error("CANCELLED notification failed:", err)
       );
@@ -898,6 +910,20 @@ export async function PATCH(
             type: NotificationType.EXCEPTION_CREATED,
             title: "Delivery exception — your cargo",
             message: `An exception has been reported on your load from ${updatedTrip.load?.pickupCity} to ${updatedTrip.load?.deliveryCity}. Our team is investigating. You will be updated when the issue is resolved.`,
+            metadata: {
+              tripId,
+              loadId: tripLoadId,
+              previousStatus: trip.status,
+            },
+          });
+        }
+        // Notify assigned driver — confirms their exception report was escalated
+        if (trip.driverId) {
+          await createNotification({
+            userId: trip.driverId,
+            type: NotificationType.EXCEPTION_CREATED,
+            title: "Exception Escalated",
+            message: `Your exception report for trip ${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity} has been escalated. Admin will follow up.`,
             metadata: {
               tripId,
               loadId: tripLoadId,

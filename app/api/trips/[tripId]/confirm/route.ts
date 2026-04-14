@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import {
+  createNotification,
   notifyOrganization,
   createNotificationForRole,
   NotificationType,
@@ -396,6 +397,19 @@ export async function POST(
         message: `Trip completed. Please rate your experience with the shipper.`,
         metadata: { tripId },
       }).catch((err) => console.warn("Notification failed:", err?.message));
+    }
+
+    // Notify the assigned driver that delivery was confirmed
+    if (trip.driverId) {
+      createNotification({
+        userId: trip.driverId,
+        type: NotificationType.DELIVERY_CONFIRMED,
+        title: "Delivery Confirmed",
+        message: `Shipper has confirmed delivery for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Trip is now COMPLETED.`,
+        metadata: { tripId, loadId: tripLoadId },
+      }).catch((err) =>
+        console.warn("Driver confirm notification failed:", err?.message)
+      );
     }
 
     return NextResponse.json({

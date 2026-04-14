@@ -440,7 +440,7 @@ New `POST /api/cron/cdl-expiry` endpoint. Checks DriverProfile `cdlExpiry` and `
 
 ### Driver Availability Restore on All Trip-End Paths ✅
 
-**Commit:** `(this commit)`
+**Commit:** `ddfc859e`
 **Files:** 4 modified
 
 POD upload + unassign already restored `driverProfile.isAvailable` on completion. But four other trip-end code paths (shipper confirm, 48h auto-close cron, trip cancel, load cancel) restored _truck_ availability but silently left the driver flagged unavailable — blocking them from taking new trips.
@@ -451,6 +451,18 @@ All four now apply the canonical POD pattern: count other active trips for the d
 - `app/api/cron/trip-monitor/route.ts` — 48h DELIVERED auto-close
 - `app/api/trips/[tripId]/cancel/route.ts` — trip cancel endpoint
 - `app/api/loads/[id]/status/route.ts` — also added `driverId` to trip select; restore on COMPLETED or CANCELLED load
+
+### Driver Notifications on Trip-Affecting Events ✅
+
+**Commit:** `(this commit)`
+**Files:** 4 modified
+
+Drivers were never individually notified when the trip they're assigned to was cancelled, confirmed by shipper, or escalated as an exception. Notifications fanned out only to carrier/shipper orgs. Five code paths now also send a `createNotification` to `trip.driverId`:
+
+- `app/api/trips/[tripId]/cancel/route.ts` — driver notified on cancel
+- `app/api/trips/[tripId]/confirm/route.ts` — driver notified on shipper confirm
+- `app/api/trips/[tripId]/route.ts` — driver notified on PATCH→CANCELLED and on PATCH→EXCEPTION (escalation confirmation)
+- `app/api/loads/[id]/status/route.ts` — driver notified when load cancelled with active trip
 
 ---
 

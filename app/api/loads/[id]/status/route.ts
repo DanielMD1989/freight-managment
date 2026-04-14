@@ -21,6 +21,7 @@ import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
 import {
   notifyLoadStakeholders,
+  createNotification,
   createNotificationForRole,
   notifyOrganization,
   NotificationType,
@@ -580,6 +581,24 @@ export async function PATCH(
             cancelledByRole: session.role,
           },
         }).catch((err) => console.warn("Notification failed:", err?.message));
+      }
+
+      // Notify assigned driver of the cancellation
+      if (load.trip.driverId) {
+        createNotification({
+          userId: load.trip.driverId,
+          type: NotificationType.TRIP_CANCELLED,
+          title: `Trip cancelled by ${cancelActorLabel}`,
+          message: `Your trip for ${load.pickupCity} → ${load.deliveryCity} has been cancelled by the ${cancelActorLabel}.`,
+          metadata: {
+            loadId,
+            tripId: load.trip.id,
+            cancelledBy: session.userId,
+            cancelledByRole: session.role,
+          },
+        }).catch((err) =>
+          console.warn("Driver cancel notification failed:", err?.message)
+        );
       }
 
       createNotificationForRole({
