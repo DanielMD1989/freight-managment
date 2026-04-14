@@ -131,6 +131,7 @@ export async function PATCH(
             status: true,
             truckId: true,
             carrierId: true,
+            driverId: true,
           },
         },
         pickupCity: true,
@@ -446,6 +447,35 @@ export async function PATCH(
             },
           },
         });
+      }
+
+      // Restore driver availability after trip completion/cancellation (mirrors POD route)
+      if (
+        (newStatus === "COMPLETED" || newStatus === "CANCELLED") &&
+        load.trip?.driverId
+      ) {
+        const driverId = load.trip.driverId;
+        const otherDriverTrips = await tx.trip.count({
+          where: {
+            driverId,
+            id: { not: load.trip.id },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
+          },
+        });
+        if (otherDriverTrips === 0) {
+          await tx.driverProfile.update({
+            where: { userId: driverId },
+            data: { isAvailable: true },
+          });
+        }
       }
 
       return { updatedLoad, tripUpdated };

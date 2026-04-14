@@ -438,6 +438,20 @@ New `POST /api/cron/cdl-expiry` endpoint. Checks DriverProfile `cdlExpiry` and `
 - `AuthenticatedImage` component (new, in `driver-app/src/components/` and `mobile/src/components/`): loads images via the authenticated apiClient, converts to base64 data URI. Used for POD thumbnails and CDL photos since React Native's `<Image>` can't send Bearer tokens.
 - Replaced `<Image>` with `<AuthenticatedImage>` in: `driver-app/app/(driver)/trips/[id].tsx`, `driver-app/app/(driver)/profile.tsx`, `mobile/app/(carrier)/drivers/[id].tsx`.
 
+### Driver Availability Restore on All Trip-End Paths ✅
+
+**Commit:** `(this commit)`
+**Files:** 4 modified
+
+POD upload + unassign already restored `driverProfile.isAvailable` on completion. But four other trip-end code paths (shipper confirm, 48h auto-close cron, trip cancel, load cancel) restored _truck_ availability but silently left the driver flagged unavailable — blocking them from taking new trips.
+
+All four now apply the canonical POD pattern: count other active trips for the driver, if zero → set `isAvailable: true`.
+
+- `app/api/trips/[tripId]/confirm/route.ts` — shipper-confirmed completion
+- `app/api/cron/trip-monitor/route.ts` — 48h DELIVERED auto-close
+- `app/api/trips/[tripId]/cancel/route.ts` — trip cancel endpoint
+- `app/api/loads/[id]/status/route.ts` — also added `driverId` to trip select; restore on COMPLETED or CANCELLED load
+
 ---
 
 ## REMAINING WORK

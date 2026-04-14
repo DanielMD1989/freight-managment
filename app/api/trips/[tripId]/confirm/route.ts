@@ -268,6 +268,31 @@ export async function POST(
         });
       }
 
+      // Restore driver availability after trip completion (mirrors POD route)
+      if (trip.driverId) {
+        const otherDriverTrips = await tx.trip.count({
+          where: {
+            driverId: trip.driverId,
+            id: { not: tripId },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
+          },
+        });
+        if (otherDriverTrips === 0) {
+          await tx.driverProfile.update({
+            where: { userId: trip.driverId },
+            data: { isAvailable: true },
+          });
+        }
+      }
+
       // G-A15-1: Only mark PAID when fees were actually collected (platformRevenue > 0)
       // or when the load is fee-waived (totalPlatformFee = 0, e.g. no corridor).
       // Using totalPlatformFee >= 0 was a bug: it was always true, marking PAID even

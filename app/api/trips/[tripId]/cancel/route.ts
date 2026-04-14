@@ -259,6 +259,31 @@ export async function POST(
         });
       }
 
+      // Restore driver availability after cancellation (mirrors POD route)
+      if (trip.driverId) {
+        const otherDriverTrips = await tx.trip.count({
+          where: {
+            driverId: trip.driverId,
+            id: { not: tripId },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
+          },
+        });
+        if (otherDriverTrips === 0) {
+          await tx.driverProfile.update({
+            where: { userId: trip.driverId },
+            data: { isAvailable: true },
+          });
+        }
+      }
+
       // Create load event inside transaction
       await tx.loadEvent.create({
         data: {

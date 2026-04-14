@@ -169,6 +169,31 @@ export async function POST(request: NextRequest) {
               });
             }
 
+            // Restore driver availability after auto-close (mirrors POD route)
+            if (trip.driverId) {
+              const otherDriverTrips = await tx.trip.count({
+                where: {
+                  driverId: trip.driverId,
+                  id: { not: trip.id },
+                  status: {
+                    in: [
+                      "ASSIGNED",
+                      "PICKUP_PENDING",
+                      "IN_TRANSIT",
+                      "DELIVERED",
+                      "EXCEPTION",
+                    ],
+                  },
+                },
+              });
+              if (otherDriverTrips === 0) {
+                await tx.driverProfile.update({
+                  where: { userId: trip.driverId },
+                  data: { isAvailable: true },
+                });
+              }
+            }
+
             // CORRECTION 4: Audit trail loadEvent
             await tx.loadEvent.create({
               data: {
