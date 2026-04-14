@@ -431,7 +431,7 @@ New `POST /api/cron/cdl-expiry` endpoint. Checks DriverProfile `cdlExpiry` and `
 
 ### Production File Serving Fixes ✅
 
-**Commit:** `(this commit)`
+**Commit:** `c75264be`
 **Files:** 1 new component (2 copies) + 4 modified
 
 - `/api/uploads/[...path]/route.ts`: path-aware access control. `documents/` is org-scoped, `pod/` is trip-scoped (carrier/shipper/driver/dispatcher/admin), `loads/` is shipper-scoped, `profiles/` is user-scoped, unknown prefixes require admin. Previously assumed path[1] was always an orgId, which broke POD access for everyone.
