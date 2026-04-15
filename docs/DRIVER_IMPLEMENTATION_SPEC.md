@@ -454,7 +454,7 @@ All four now apply the canonical POD pattern: count other active trips for the d
 
 ### Driver Notifications on Trip-Affecting Events ✅
 
-**Commit:** `(this commit)`
+**Commit:** `3f4163a6`
 **Files:** 4 modified
 
 Drivers were never individually notified when the trip they're assigned to was cancelled, confirmed by shipper, or escalated as an exception. Notifications fanned out only to carrier/shipper orgs. Five code paths now also send a `createNotification` to `trip.driverId`:
@@ -463,6 +463,16 @@ Drivers were never individually notified when the trip they're assigned to was c
 - `app/api/trips/[tripId]/confirm/route.ts` — driver notified on shipper confirm
 - `app/api/trips/[tripId]/route.ts` — driver notified on PATCH→CANCELLED and on PATCH→EXCEPTION (escalation confirmation)
 - `app/api/loads/[id]/status/route.ts` — driver notified when load cancelled with active trip
+
+### Remove Dead DELIVERED→COMPLETED Buttons ✅
+
+**Commit:** `(this commit)`
+**Files:** 2 modified
+
+POD upload now auto-completes the trip (Blueprint §7), making the manual DELIVERED → COMPLETED transition unreachable. The carrier mobile app and driver app both rendered this dead button on DELIVERED trips. Removed:
+
+- `mobile/app/(carrier)/trips/[id].tsx`: filter `COMPLETED` from `validNextStatuses`, drop `COMPLETED` from `statusActionMap`
+- `driver-app/app/(driver)/trips/[id].tsx`: remove `DELIVERED` case from `getDriverNextStatuses`
 
 ---
 

@@ -163,7 +163,7 @@ export default function CarrierTripDetailsScreen() {
     DELIVERED: { label: "Mark Delivered", icon: "flag" },
     EXCEPTION: { label: "Report Exception", icon: "warning" },
     ASSIGNED: { label: "Re-assign", icon: "refresh-circle" },
-    COMPLETED: { label: "Mark Completed", icon: "checkmark-done-circle" },
+    // COMPLETED removed — POD upload auto-completes the trip (driver-only)
   };
 
   return (
@@ -493,7 +493,7 @@ export default function CarrierTripDetailsScreen() {
         {validNextStatuses.length > 0 && (
           <View style={styles.actions}>
             {validNextStatuses
-              .filter((s) => s !== "CANCELLED")
+              .filter((s) => s !== "CANCELLED" && s !== "COMPLETED")
               .map((status) => {
                 const action = statusActionMap[status];
                 return (

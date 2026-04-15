@@ -82,10 +82,7 @@ function getDriverNextStatuses(
           color: colors.accent600,
         },
       ];
-    case "DELIVERED":
-      return [
-        { status: "COMPLETED", label: "Complete Trip", color: colors.success },
-      ];
+    // DELIVERED → COMPLETED removed — POD upload auto-completes the trip
     default:
       return [];
   }
