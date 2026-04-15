@@ -488,7 +488,7 @@ Dispatcher and shipper UIs showed no driver info at all even though the API retu
 
 ### Suspended Driver Becomes Unavailable ✅
 
-**Commit:** `(this commit)`
+**Commit:** `0b190c18`
 **File:** 1 modified
 
 `DELETE /api/drivers/[id]` (soft-delete / suspend) updated `user.status = "SUSPENDED"` and revoked sessions, but left `driverProfile.isAvailable` unchanged — so the suspended driver still showed up in carrier's available-driver pickers for trip assignment. Now also sets `isAvailable: false` as a best-effort update (handles case where driverProfile doesn't exist yet).
