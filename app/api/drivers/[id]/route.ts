@@ -337,6 +337,17 @@ export async function DELETE(
       data: { status: "SUSPENDED" },
     });
 
+    // Mark driver unavailable so they don't appear in assign-driver pickers.
+    // Best-effort — driverProfile may not exist if suspended before accepting invite.
+    try {
+      await db.driverProfile.update({
+        where: { userId: id },
+        data: { isAvailable: false },
+      });
+    } catch (err) {
+      console.warn("driverProfile.update failed after suspension:", err);
+    }
+
     // Best-effort session revocation — if it fails, the driver is still
     // suspended in the DB, and requireActiveUser will reject them on next
     // request regardless.

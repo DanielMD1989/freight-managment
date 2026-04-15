@@ -476,7 +476,7 @@ POD upload now auto-completes the trip (Blueprint §7), making the manual DELIVE
 
 ### Driver Display in Dispatcher + Shipper UIs ✅
 
-**Commit:** `(this commit)`
+**Commit:** `8ba5daff`
 **Files:** 4 modified
 
 Dispatcher and shipper UIs showed no driver info at all even though the API returned `trip.driver`. Four UI surfaces now display driver name/phone:
@@ -485,6 +485,13 @@ Dispatcher and shipper UIs showed no driver info at all even though the API retu
 - `app/dispatcher/trips/TripsClient.tsx` — new Driver column in trips table (between Shipper and Status)
 - `mobile/app/(shipper)/trips/[id].tsx` — new Driver `<Card>` with name + tap-to-call phone
 - `mobile/app/(shipper)/trips/index.tsx` — driver name line in each trip card
+
+### Suspended Driver Becomes Unavailable ✅
+
+**Commit:** `(this commit)`
+**File:** 1 modified
+
+`DELETE /api/drivers/[id]` (soft-delete / suspend) updated `user.status = "SUSPENDED"` and revoked sessions, but left `driverProfile.isAvailable` unchanged — so the suspended driver still showed up in carrier's available-driver pickers for trip assignment. Now also sets `isAvailable: false` as a best-effort update (handles case where driverProfile doesn't exist yet).
 
 ---
 
