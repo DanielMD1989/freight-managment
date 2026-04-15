@@ -246,6 +246,43 @@ export default function ShipperTripDetailsScreen() {
         </Card>
       )}
 
+      {/* Driver Info */}
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>Driver</Text>
+        {trip.driver ? (
+          <>
+            <DetailRow
+              label="Name"
+              value={
+                [trip.driver.firstName, trip.driver.lastName]
+                  .filter(Boolean)
+                  .join(" ") || "—"
+              }
+            />
+            {trip.driver.phone && (
+              <View style={styles.contactRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detailLabel}>Phone</Text>
+                  <Text style={styles.detailValue}>{trip.driver.phone}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.contactBtn}
+                  onPress={() => Linking.openURL(`tel:${trip.driver!.phone}`)}
+                >
+                  <Ionicons
+                    name="call-outline"
+                    size={18}
+                    color={colors.primary600}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        ) : (
+          <Text style={styles.detailLabel}>No driver assigned</Text>
+        )}
+      </Card>
+
       {/* Load Details */}
       {trip.load && (
         <Card style={styles.card}>

@@ -52,6 +52,12 @@ interface Trip {
     id: string;
     name: string;
   };
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+  } | null;
 }
 
 // All TripStatus values from Prisma schema + 'ALL' for filter
@@ -386,6 +392,9 @@ export default function TripsClient() {
                     Shipper
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                    Driver
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
@@ -438,6 +447,15 @@ export default function TripsClient() {
                     <td className="px-4 py-3">
                       <p className="text-sm text-slate-700">
                         {trip.shipper?.name || "Unknown"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm text-slate-700">
+                        {trip.driver
+                          ? [trip.driver.firstName, trip.driver.lastName]
+                              .filter(Boolean)
+                              .join(" ") || "—"
+                          : "—"}
                       </p>
                     </td>
                     <td className="px-4 py-3">

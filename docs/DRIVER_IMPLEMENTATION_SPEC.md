@@ -466,13 +466,25 @@ Drivers were never individually notified when the trip they're assigned to was c
 
 ### Remove Dead DELIVERED→COMPLETED Buttons ✅
 
-**Commit:** `(this commit)`
+**Commit:** `dbaada94`
 **Files:** 2 modified
 
 POD upload now auto-completes the trip (Blueprint §7), making the manual DELIVERED → COMPLETED transition unreachable. The carrier mobile app and driver app both rendered this dead button on DELIVERED trips. Removed:
 
 - `mobile/app/(carrier)/trips/[id].tsx`: filter `COMPLETED` from `validNextStatuses`, drop `COMPLETED` from `statusActionMap`
 - `driver-app/app/(driver)/trips/[id].tsx`: remove `DELIVERED` case from `getDriverNextStatuses`
+
+### Driver Display in Dispatcher + Shipper UIs ✅
+
+**Commit:** `(this commit)`
+**Files:** 4 modified
+
+Dispatcher and shipper UIs showed no driver info at all even though the API returned `trip.driver`. Four UI surfaces now display driver name/phone:
+
+- `app/dispatcher/trips/[id]/TripDetailClient.tsx` — new Driver cell in trip detail grid (name + phone, or "Unassigned")
+- `app/dispatcher/trips/TripsClient.tsx` — new Driver column in trips table (between Shipper and Status)
+- `mobile/app/(shipper)/trips/[id].tsx` — new Driver `<Card>` with name + tap-to-call phone
+- `mobile/app/(shipper)/trips/index.tsx` — driver name line in each trip card
 
 ---
 

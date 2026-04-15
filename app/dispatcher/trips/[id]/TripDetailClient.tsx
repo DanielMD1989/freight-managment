@@ -50,6 +50,12 @@ interface TripDetail {
     id: string;
     name: string;
   };
+  driver?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+  } | null;
 }
 
 const statusStyles: Record<string, string> = {
@@ -290,6 +296,21 @@ export default function TripDetailClient({ tripId }: { tripId: string }) {
             <p className="mt-1 text-sm font-medium text-slate-800">
               {trip.shipper?.name || "Unknown"}
             </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase">
+              Driver
+            </p>
+            <p className="mt-1 text-sm font-medium text-slate-800">
+              {trip.driver
+                ? [trip.driver.firstName, trip.driver.lastName]
+                    .filter(Boolean)
+                    .join(" ") || "—"
+                : "Unassigned"}
+            </p>
+            {trip.driver?.phone && (
+              <p className="text-xs text-slate-500">{trip.driver.phone}</p>
+            )}
           </div>
           <div>
             <p className="text-xs font-medium text-slate-500 uppercase">

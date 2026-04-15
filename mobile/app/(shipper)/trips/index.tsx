@@ -54,22 +54,28 @@ export default function ShipperTripsScreen() {
     return counts;
   }, [allTrips]);
 
-  const renderTrip = ({ item }: { item: Trip }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/(shipper)/trips/${item.id}`)}
-      activeOpacity={0.7}
-    >
-      <Card style={styles.card}>
-        <View style={styles.header}>
-          <Text style={styles.route}>
-            {item.pickupCity} → {item.deliveryCity}
-          </Text>
-          <StatusBadge status={item.status} type="trip" />
-        </View>
-        <Text style={styles.meta}>{formatDate(item.createdAt)}</Text>
-      </Card>
-    </TouchableOpacity>
-  );
+  const renderTrip = ({ item }: { item: Trip }) => {
+    const driverName = item.driver
+      ? [item.driver.firstName, item.driver.lastName].filter(Boolean).join(" ")
+      : "";
+    return (
+      <TouchableOpacity
+        onPress={() => router.push(`/(shipper)/trips/${item.id}`)}
+        activeOpacity={0.7}
+      >
+        <Card style={styles.card}>
+          <View style={styles.header}>
+            <Text style={styles.route}>
+              {item.pickupCity} → {item.deliveryCity}
+            </Text>
+            <StatusBadge status={item.status} type="trip" />
+          </View>
+          <Text style={styles.meta}>Driver: {driverName || "Unassigned"}</Text>
+          <Text style={styles.meta}>{formatDate(item.createdAt)}</Text>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
