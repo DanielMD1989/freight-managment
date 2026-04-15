@@ -80,6 +80,20 @@ async function getTripDetails(id: string, userId: string) {
           name: true,
         },
       },
+      driver: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          driverProfile: {
+            select: {
+              cdlNumber: true,
+              isAvailable: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -134,6 +148,20 @@ async function getTripDetails(id: string, userId: string) {
           select: {
             id: true,
             name: true,
+          },
+        },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
           },
         },
       },
@@ -221,6 +249,20 @@ async function getTripDetails(id: string, userId: string) {
               },
               carrier: {
                 select: { id: true, name: true },
+              },
+              driver: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  phone: true,
+                  driverProfile: {
+                    select: {
+                      cdlNumber: true,
+                      isAvailable: true,
+                    },
+                  },
+                },
               },
             },
           });
@@ -333,6 +375,10 @@ export default async function TripDetailPage({
     completedAt: tripData.completedAt?.toISOString() || null,
     podSubmitted: load?.podSubmitted ?? false,
     podVerified: load?.podVerified ?? false,
+    // Driver info (from include.driver). Bug fix: the projection previously
+    // dropped driver, so TripDetailClient always rendered "No driver assigned".
+    driverId: tripData.driverId ?? null,
+    driver: tripData.driver ?? null,
   };
 
   return (

@@ -98,6 +98,20 @@ async function getTripDetails(id: string, userId: string) {
           contactPhone: true,
         },
       },
+      driver: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          driverProfile: {
+            select: {
+              cdlNumber: true,
+              isAvailable: true,
+            },
+          },
+        },
+      },
       podDocuments: {
         orderBy: { uploadedAt: "desc" },
       },
@@ -152,6 +166,20 @@ async function getTripDetails(id: string, userId: string) {
             name: true,
             isVerified: true,
             contactPhone: true,
+          },
+        },
+        driver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            driverProfile: {
+              select: {
+                cdlNumber: true,
+                isAvailable: true,
+              },
+            },
           },
         },
         podDocuments: {
@@ -338,6 +366,9 @@ export default async function ShipperTripDetailPage({
         notes: pod.notes,
         uploadedAt: pod.uploadedAt.toISOString(),
       })),
+      // Driver info (from include.driver). Must be passed through the
+      // projection or ShipperTripDetailClient won't see it.
+      driver: tripData.driver ?? null,
     };
   } else {
     // Legacy load-based format

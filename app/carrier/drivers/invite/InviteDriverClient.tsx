@@ -24,12 +24,16 @@ export default function InviteDriverClient() {
         credentials: "include",
       }).then((r) => r.json());
 
+      // /api/csrf-token returns { csrfToken, expiresIn, fresh }.
+      // Fall back to csrf.token for forward-compat with older responses.
+      const csrfToken = csrf.csrfToken ?? csrf.token;
+
       const res = await fetch("/api/drivers/invite", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": csrf.token,
+          "X-CSRF-Token": csrfToken,
         },
         body: JSON.stringify({
           name,

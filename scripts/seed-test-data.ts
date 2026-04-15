@@ -287,6 +287,74 @@ async function main() {
     console.log("   [=] User exists: carrier@test.com (updated)");
   }
 
+  // --- Driver User & Profile (under carrierOrg) ---
+  const cdlExpiry = new Date();
+  cdlExpiry.setFullYear(cdlExpiry.getFullYear() + 2);
+  const medicalCertExp = new Date();
+  medicalCertExp.setFullYear(medicalCertExp.getFullYear() + 1);
+
+  let driverUser = await prisma.user.findUnique({
+    where: { email: "driver@test.com" },
+  });
+
+  if (!driverUser) {
+    driverUser = await prisma.user.create({
+      data: {
+        email: "driver@test.com",
+        passwordHash: hashedPassword,
+        firstName: "Test",
+        lastName: "Driver",
+        phone: "+251944444441",
+        role: "DRIVER",
+        status: "ACTIVE",
+        isActive: true,
+        organizationId: carrierOrg.id,
+      },
+    });
+    console.log("   [+] Created user: driver@test.com");
+  } else {
+    await prisma.user.update({
+      where: { id: driverUser.id },
+      data: {
+        passwordHash: hashedPassword,
+        status: "ACTIVE",
+        isActive: true,
+        organizationId: carrierOrg.id,
+        role: "DRIVER",
+      },
+    });
+    console.log("   [=] User exists: driver@test.com (updated)");
+  }
+
+  const existingProfile = await prisma.driverProfile.findUnique({
+    where: { userId: driverUser.id },
+  });
+  if (!existingProfile) {
+    await prisma.driverProfile.create({
+      data: {
+        userId: driverUser.id,
+        cdlNumber: "CDL-E2E-001",
+        cdlState: "AA",
+        cdlExpiry,
+        medicalCertExp,
+        isAvailable: true,
+      },
+    });
+    console.log("   [+] Created driverProfile for driver@test.com");
+  } else {
+    await prisma.driverProfile.update({
+      where: { userId: driverUser.id },
+      data: {
+        cdlNumber: "CDL-E2E-001",
+        cdlState: "AA",
+        cdlExpiry,
+        medicalCertExp,
+        isAvailable: true,
+      },
+    });
+    console.log("   [=] DriverProfile exists for driver@test.com (updated)");
+  }
+
   // --- Admin User ---
   let adminUser = await prisma.user.findUnique({
     where: { email: "admin@test.com" },

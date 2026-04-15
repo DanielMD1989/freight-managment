@@ -99,13 +99,15 @@ export default function DriverManagementClient({
       const csrf = await fetch("/api/csrf-token", {
         credentials: "include",
       }).then((r) => r.json());
+      // /api/csrf-token returns { csrfToken, ... }; fall back to .token for forward-compat.
+      const csrfToken = csrf.csrfToken ?? csrf.token;
 
       const res = await fetch(`/api/drivers/${driverId}/approve`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": csrf.token,
+          "X-CSRF-Token": csrfToken,
         },
       });
       if (!res.ok) {
@@ -127,13 +129,14 @@ export default function DriverManagementClient({
       const csrf = await fetch("/api/csrf-token", {
         credentials: "include",
       }).then((r) => r.json());
+      const csrfToken = csrf.csrfToken ?? csrf.token;
 
       const res = await fetch(`/api/drivers/${driverId}/reject`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": csrf.token,
+          "X-CSRF-Token": csrfToken,
         },
         body: JSON.stringify({ reason: rejectReason }),
       });
@@ -155,11 +158,12 @@ export default function DriverManagementClient({
       const csrf = await fetch("/api/csrf-token", {
         credentials: "include",
       }).then((r) => r.json());
+      const csrfToken = csrf.csrfToken ?? csrf.token;
 
       const res = await fetch(`/api/drivers/${driverId}`, {
         method: "DELETE",
         credentials: "include",
-        headers: { "X-CSRF-Token": csrf.token },
+        headers: { "X-CSRF-Token": csrfToken },
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

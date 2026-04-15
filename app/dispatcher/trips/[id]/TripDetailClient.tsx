@@ -124,7 +124,9 @@ export default function TripDetailClient({ tripId }: { tripId: string }) {
         throw new Error("Failed to fetch trip");
       }
       const data = await response.json();
-      setTrip(data);
+      // GET /api/trips/[tripId] returns { trip: {...} }. Defensive unwrap
+      // matches the driver-app/mobile pattern (`response.data.trip ?? response.data`).
+      setTrip(data.trip ?? data);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to fetch trip";
