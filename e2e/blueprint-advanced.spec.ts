@@ -6,6 +6,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { freeUpCarrierTrucks } from "./shared/trip-cleanup";
 
 const BASE = "http://localhost:3000";
 const PW = "Test123!";
@@ -163,8 +164,13 @@ async function createTrip(
     return null;
   }
 
-  // Find the trip
-  const { data: trips } = await api("GET", "/api/trips?limit=50", carrierToken);
+  // Find the trip. Use a higher limit — earlier suite runs can leave
+  // dozens of trips on this carrier that would push ours past limit=50.
+  const { data: trips } = await api(
+    "GET",
+    "/api/trips?limit=500",
+    carrierToken
+  );
   const trip = (trips.trips || []).find(
     (t: { loadId: string }) => t.loadId === loadId
   );
@@ -373,6 +379,16 @@ test.describe.serial("§7: Exception Path", () => {
     carrierToken = await login("wf-carrier@test.com", PW);
     adminToken = TOKENS.admin;
     dispatcherToken = TOKENS.dispatcher;
+    // Free up the carrier's trucks so createTrip() can allocate one.
+    // Also free the default carrier@test.com — createTrip may fall back to it
+    // when wf-carrier has no matching trucks for the load.
+    await freeUpCarrierTrucks(carrierToken, adminToken);
+    try {
+      const seedCarrier = await login("carrier@test.com", PW);
+      await freeUpCarrierTrucks(seedCarrier, adminToken);
+    } catch {
+      /* ignore */
+    }
   });
 
   test("9. IN_TRANSIT → EXCEPTION (carrier flags)", async () => {

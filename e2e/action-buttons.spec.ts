@@ -8,6 +8,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { freeUpCarrierTrucks } from "./shared/trip-cleanup";
 
 const BASE_URL = "http://localhost:3000";
 const TEST_PASSWORD = "Test123!";
@@ -403,6 +404,10 @@ test.describe.serial("Request & Booking Actions", () => {
     carrierToken = c.token;
     const a = await login(ADMIN.email, ADMIN.password);
     adminToken = a.token;
+    // Earlier specs in chromium project (platform-lifecycle, blueprint-*)
+    // can leave trips on the carrier's trucks in non-terminal states which
+    // would block the APPROVE step below. Cleanup here is idempotent.
+    await freeUpCarrierTrucks(carrierToken, adminToken);
   });
 
   test("Shipper creates + posts load", async () => {

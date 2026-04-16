@@ -20,6 +20,7 @@ import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 
+import { freeUpCarrierTrucks } from "../shared/trip-cleanup";
 import {
   apiCall,
   getToken,
@@ -110,11 +111,17 @@ test.describe.serial("Full Trip Lifecycle", () => {
   test("ensure truck exists and is approved", async () => {
     test.skip(!carrierToken, "No carrier token");
 
-    // Use an existing APPROVED seed truck (has valid insurance + approval)
-    // Fetch carrier's trucks and pick the first available APPROVED one
+    // Free up any active trips on wf-carrier before picking a truck.
+    // In full-suite runs, earlier specs can leave trips in non-terminal
+    // states, blocking new load-requests on the truck.
+    await freeUpCarrierTrucks(carrierToken, adminToken);
+
+    // Use an existing APPROVED seed truck (has valid insurance + approval).
+    // Use approvalStatus filter + high limit so accumulated PENDING trucks
+    // from earlier suite runs don't push APPROVED ones off page 1.
     const { data: truckList } = await apiCall(
       "GET",
-      "/api/trucks?myTrucks=true&limit=20",
+      "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=200",
       carrierToken
     );
     const trucks = truckList.trucks || [];

@@ -159,25 +159,30 @@ test.describe("Deep: Dispatcher Loads", () => {
   });
 
   test("results summary text visible", async ({ page }) => {
+    test.setTimeout(45000);
     const main = page.getByRole("main");
+    // Let the initial /api/loads fetch complete before asserting anything.
+    // In full-suite runs the dev server is under load and the default
+    // waitForMainContent's network-idle condition is not enough.
+    await page.waitForLoadState("networkidle").catch(() => {});
     await page
       .getByPlaceholder(/Search/i)
       .first()
-      .waitFor({ state: "visible", timeout: 10000 });
+      .waitFor({ state: "visible", timeout: 15000 });
     const summary = main.getByText(/Showing|Page|of/i).first();
     const hasSummary = await summary
-      .isVisible({ timeout: 5000 })
+      .isVisible({ timeout: 15000 })
       .catch(() => false);
     // Pagination or summary text should be present if loads exist
     if (!hasSummary) {
       const hasTable = await main
         .locator("table")
-        .isVisible({ timeout: 3000 })
+        .isVisible({ timeout: 10000 })
         .catch(() => false);
       const hasEmpty = await main
         .getByText(/no loads/i)
         .first()
-        .isVisible({ timeout: 3000 })
+        .isVisible({ timeout: 10000 })
         .catch(() => false);
       expect(hasTable || hasEmpty).toBe(true);
     }

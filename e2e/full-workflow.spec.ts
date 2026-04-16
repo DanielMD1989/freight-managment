@@ -20,6 +20,7 @@ import { test, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
 import { getToken as getSharedToken } from "./carrier/test-utils";
+import { freeUpCarrierTrucks } from "./shared/trip-cleanup";
 
 const BASE_URL = "http://localhost:3000";
 const ts = Date.now();
@@ -408,6 +409,11 @@ test.describe.serial("Full Business Workflow", () => {
       adminToken = await getToken("admin@test.com", password);
     }
 
+    // Free up any active trips on the carrier before picking/creating a
+    // truck. In full-suite runs earlier specs can leave trips open on the
+    // carrier's trucks, which blocks load-requests later.
+    await freeUpCarrierTrucks(carrierToken, adminToken);
+
     // Create a fresh truck
     const plate = `ET-FW-${ts.toString(36).slice(-5).toUpperCase()}`;
     const { status: truckStatus, data: truckData } = await apiCall(
@@ -427,6 +433,8 @@ test.describe.serial("Full Business Workflow", () => {
     if (truckStatus === 403) {
       // Fresh carrier org not fully approved — fall back to seed carrier
       carrierToken = await getToken("carrier@test.com", password);
+      // Free up the seed carrier's trips too (same reason as above).
+      await freeUpCarrierTrucks(carrierToken, adminToken);
       const { status: s2, data: d2 } = await apiCall(
         "POST",
         "/api/trucks",
@@ -458,10 +466,12 @@ test.describe.serial("Full Business Workflow", () => {
       { action: "APPROVE" }
     );
     if (approveStatus !== 200) {
-      // Fall back to an existing approved truck
+      // Fall back to an existing approved truck. Use approvalStatus filter
+      // and a higher limit — earlier suite runs accumulate dozens of PENDING
+      // trucks that would push the APPROVED ones off page 1.
       const { data: myTrucks } = await apiCall(
         "GET",
-        "/api/trucks?myTrucks=true&limit=20",
+        "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=200",
         carrierToken
       );
       const approved = (myTrucks.trucks || []).find(
@@ -650,5 +660,18 @@ test.describe.serial("Full Business Workflow", () => {
       await expect(mainContent).toBeVisible({ timeout: 10000 });
     }
     expect(true).toBe(true); // Trip was created and progressed (verified in earlier steps)
+  });
+
+  // ─── Cleanup: confirm the test trip so the truck is freed for downstream specs
+  test.afterAll(async () => {
+    if (!tripId || !shipperToken) return;
+    // Trip is at DELIVERED. Shipper-confirm walks it to COMPLETED so the
+    // carrier@test.com truck is free for action-buttons / blueprint-* later.
+    await apiCall(
+      "POST",
+      `/api/trips/${tripId}/confirm`,
+      shipperToken,
+      {}
+    ).catch(() => {});
   });
 });

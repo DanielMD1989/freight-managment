@@ -30,6 +30,7 @@
 import fs from "fs";
 import path from "path";
 import { test, expect, Page } from "@playwright/test";
+import { freeUpCarrierTrucks } from "./shared/trip-cleanup";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -377,10 +378,18 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
     const { carrierToken, adminToken } = loadState();
     expect(carrierToken).toBeTruthy();
 
-    // Use an existing APPROVED seed truck (has valid insurance + approval)
+    // Free up any active trips on the carrier's trucks before picking one.
+    // In full-suite runs, earlier specs (deep-carrier-functional, workflow)
+    // can leave trips on the carrier's shared truck, surfacing as
+    // "Truck on active trip" at PL-04. Clean it here.
+    await freeUpCarrierTrucks(carrierToken, adminToken);
+
+    // Use an existing APPROVED seed truck (has valid insurance + approval).
+    // Use approvalStatus filter + high limit so accumulated PENDING trucks
+    // from earlier suite runs don't push APPROVED ones off page 1.
     const { data: truckList } = await apiCall(
       "GET",
-      "/api/trucks?myTrucks=true&limit=20",
+      "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=200",
       carrierToken
     );
     const trucks = (truckList.trucks || []) as Array<{
@@ -823,6 +832,22 @@ test.describe.serial("Platform Lifecycle — Full Operational Workflow", () => {
       { status: "IN_TRANSIT", notes: "Exception resolved by admin" }
     );
     expect(resolveStatus).toBe(200);
+
+    // Walk the exception trip through to a terminal state so the truck is
+    // free for downstream specs (action-buttons, blueprint-*) that share
+    // the same carrier@test.com truck pool. Without this, the truck stays
+    // in IN_TRANSIT and later APPROVE calls fail with "truck on active trip".
+    await apiCall("PATCH", `/api/trips/${exTrip.id}`, carrierToken, {
+      status: "DELIVERED",
+      receiverName: "PL-09 cleanup",
+      receiverPhone: "+251911111111",
+    }).catch(() => {});
+    await apiCall(
+      "POST",
+      `/api/trips/${exTrip.id}/confirm`,
+      shipperToken,
+      {}
+    ).catch(() => {});
   });
 
   // ── Phase 8: Analytics snapshot (API source-of-truth capture) ────────────
