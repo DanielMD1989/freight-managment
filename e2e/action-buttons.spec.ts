@@ -428,16 +428,27 @@ test.describe.serial("Request & Booking Actions", () => {
   });
 
   test("Shipper sends truck request (POST /api/truck-requests)", async () => {
-    // Find a matching truck
+    // Find a matching truck owned by carrier@test.com (the APPROVE step below
+    // requires the carrier to own the truck — limit=1 + first-match picked a
+    // truck from another carrier in the full suite, producing 404 on APPROVE).
+    const { data: meData } = await api("GET", "/api/auth/me", carrierToken);
+    const carrierOrgId = meData.user?.organizationId ?? meData.organizationId;
+    expect(carrierOrgId, "carrier org id missing").toBeTruthy();
+
     const { data: matches } = await api(
       "GET",
-      `/api/loads/${loadId}/matching-trucks?limit=1`,
+      `/api/loads/${loadId}/matching-trucks?limit=50`,
       shipperToken
     );
     const trucks = matches.trucks || [];
-    test.skip(trucks.length === 0, "No matching trucks");
+    const truckPosting = trucks.find(
+      (t: { carrier?: { id?: string } }) => t.carrier?.id === carrierOrgId
+    );
+    test.skip(
+      !truckPosting,
+      "No matching truck owned by carrier@test.com in the current state"
+    );
 
-    const truckPosting = trucks[0];
     const truckIdForRequest = truckPosting.truck?.id || truckPosting.truckId;
 
     const { status, data } = await api(
@@ -744,15 +755,24 @@ test.describe.serial("Cancellation & Rejection Actions", () => {
     });
     const rejectLoadId = (loadData.load ?? loadData).id;
 
-    // Find matching truck
+    // Find matching truck owned by carrier@test.com — REJECT also requires
+    // the responding carrier to own the truck or the API returns 404.
+    const { data: meData } = await api("GET", "/api/auth/me", carrierToken);
+    const carrierOrgId = meData.user?.organizationId ?? meData.organizationId;
     const { data: matches } = await api(
       "GET",
-      `/api/loads/${rejectLoadId}/matching-trucks?limit=1`,
+      `/api/loads/${rejectLoadId}/matching-trucks?limit=50`,
       shipperToken
     );
     const trucks = matches.trucks || [];
-    if (trucks.length === 0) {
-      test.skip(true, "No trucks to test rejection");
+    const truckPosting = trucks.find(
+      (t: { carrier?: { id?: string } }) => t.carrier?.id === carrierOrgId
+    );
+    if (!truckPosting) {
+      test.skip(
+        true,
+        "No matching truck owned by carrier@test.com in the current state"
+      );
       return;
     }
 
@@ -763,8 +783,8 @@ test.describe.serial("Cancellation & Rejection Actions", () => {
       shipperToken,
       {
         loadId: rejectLoadId,
-        truckPostingId: trucks[0].id,
-        truckId: trucks[0].truck?.id,
+        truckPostingId: truckPosting.id,
+        truckId: truckPosting.truck?.id,
         message: "Reject test",
       }
     );

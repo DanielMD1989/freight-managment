@@ -945,20 +945,35 @@ test.describe.serial("Web Shipper FUNCTIONAL: dispute via form", () => {
   }) => {
     test.skip(!token, "no token");
 
-    // Reuse a load that already has a dispute — that proves it has a
-    // valid counterparty (assigned carrier). The API rejects loads
-    // without an assignedTruck with "Cannot determine the other party".
+    // Reuse a load that already has a dispute AND still has an assigned
+    // carrier. The API rejects loads without an assignedTruck with
+    // "Cannot determine the other party". Earlier specs in the full suite
+    // cancel trips (clearing assignedTruckId) — so the FIRST disputable
+    // load may no longer be valid. Scan through candidates until one has
+    // a current carrier assignment.
     const existing = await apiCall<{ disputes?: Array<{ loadId: string }> }>(
       "GET",
-      "/api/disputes?limit=20",
+      "/api/disputes?limit=50",
       token
     );
-    const reusableLoadId = (existing.data.disputes ?? [])[0]?.loadId;
+    const candidates = (existing.data.disputes ?? []).map((d) => d.loadId);
+    let reusableLoadId: string | null = null;
+    for (const loadId of candidates) {
+      const { data } = await apiCall<{
+        load?: { assignedTruckId: string | null };
+        assignedTruckId?: string | null;
+      }>("GET", `/api/loads/${loadId}`, token);
+      const load = data.load ?? data;
+      if (load?.assignedTruckId) {
+        reusableLoadId = loadId;
+        break;
+      }
+    }
     test.skip(
       !reusableLoadId,
-      "no disputable load found via existing disputes"
+      "no disputable load with current carrier assignment"
     );
-    const target = { id: reusableLoadId } as { id: string };
+    const target = { id: reusableLoadId! } as { id: string };
 
     const beforeRes = await apiCall<{ disputes?: Array<{ id: string }> }>(
       "GET",
