@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getCSRFToken } from "@/lib/csrfFetch";
 import ReassignTruckModal from "@/app/dispatcher/trips/[id]/ReassignTruckModal";
+import { renderEventDescription } from "@/lib/eventDescriptions";
 import type { TripDetail } from "./page";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -439,7 +440,16 @@ export default function AdminTripDetailClient({ trip }: { trip: TripDetail }) {
                   </div>
                   {event.description && (
                     <p className="mt-1 text-sm text-gray-600">
-                      {event.description}
+                      {renderEventDescription(
+                        { ...event, description: event.description ?? "" },
+                        {
+                          organizationId: null,
+                          carrierId: trip.carrier?.id,
+                          carrierName: trip.carrier?.name,
+                          shipperId: trip.load?.shipper?.id,
+                          shipperName: trip.load?.shipper?.name,
+                        }
+                      )}
                     </p>
                   )}
                 </div>

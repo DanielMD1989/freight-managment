@@ -77,7 +77,7 @@ export default function DriverDetailClient({
   async function csrfToken() {
     const res = await fetch("/api/csrf-token", { credentials: "include" });
     const data = await res.json();
-    return data.token as string;
+    return (data.csrfToken ?? data.token) as string;
   }
 
   async function handleApprove() {

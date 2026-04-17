@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import GoogleMap, { MapMarker } from "@/components/GoogleMap";
 import TripHistoryPlayback from "@/components/TripHistoryPlayback";
+import { renderEventDescription } from "@/lib/eventDescriptions";
 import { useGpsRealtime } from "@/hooks/useGpsRealtime";
 import { csrfFetch } from "@/lib/csrfFetch";
 import StarRating from "@/components/StarRating";
@@ -98,8 +99,13 @@ interface Trip {
     id: string;
     eventType: string;
     description: string;
+    metadata?: Record<string, unknown> | null;
     createdAt: string;
   }[];
+  carrierOrgId?: string | null;
+  carrierOrgName?: string | null;
+  shipperOrgId?: string;
+  shipperOrgName?: string | null;
   // New: POD documents array
   podDocuments?: TripPod[];
 }
@@ -1019,7 +1025,13 @@ export default function ShipperTripDetailClient({
                       </p>
                       {event.description && (
                         <p className="text-sm text-slate-500">
-                          {event.description}
+                          {renderEventDescription(event, {
+                            organizationId: trip.shipperOrgId ?? null,
+                            carrierId: trip.carrierOrgId ?? undefined,
+                            carrierName: trip.carrierOrgName ?? undefined,
+                            shipperId: trip.shipperOrgId,
+                            shipperName: trip.shipperOrgName ?? undefined,
+                          })}
                         </p>
                       )}
                       <p className="mt-1 text-xs text-slate-400">

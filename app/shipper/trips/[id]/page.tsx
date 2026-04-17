@@ -356,6 +356,7 @@ export default async function ShipperTripDetailPage({
         id: event.id,
         eventType: event.eventType,
         description: event.description || "",
+        metadata: (event as unknown as { metadata?: unknown }).metadata ?? null,
         createdAt: event.createdAt.toISOString(),
       })),
       podDocuments: (tripData.podDocuments || []).map((pod: PodDocResult) => ({
@@ -366,6 +367,11 @@ export default async function ShipperTripDetailPage({
         notes: pod.notes,
         uploadedAt: pod.uploadedAt.toISOString(),
       })),
+      // Org context for role-aware event rendering
+      carrierOrgId: tripData.carrierId,
+      carrierOrgName: tripData.carrier?.name ?? null,
+      shipperOrgId: tripData.shipperId,
+      shipperOrgName: tripData.shipper?.name ?? null,
       // Driver info (from include.driver). Must be passed through the
       // projection or ShipperTripDetailClient won't see it.
       driver: tripData.driver ?? null,
@@ -453,9 +459,14 @@ export default async function ShipperTripDetailPage({
         id: event.id,
         eventType: event.eventType,
         description: event.description || "",
+        metadata: (event as unknown as { metadata?: unknown }).metadata ?? null,
         createdAt: event.createdAt.toISOString(),
       })),
       podDocuments: [],
+      carrierOrgId: load.assignedTruck?.carrier?.id ?? null,
+      carrierOrgName: load.assignedTruck?.carrier?.name ?? null,
+      shipperOrgId: load.shipperId,
+      shipperOrgName: load.shipper?.name ?? null,
     };
   }
 

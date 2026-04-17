@@ -15,6 +15,7 @@ import { csrfFetch } from "@/lib/csrfFetch";
 import StarRating from "@/components/StarRating";
 import RatingModal from "@/components/RatingModal";
 import TripChat from "@/components/TripChat";
+import { renderEventDescription } from "@/lib/eventDescriptions";
 
 interface Trip {
   id: string; // Trip ID
@@ -77,8 +78,13 @@ interface Trip {
     id: string;
     eventType: string;
     description: string;
+    metadata?: Record<string, unknown> | null;
     createdAt: string;
   }[];
+  carrierOrgId?: string;
+  carrierOrgName?: string | null;
+  shipperOrgId?: string;
+  shipperOrgName?: string | null;
   // Trip-specific timestamps
   startedAt?: string | null;
   pickedUpAt?: string | null;
@@ -1130,7 +1136,13 @@ export default function TripDetailClient({
                     </div>
                     <div className="flex-1 pb-4">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {event.description}
+                        {renderEventDescription(event, {
+                          organizationId: trip.carrierOrgId ?? null,
+                          carrierId: trip.carrierOrgId,
+                          carrierName: trip.carrierOrgName ?? undefined,
+                          shipperId: trip.shipperOrgId,
+                          shipperName: trip.shipperOrgName ?? undefined,
+                        })}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {formatDateTime(event.createdAt)}

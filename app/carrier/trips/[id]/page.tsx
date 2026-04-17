@@ -366,8 +366,18 @@ export default async function TripDetailPage({
       id: event.id,
       eventType: event.eventType,
       description: event.description || "",
+      metadata:
+        ((event as { metadata?: unknown }).metadata as Record<
+          string,
+          unknown
+        > | null) ?? null,
       createdAt: event.createdAt.toISOString(),
     })),
+    // Org context for role-aware event rendering
+    carrierOrgId: tripData.carrierId,
+    carrierOrgName: tripData.carrier?.name ?? null,
+    shipperOrgId: tripData.shipperId,
+    shipperOrgName: tripData.shipper?.name ?? null,
     // Add trip-specific timestamps
     startedAt: tripData.startedAt?.toISOString() || null,
     pickedUpAt: tripData.pickedUpAt?.toISOString() || null,
