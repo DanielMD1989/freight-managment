@@ -38,12 +38,13 @@ interface SearchLoadsTabProps {
   user: CarrierUser;
 }
 
-type ResultsFilter = "all" | "PREFERRED" | "BLOCKED";
+// ResultsFilter tabs (PREFERRED/BLOCKED) removed — not implemented
 
 export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<ResultsFilter>("all");
+  const [hasSearched, setHasSearched] = useState(false);
+  // activeFilter removed — PREFERRED/BLOCKED not implemented
   const [ethiopianCities, setEthiopianCities] = useState<EthiopianCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [showSearchForm, setShowSearchForm] = useState(true);
@@ -342,6 +343,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
    */
   const fetchLoads = async () => {
     setLoading(true);
+    setHasSearched(true);
     try {
       const params = new URLSearchParams();
       params.append("status", "POSTED,SEARCHING,OFFERED");
@@ -584,19 +586,17 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   /**
    * Results tabs configuration
    */
-  const resultsTabs: StatusTab[] = [
-    { key: "all", label: "ALL" },
-    { key: "PREFERRED", label: "PREFERRED" },
-    { key: "BLOCKED", label: "BLOCKED" },
-  ];
+  // resultsTabs removed — PREFERRED/BLOCKED not implemented
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Search Loads</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+            Search Loads
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Find available loads matching your trucks
           </p>
         </div>
@@ -683,183 +683,14 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
         </div>
       )}
 
-      {/* Inline Search Form - Only show when toggled */}
+      {/* Search Form */}
       {showSearchForm && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
-          {/* Header Row */}
-          <div className="grid grid-cols-12 gap-2 bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 text-xs font-semibold text-white">
-            <div>Truck</div>
-            <div>Origin</div>
-            <div>Destination</div>
-            <div>Avail</div>
-            <div className="col-span-2">Posting (DH Filter)</div>
-            <div>F/P</div>
-            <div>Length</div>
-            <div>Weight</div>
-            <div className="col-span-3"></div>
-          </div>
-
-          {/* Editable Search Row */}
-          <div className="grid grid-cols-12 items-center gap-2 bg-gradient-to-r from-slate-50 to-teal-50/30 px-4 py-4 text-xs">
-            {/* Truck Type with ANY/ONLY */}
-            <div className="flex flex-col gap-1">
-              <div className="flex gap-1">
-                <button
-                  onClick={() => handleFilterChange("truckTypeMode", "ANY")}
-                  className={`flex-1 rounded-md px-2 py-0.5 text-xs font-bold transition-colors ${
-                    filterValues.truckTypeMode === "ANY"
-                      ? "bg-teal-600 text-white"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  ANY
-                </button>
-                <button
-                  onClick={() => handleFilterChange("truckTypeMode", "ONLY")}
-                  className={`flex-1 rounded-md px-2 py-0.5 text-xs font-bold transition-colors ${
-                    filterValues.truckTypeMode === "ONLY"
-                      ? "bg-teal-600 text-white"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  ONLY
-                </button>
-              </div>
-              <select
-                value={filterValues.truckType || ""}
-                onChange={(e) =>
-                  handleFilterChange("truckType", e.target.value)
-                }
-                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-              >
-                <option value="">Select Type</option>
-                {truckTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.code}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Origin */}
-            <div>
-              <select
-                value={filterValues.origin || ""}
-                onChange={(e) => handleFilterChange("origin", e.target.value)}
-                disabled={loadingCities}
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1.5 text-xs"
-                style={{ minHeight: "32px" }}
-              >
-                <option value="">
-                  {loadingCities ? "Loading..." : "Any Origin"}
-                </option>
-                {ethiopianCities.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Destination */}
-            <div>
-              <select
-                value={filterValues.destination || ""}
-                onChange={(e) =>
-                  handleFilterChange("destination", e.target.value)
-                }
-                disabled={loadingCities}
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1.5 text-xs"
-                style={{ minHeight: "32px" }}
-              >
-                <option value="">
-                  {loadingCities ? "Loading..." : "Anywhere"}
-                </option>
-                {ethiopianCities.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Avail Date */}
-            <div>
-              <input
-                type="date"
-                value={filterValues.availDate || ""}
-                onChange={(e) =>
-                  handleFilterChange("availDate", e.target.value)
-                }
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              />
-            </div>
-
-            {/* G-M16-3: TruckPosting selector for server-side DH filtering */}
-            <div className="col-span-2">
-              <select
-                value={filterValues.truckPostingId || ""}
-                onChange={(e) =>
-                  handleFilterChange("truckPostingId", e.target.value)
-                }
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1.5 text-xs"
-                style={{ minHeight: "32px" }}
-              >
-                <option value="">No DH Filter</option>
-                {carrierPostings.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.truck?.licensePlate ?? "Truck"} ({p.origin ?? "?"} →{" "}
-                    {p.destination ?? "?"})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* F/P */}
-            <div>
-              <select
-                value={filterValues.fullPartial || ""}
-                onChange={(e) =>
-                  handleFilterChange("fullPartial", e.target.value)
-                }
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              >
-                <option value="">Both</option>
-                <option value="FULL">Full</option>
-                <option value="PARTIAL">Partial</option>
-              </select>
-            </div>
-
-            {/* Length */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.length || ""}
-                onChange={(e) => handleFilterChange("length", e.target.value)}
-                placeholder="m"
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              />
-            </div>
-
-            {/* Weight */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.weight || ""}
-                onChange={(e) => handleFilterChange("weight", e.target.value)}
-                placeholder="kg"
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="col-span-3 flex justify-end gap-2">
-              <button
-                onClick={fetchLoads}
-                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:from-teal-700 hover:to-teal-600"
-              >
+        <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm">
                 <svg
-                  className="h-3.5 w-3.5"
+                  className="h-5 w-5 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -871,14 +702,207 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                Search
-              </button>
-              <button
-                onClick={handleFilterReset}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
-              >
-                Clear
-              </button>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+                  Search Available Loads
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Filter by truck type, route, date, and capacity
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {/* Row 1: Route + Date */}
+            <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Origin
+                </label>
+                <select
+                  value={filterValues.origin || ""}
+                  onChange={(e) => handleFilterChange("origin", e.target.value)}
+                  disabled={loadingCities}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  <option value="">
+                    {loadingCities ? "Loading..." : "Any Origin"}
+                  </option>
+                  {ethiopianCities.map((city) => (
+                    <option key={city.id} value={city.name}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Destination
+                </label>
+                <select
+                  value={filterValues.destination || ""}
+                  onChange={(e) =>
+                    handleFilterChange("destination", e.target.value)
+                  }
+                  disabled={loadingCities}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  <option value="">
+                    {loadingCities ? "Loading..." : "Anywhere"}
+                  </option>
+                  {ethiopianCities.map((city) => (
+                    <option key={city.id} value={city.name}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Available From
+                </label>
+                <input
+                  type="date"
+                  value={filterValues.availDate || ""}
+                  onChange={(e) =>
+                    handleFilterChange("availDate", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  DH Filter (Truck Posting)
+                </label>
+                <select
+                  value={filterValues.truckPostingId || ""}
+                  onChange={(e) =>
+                    handleFilterChange("truckPostingId", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  <option value="">No DH Filter</option>
+                  {carrierPostings.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.truck?.licensePlate ?? "Truck"} ({p.origin ?? "?"} →{" "}
+                      {p.destination ?? "?"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: Truck type + Capacity */}
+            <div className="mb-5 grid grid-cols-2 gap-4 md:grid-cols-5">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Truck Type
+                </label>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() =>
+                      handleFilterChange(
+                        "truckTypeMode",
+                        filterValues.truckTypeMode === "ANY" ? "ONLY" : "ANY"
+                      )
+                    }
+                    className={`rounded-lg px-2.5 py-2.5 text-xs font-bold transition-colors ${
+                      filterValues.truckTypeMode === "ONLY"
+                        ? "bg-teal-600 text-white"
+                        : "border border-slate-200 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400"
+                    }`}
+                  >
+                    {filterValues.truckTypeMode === "ONLY" ? "ONLY" : "ANY"}
+                  </button>
+                  <select
+                    value={filterValues.truckType || ""}
+                    onChange={(e) =>
+                      handleFilterChange("truckType", e.target.value)
+                    }
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  >
+                    <option value="">All Types</option>
+                    {truckTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Full / Partial
+                </label>
+                <select
+                  value={filterValues.fullPartial || ""}
+                  onChange={(e) =>
+                    handleFilterChange("fullPartial", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  <option value="">Both</option>
+                  <option value="FULL">Full Load</option>
+                  <option value="PARTIAL">Partial</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Min Length (m)
+                </label>
+                <input
+                  type="number"
+                  value={filterValues.length || ""}
+                  onChange={(e) => handleFilterChange("length", e.target.value)}
+                  placeholder="e.g. 12"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Min Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  value={filterValues.weight || ""}
+                  onChange={(e) => handleFilterChange("weight", e.target.value)}
+                  placeholder="e.g. 5000"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-teal-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <button
+                  onClick={fetchLoads}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  Search
+                </button>
+                <button
+                  onClick={() => {
+                    handleFilterReset();
+                    setLoads([]);
+                    setHasSearched(false);
+                  }}
+                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -916,54 +940,42 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
         </div>
       )}
 
-      {/* Results Section Header */}
-      <div className="flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-3">
-        <h3 className="flex items-center gap-2 text-lg font-bold text-white">
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-            />
-          </svg>
-          {loads.length} {loads.length === 1 ? "Load" : "Loads"} Found
-        </h3>
-        <div className="flex gap-2">
-          {resultsTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveFilter(tab.key as ResultsFilter)}
-              className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-colors ${
-                activeFilter === tab.key
-                  ? "bg-white text-teal-700"
-                  : "bg-white/20 text-white hover:bg-white/30"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Results — only show after carrier clicks Search */}
+      {hasSearched && (
+        <>
+          <div className="flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-3">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+              {loads.length} {loads.length === 1 ? "Load" : "Loads"} Found
+            </h3>
+          </div>
 
-      {/* Results Table - Responsive DataTable */}
-      <DataTable
-        columns={columns}
-        data={loads}
-        loading={loading}
-        actions={tableActions}
-        rowKey="id"
-        responsiveCardView={true}
-        cardTitleColumn="pickupCity"
-        cardSubtitleColumn="deliveryCity"
-        emptyMessage="No loads found. Try adjusting your search filters."
-        className="rounded-t-none"
-      />
+          <DataTable
+            columns={columns}
+            data={loads}
+            loading={loading}
+            actions={tableActions}
+            rowKey="id"
+            responsiveCardView={true}
+            cardTitleColumn="pickupCity"
+            cardSubtitleColumn="deliveryCity"
+            emptyMessage="No loads match your search. Try broader filters."
+            className="rounded-t-none"
+          />
+        </>
+      )}
 
       {/* Edit Search Modal */}
       <EditSearchModal
