@@ -46,7 +46,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>("all");
   const [ethiopianCities, setEthiopianCities] = useState<EthiopianCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [showSearchForm, setShowSearchForm] = useState(false);
+  const [showSearchForm, setShowSearchForm] = useState(true);
 
   // Saved searches state
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
