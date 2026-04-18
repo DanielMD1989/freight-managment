@@ -1483,8 +1483,17 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
           {/* New Truck Posting Form — Modal Overlay */}
           {showNewTruckForm && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12 backdrop-blur-sm">
-              <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm"
+              onClick={() => {
+                resetNewTruckForm();
+                setShowNewTruckForm(false);
+              }}
+            >
+              <div
+                className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm">
