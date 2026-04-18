@@ -210,7 +210,7 @@ export default function DriverDetailClient({
       {/* Back link */}
       <Link
         href="/carrier/drivers"
-        className="text-sm text-slate-500 hover:text-slate-700"
+        className="text-sm text-slate-500 hover:text-slate-300"
       >
         &larr; Back to Drivers
       </Link>
@@ -226,10 +226,12 @@ export default function DriverDetailClient({
       )}
 
       {/* Header card */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">{name}</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+              {name}
+            </h1>
             <p className="text-sm text-slate-500">{driver.phone ?? "-"}</p>
             <p className="text-sm text-slate-400">{driver.email}</p>
             <p className="mt-1 text-xs text-slate-400">
@@ -280,9 +282,9 @@ export default function DriverDetailClient({
 
       {/* CDL / Profile card */}
       {driver.driverProfile && (
-        <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-800">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
               Driver Profile
             </h2>
             <button
@@ -304,33 +306,35 @@ export default function DriverDetailClient({
 
           <dl className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <dt className="text-slate-500">CDL Number</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-slate-500 dark:text-slate-400">CDL Number</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-200">
                 {driver.driverProfile.cdlNumber ?? "-"}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">CDL State</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-slate-500 dark:text-slate-400">CDL State</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-200">
                 {driver.driverProfile.cdlState ?? "-"}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">CDL Expiry</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-slate-500 dark:text-slate-400">CDL Expiry</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-200">
                 {fmtDate(driver.driverProfile.cdlExpiry)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Medical Cert Expiry</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-slate-500 dark:text-slate-400">
+                Medical Cert Expiry
+              </dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-200">
                 {fmtDate(driver.driverProfile.medicalCertExp)}
               </dd>
             </div>
           </dl>
 
           {/* CDL Photos */}
-          <div className="mt-6 border-t border-slate-200 pt-4">
+          <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-700">
             <h3 className="mb-3 text-sm font-semibold text-slate-700">
               CDL Documents
             </h3>
@@ -354,7 +358,7 @@ export default function DriverDetailClient({
                       className="h-24 w-full rounded-lg border border-slate-200 object-cover"
                     />
                   ) : (
-                    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
+                    <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-900">
                       <span className="text-xs text-slate-400">
                         Not uploaded
                       </span>
@@ -368,8 +372,8 @@ export default function DriverDetailClient({
       )}
 
       {/* Active trips */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-800">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">
           Active Trips ({driver.activeTrips?.length ?? 0})
         </h2>
         {!driver.activeTrips || driver.activeTrips.length === 0 ? (
@@ -379,10 +383,10 @@ export default function DriverDetailClient({
             {driver.activeTrips.map((trip) => (
               <div
                 key={trip.id}
-                className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
+                className="flex items-center justify-between rounded-lg border border-slate-200 p-3 dark:border-slate-700"
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-800">
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                     {trip.load?.pickupCity ?? "?"} &rarr;{" "}
                     {trip.load?.deliveryCity ?? "?"}
                   </p>
@@ -407,7 +411,7 @@ export default function DriverDetailClient({
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-lg font-semibold text-slate-800">
+            <h3 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">
               Reject Driver
             </h3>
             <textarea
@@ -423,7 +427,7 @@ export default function DriverDetailClient({
                   setShowRejectModal(false);
                   setRejectReason("");
                 }}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>

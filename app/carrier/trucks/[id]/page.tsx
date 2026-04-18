@@ -192,15 +192,19 @@ export default function TruckDetailsPage({
   }
 
   const approvalColors: Record<string, string> = {
-    APPROVED: "bg-emerald-100 text-emerald-700",
-    PENDING: "bg-amber-100 text-amber-700",
-    REJECTED: "bg-red-100 text-red-700",
+    APPROVED:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+    PENDING:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+    REJECTED: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
   };
 
   const verificationColors: Record<string, string> = {
-    VERIFIED: "bg-emerald-100 text-emerald-700",
-    PENDING: "bg-amber-100 text-amber-700",
-    REJECTED: "bg-red-100 text-red-700",
+    VERIFIED:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+    PENDING:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+    REJECTED: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
   };
 
   return (
@@ -208,16 +212,16 @@ export default function TruckDetailsPage({
       {/* Back link */}
       <Link
         href="/carrier/trucks"
-        className="text-sm text-slate-500 hover:text-slate-700"
+        className="text-sm text-slate-500 hover:text-slate-300"
       >
         &larr; Back to My Trucks
       </Link>
 
       {/* Header card */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
               {truck.licensePlate}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
@@ -241,8 +245,8 @@ export default function TruckDetailsPage({
             <span
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 truck.isAvailable
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-slate-100 text-slate-600"
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
               }`}
             >
               {truck.isAvailable ? "Available" : "Unavailable"}
@@ -274,44 +278,46 @@ export default function TruckDetailsPage({
       )}
 
       {/* Truck details grid */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-800">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">
           Truck Information
         </h2>
         <dl className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
           <div>
             <dt className="text-slate-500">Type</dt>
-            <dd className="font-medium text-slate-800">
+            <dd className="font-medium text-slate-800 dark:text-slate-200">
               {formatTruckType(truck.truckType)}
             </dd>
           </div>
           <div>
             <dt className="text-slate-500">Capacity</dt>
-            <dd className="font-medium text-slate-800">
+            <dd className="font-medium text-slate-800 dark:text-slate-200">
               {truck.capacity.toLocaleString()} kg
             </dd>
           </div>
           {truck.volume && (
             <div>
               <dt className="text-slate-500">Volume</dt>
-              <dd className="font-medium text-slate-800">{truck.volume} m³</dd>
+              <dd className="font-medium text-slate-800 dark:text-slate-200">
+                {truck.volume} m³
+              </dd>
             </div>
           )}
           <div>
             <dt className="text-slate-500">City</dt>
-            <dd className="font-medium text-slate-800">
+            <dd className="font-medium text-slate-800 dark:text-slate-200">
               {truck.currentCity || "Not set"}
             </dd>
           </div>
           <div>
             <dt className="text-slate-500">Region</dt>
-            <dd className="font-medium text-slate-800">
+            <dd className="font-medium text-slate-800 dark:text-slate-200">
               {truck.currentRegion || "Not set"}
             </dd>
           </div>
           <div>
             <dt className="text-slate-500">Carrier</dt>
-            <dd className="flex items-center gap-1.5 font-medium text-slate-800">
+            <dd className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
               {truck.carrier.name}
               {truck.carrier.isVerified && (
                 <svg
@@ -331,21 +337,21 @@ export default function TruckDetailsPage({
         </dl>
 
         {/* GPS Device */}
-        <div className="mt-6 border-t border-slate-100 pt-5">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">
+        <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-700">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">
             GPS Device
           </h3>
           {truck.gpsDevice ? (
             <dl className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
               <div>
                 <dt className="text-slate-500">IMEI</dt>
-                <dd className="font-mono font-medium text-slate-800">
+                <dd className="font-mono font-medium text-slate-800 dark:text-slate-200">
                   {truck.gpsDevice.imei}
                 </dd>
               </div>
               <div>
                 <dt className="text-slate-500">Provider</dt>
-                <dd className="font-medium text-slate-800">
+                <dd className="font-medium text-slate-800 dark:text-slate-200">
                   {truck.gpsDevice.provider}
                 </dd>
               </div>
@@ -355,8 +361,8 @@ export default function TruckDetailsPage({
                   <span
                     className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       truck.gpsDevice.status === "ACTIVE"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-slate-100 text-slate-600"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                     }`}
                   >
                     {truck.gpsDevice.status}
@@ -365,14 +371,18 @@ export default function TruckDetailsPage({
               </div>
             </dl>
           ) : (
-            <p className="text-sm text-slate-400">No GPS device configured</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">
+              No GPS device configured
+            </p>
           )}
         </div>
       </div>
 
       {/* Documents section */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-800">Documents</h2>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h2 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">
+          Documents
+        </h2>
 
         {/* Existing documents */}
         {documents.length > 0 && (
@@ -384,10 +394,10 @@ export default function TruckDetailsPage({
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3"
+                  className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-indigo-100 p-2">
+                    <div className="rounded-lg bg-indigo-100 p-2 dark:bg-indigo-900">
                       <svg
                         className="h-5 w-5 text-indigo-600"
                         fill="none"
@@ -403,7 +413,7 @@ export default function TruckDetailsPage({
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-800">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                         {doc.type.replace(/_/g, " ")}
                       </p>
                       <p className="text-xs text-slate-400">{doc.fileName}</p>
@@ -422,7 +432,7 @@ export default function TruckDetailsPage({
                       href={doc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                      className="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
                     >
                       View
                     </a>
@@ -447,7 +457,7 @@ export default function TruckDetailsPage({
               onChange={(e) =>
                 setSelectedDocType(e.target.value as TruckDocumentType)
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none md:w-64"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none md:w-64 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
             >
               {TRUCK_DOCUMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -465,7 +475,7 @@ export default function TruckDetailsPage({
 
           {/* Insurance-specific fields */}
           {selectedDocType === "INSURANCE" && (
-            <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 md:grid-cols-2">
+            <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 md:grid-cols-2 dark:border-indigo-800 dark:bg-indigo-950">
               <div className="md:col-span-2">
                 <p className="mb-2 text-sm font-medium text-indigo-800">
                   Insurance Details (optional)

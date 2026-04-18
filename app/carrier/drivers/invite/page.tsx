@@ -26,7 +26,7 @@ export default async function InviteDriverPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="mx-auto max-w-xl px-4 py-8 sm:px-6 lg:px-8">
         <InviteDriverClient />
       </div>
