@@ -31,20 +31,21 @@ interface PostTrucksTabProps {
 }
 
 type TruckStatus = "POSTED" | "UNPOSTED" | "MATCHED" | "EXPIRED";
-// Matching Loads tab removed — it was a passive read-only list with no actions.
+type MainTab = "postings" | "matching";
 
 export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [trucks, setTrucks] = useState<TruckWithPosting[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState<TruckStatus>("POSTED");
-  // Tab state removed — only "postings" tab remains
+  const [activeMainTab, setActiveMainTab] = useState<MainTab>("postings");
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [, setExpandedTruckId] = useState<string | null>(null);
-  // matchingLoads state removed — Matching Loads tab deleted
+  const [matchingLoads, setMatchingLoads] = useState<Load[]>([]);
+  const [totalUniqueMatches, setTotalUniqueMatches] = useState(0);
   const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TruckPostingUpdatePayload>({});
-  // loadingMatches removed
+  const [loadingMatches, setLoadingMatches] = useState(false);
   const [showNewTruckForm, setShowNewTruckForm] = useState(false);
 
   // User's approved trucks (from My Trucks)
@@ -80,7 +81,20 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   // Note: DH-O, DH-D, F/P filters removed - these are already specified when posting the truck
   // The system auto-calculates distances based on truck location
 
-  // Load request modal moved to SearchLoadsTab — removed from here
+  // Sprint 18: Load request modal state
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [selectedLoadForRequest, setSelectedLoadForRequest] =
+    useState<Load | null>(null);
+  const [selectedTruckForRequest, setSelectedTruckForRequest] =
+    useState<string>("");
+  const [requestNotes, setRequestNotes] = useState("");
+  // Note: proposedRate removed - price negotiation happens outside platform
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+
+  // Track which loads have already been requested by this carrier
+  const [requestedLoadIds, setRequestedLoadIds] = useState<Set<string>>(
+    new Set()
+  );
 
   /**
    * Reset new truck form to initial state
@@ -149,11 +163,28 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     }
   };
 
-  // fetchExistingRequests removed — load requests handled in SearchLoadsTab
+  /**
+   * Fetch existing load requests to track which loads have already been requested
+   */
+  const fetchExistingRequests = async () => {
+    try {
+      const response = await fetch("/api/load-requests?status=PENDING");
+      if (response.ok) {
+        const data = await response.json();
+        const requestedIds = new Set<string>(
+          (data.loadRequests || []).map((req: LoadRequest) => req.loadId)
+        );
+        setRequestedLoadIds(requestedIds);
+      }
+    } catch (error) {
+      console.error("Failed to fetch existing load requests:", error);
+    }
+  };
 
   useEffect(() => {
     fetchEthiopianCities();
     fetchApprovedTrucks();
+    fetchExistingRequests();
   }, []);
 
   /**
@@ -229,6 +260,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           } else if (batchRes.ok) {
             const batchData = await batchRes.json();
             truckMatchCounts = batchData.counts || {};
+            setTotalUniqueMatches(batchData.totalUniqueMatches || 0);
           }
         } catch {
           // Fallback: all counts stay 0
@@ -303,9 +335,101 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    * Returns distance in kilometers (rounded to integer)
    */
 
+  /**
+   * Fetch all matching loads for all posted trucks — single batch request.
+   * Only called when user clicks the "Matching Loads" tab (lazy-loaded).
+   */
+  const fetchAllMatchingLoads = useCallback(async () => {
+    setLoadingMatches(true);
+    try {
+      const postedTrucks = trucks.filter(
+        (t) => t.status === "POSTED" || t.status === "ACTIVE"
+      );
+
+      if (postedTrucks.length === 0) {
+        setMatchingLoads([]);
+        setLoadingMatches(false);
+        return;
+      }
+
+      const postingIds = postedTrucks.map((t) => t.id);
+      const csrfToken = await getCSRFToken();
+      const res = await fetch("/api/truck-postings/batch-matching-loads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        credentials: "include",
+        body: JSON.stringify({ postingIds, limit: 100 }),
+      });
+
+      if (res.status === 402) {
+        const errData = await res.json();
+        toast.error(
+          errData.error || "Insufficient wallet balance for marketplace access."
+        );
+        setMatchingLoads([]);
+        return;
+      }
+
+      if (!res.ok) {
+        setMatchingLoads([]);
+        return;
+      }
+
+      const data = await res.json();
+      setMatchingLoads(data.matches || []);
+    } catch (error) {
+      console.error("Failed to fetch matching loads:", error);
+      setMatchingLoads([]);
+    } finally {
+      setLoadingMatches(false);
+    }
+  }, [trucks]);
+
+  /**
+   * Fetch matching loads for a specific truck
+   * Used when user clicks on a truck row - shows exact matches for that truck
+   */
+  const fetchMatchingLoadsForTruck = async (truckId: string) => {
+    setLoadingMatches(true);
+    try {
+      const response = await fetch(
+        `/api/truck-postings/${truckId}/matching-loads`
+      );
+      if (response.status === 402) {
+        const errData = await response.json();
+        toast.error(
+          errData.error || "Insufficient wallet balance for marketplace access."
+        );
+        setMatchingLoads([]);
+        return;
+      }
+      const data = await response.json();
+      setMatchingLoads(data.matches || []);
+    } catch (error) {
+      console.error("Failed to fetch matching loads for truck:", error);
+      setMatchingLoads([]);
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
+
   useEffect(() => {
     fetchTrucks();
   }, [fetchTrucks]);
+
+  useEffect(() => {
+    // Lazy-load: only fetch matching loads when user switches to the tab
+    if (
+      activeMainTab === "matching" &&
+      trucks.length > 0 &&
+      matchingLoads.length === 0
+    ) {
+      fetchAllMatchingLoads();
+    }
+  }, [activeMainTab, trucks, matchingLoads.length, fetchAllMatchingLoads]);
 
   /**
    * Handle DELETE action
@@ -337,6 +461,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       fetchTrucks();
       if (selectedTruckId === truck.id) {
         setSelectedTruckId(null);
+        setMatchingLoads([]);
       }
     } catch (error) {
       console.error("Delete failed:", error);
@@ -526,8 +651,86 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     { key: "EXPIRED", label: "Expired", count: statusCounts.EXPIRED },
   ];
 
-  // Load request modal + handleOpenRequestModal + handleSubmitLoadRequest
-  // removed — load requests are handled in SearchLoadsTab
+  /**
+   * Sprint 18: Handle opening the load request modal
+   */
+  const handleOpenRequestModal = (load: Load) => {
+    setSelectedLoadForRequest(load);
+    // Pre-select first posted truck
+    const postedTrucks = trucks.filter(
+      (t) =>
+        (t.status === "POSTED" || t.status === "ACTIVE") &&
+        t.truck?.approvalStatus === "APPROVED"
+    );
+    if (postedTrucks.length > 0) {
+      setSelectedTruckForRequest(postedTrucks[0].truck?.id || "");
+    }
+    setRequestNotes("");
+    setRequestModalOpen(true);
+  };
+
+  /**
+   * Sprint 18: Submit load request to shipper
+   */
+  const handleSubmitLoadRequest = async () => {
+    if (!selectedLoadForRequest || !selectedTruckForRequest) {
+      toast("Please select a truck for this load request");
+      return;
+    }
+
+    setSubmittingRequest(true);
+    try {
+      // Get CSRF token
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        toast.error(
+          "Failed to get security token. Please refresh and try again."
+        );
+        setSubmittingRequest(false);
+        return;
+      }
+
+      const response = await fetch("/api/load-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        body: JSON.stringify({
+          loadId: selectedLoadForRequest.id,
+          truckId: selectedTruckForRequest,
+          notes: requestNotes || undefined,
+          // No proposedRate - price negotiation happens outside platform
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit load request");
+      }
+
+      toast.success(
+        "Load request sent to shipper! You will be notified when they respond."
+      );
+
+      // Add to requested loads to update button state
+      setRequestedLoadIds(
+        (prev) => new Set([...prev, selectedLoadForRequest.id])
+      );
+
+      setRequestModalOpen(false);
+      setSelectedLoadForRequest(null);
+      setSelectedTruckForRequest("");
+      setRequestNotes("");
+    } catch (error: unknown) {
+      console.error("Load request error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit load request"
+      );
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
 
   /**
    * Get posted trucks that are approved for requests
@@ -788,8 +991,146 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   ];
 
   /**
-   * Matching loads table columns — removed (tab deleted)
+   * Matching loads table columns
    */
+  const loadColumns: TableColumn[] = [
+    {
+      key: "age",
+      label: "Age",
+      width: "60px",
+      render: (_, row) => <AgeIndicator date={row.postedAt || row.createdAt} />,
+    },
+    {
+      key: "pickupDate",
+      label: "Pickup",
+      width: "90px",
+      render: (value) => (value ? new Date(value).toLocaleDateString() : "N/A"),
+    },
+    {
+      key: "truckType",
+      label: "Truck",
+      width: "80px",
+      render: (value) => value?.replace("_", " ") || "N/A",
+    },
+    {
+      key: "fullPartial",
+      label: "F/P",
+      width: "40px",
+      align: "center" as const,
+      render: (value) => (value === "FULL" ? "F" : "P"),
+    },
+    {
+      key: "dhToOriginKm",
+      label: "DH-O",
+      width: "70px",
+      align: "right" as const,
+      render: (value, row) => {
+        if (!value && value !== 0) return "-";
+        // Show green if within declared limits, gray otherwise
+        const withinLimits = row.withinDhLimits;
+        return (
+          <span
+            className={`font-medium ${withinLimits ? "text-green-600" : "text-[#064d51]/60"}`}
+          >
+            {value} km
+          </span>
+        );
+      },
+    },
+    {
+      key: "pickupCity",
+      label: "Origin",
+      width: "100px",
+    },
+    {
+      key: "tripKm",
+      label: "Trip",
+      width: "60px",
+      align: "right" as const,
+      render: (value) => (value ? `${value}` : "-"),
+    },
+    {
+      key: "deliveryCity",
+      label: "Destination",
+      width: "100px",
+    },
+    {
+      key: "dhAfterDeliveryKm",
+      label: "DH-D",
+      width: "70px",
+      align: "right" as const,
+      render: (value, row) => {
+        if (!value && value !== 0) return "-";
+        // Show green if within declared limits, gray otherwise
+        const withinLimits = row.withinDhLimits;
+        return (
+          <span
+            className={`font-medium ${withinLimits ? "text-green-600" : "text-[#064d51]/60"}`}
+          >
+            {value} km
+          </span>
+        );
+      },
+    },
+    {
+      key: "shipper",
+      label: "Company",
+      width: "140px",
+      render: (_, row) => (
+        <span className="cursor-pointer text-[#1e9c99] hover:underline">
+          {row.shipper?.name || "N/A"}
+        </span>
+      ),
+    },
+    {
+      key: "shipperContactPhone",
+      label: "Contact",
+      width: "110px",
+      render: (value) => value || "N/A",
+    },
+    {
+      key: "lengthM",
+      label: "Length",
+      width: "60px",
+      align: "right" as const,
+      render: (value) => (value ? `${value}` : "-"),
+    },
+    {
+      key: "weight",
+      label: "Weight",
+      width: "70px",
+      align: "right" as const,
+      render: (value) => (value ? `${value} lbs` : "-"),
+    },
+    // Sprint 18: Request Load button column
+    {
+      key: "actions",
+      label: "Action",
+      width: "120px",
+      align: "center" as const,
+      render: (_, row) => {
+        const isRequested = requestedLoadIds.has(row.id);
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isRequested) {
+                handleOpenRequestModal(row);
+              }
+            }}
+            disabled={isRequested}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors ${
+              isRequested
+                ? "cursor-not-allowed bg-amber-500 text-white"
+                : "bg-[#064d51] text-white hover:bg-[#053d40]"
+            }`}
+          >
+            {isRequested ? "REQUESTED" : "REQUEST LOAD"}
+          </button>
+        );
+      },
+    },
+  ];
 
   /**
    * Handle EDIT action
@@ -952,56 +1293,1062 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Get selected truck's origin for filtering
    */
+  /**
+   * Filter matching loads based on active tab only
+   * API already returns correctly matched loads - no need for city name filtering
+   * Sorts by: loads within DH limits first, then DH-O, then by match score
+   */
+  const filteredMatchingLoads = matchingLoads
+    .map((match) => {
+      // Extract load from match object (API returns { load: {...}, matchScore: X })
+      const load = match.load || match;
+      return {
+        ...match,
+        load: {
+          ...load,
+          // Preserve DH values and limits flag from match if available
+          dhToOriginKm: match.dhToOriginKm ?? load.dhToOriginKm ?? 0,
+          dhAfterDeliveryKm:
+            match.dhAfterDeliveryKm ?? load.dhAfterDeliveryKm ?? 0,
+          withinDhLimits: match.withinDhLimits ?? load.withinDhLimits ?? true,
+        },
+      };
+    })
+    .filter(({ load }) => {
+      if (!load) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      // If a truck is selected, sort by within-limits first, then DH-O
+      if (selectedTruckId) {
+        // First priority: loads within declared DH limits come first
+        const aWithin = a.load?.withinDhLimits ?? true;
+        const bWithin = b.load?.withinDhLimits ?? true;
+        if (aWithin !== bWithin) {
+          return aWithin ? -1 : 1;
+        }
+
+        // Second: by DH-O (lower is better)
+        const dhA = a.load?.dhToOriginKm || 0;
+        const dhB = b.load?.dhToOriginKm || 0;
+        if (dhA !== dhB) return dhA - dhB;
+
+        // Third: by DH-D (lower is better)
+        const dhDA = a.load?.dhAfterDeliveryKm || 0;
+        const dhDB = b.load?.dhAfterDeliveryKm || 0;
+        if (dhDA !== dhDB) return dhDA - dhDB;
+      } else {
+        // No truck selected: sort by recency first, then by location
+        // First: by most recent posted (newest first)
+        const dateA = new Date(
+          a.load?.postedAt || a.load?.createdAt || 0
+        ).getTime();
+        const dateB = new Date(
+          b.load?.postedAt || b.load?.createdAt || 0
+        ).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+
+        // Second: by pickup city (alphabetically for easier scanning)
+        const cityA = (a.load?.pickupCity || "").toLowerCase();
+        const cityB = (b.load?.pickupCity || "").toLowerCase();
+        if (cityA !== cityB) return cityA.localeCompare(cityB);
+
+        // Third: by delivery city
+        const destA = (a.load?.deliveryCity || "").toLowerCase();
+        const destB = (b.load?.deliveryCity || "").toLowerCase();
+        return destA.localeCompare(destB);
+      }
+
+      // Fallback: sort by most recent posted first
+      const dateA = new Date(
+        a.load?.postedAt || a.load?.createdAt || 0
+      ).getTime();
+      const dateB = new Date(
+        b.load?.postedAt || b.load?.createdAt || 0
+      ).getTime();
+      return dateB - dateA;
+    })
+    .map((match) => match.load); // Return just the load object for the table
+
+  // Get selected truck details for matching tab header
+  const selectedTruckDetails = selectedTruckId
+    ? trucks.find((t) => t.id === selectedTruckId)
+    : null;
+
   return (
     <div className="space-y-4 pt-6">
-      {/* Header Row - NEW TRUCK POST on left, Status Tabs on right */}
-      <div className="flex items-center justify-between">
+      {/* Main Tab Navigation - Pill Style */}
+      <div className="flex w-fit gap-1 rounded-xl bg-slate-200 p-1">
         <button
-          onClick={() => setShowNewTruckForm(!showNewTruckForm)}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
+          onClick={() => setActiveMainTab("postings")}
+          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all ${
+            activeMainTab === "postings"
+              ? "bg-white text-sky-600 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
         >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <span>📋</span>
+          My Postings
+          <span
+            className={`rounded-full px-2 py-0.5 text-sm ${
+              activeMainTab === "postings"
+                ? "bg-sky-100 text-sky-600"
+                : "bg-slate-300 text-slate-600"
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          NEW TRUCK POST
+            {trucks.length}
+          </span>
         </button>
-
-        {/* Status Filter Tabs - Right Side */}
-        <StatusTabs
-          tabs={statusTabs}
-          activeTab={activeStatus}
-          onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
-        />
+        <button
+          onClick={() => setActiveMainTab("matching")}
+          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all ${
+            activeMainTab === "matching"
+              ? "bg-white text-sky-600 shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <span>🔍</span>
+          Matching Loads
+          <span
+            className={`rounded-full px-2 py-0.5 text-sm ${
+              activeMainTab === "matching"
+                ? "bg-sky-100 text-sky-600"
+                : "bg-slate-300 text-slate-600"
+            }`}
+          >
+            {activeMainTab === "matching" && matchingLoads.length > 0
+              ? filteredMatchingLoads.length
+              : totalUniqueMatches}
+          </span>
+        </button>
       </div>
 
-      {/* New Truck Posting Form — Modal Overlay */}
-      {showNewTruckForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm"
-          onClick={() => {
-            resetNewTruckForm();
-            setShowNewTruckForm(false);
-          }}
-        >
-          <div
-            className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm">
+      {/* ============================================================ */}
+      {/* TAB 1: MY POSTINGS                                           */}
+      {/* ============================================================ */}
+      {activeMainTab === "postings" && (
+        <>
+          {/* Header Row - NEW TRUCK POST on left, Status Tabs on right */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowNewTruckForm(!showNewTruckForm)}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              NEW TRUCK POST
+            </button>
+
+            {/* Status Filter Tabs - Right Side */}
+            <StatusTabs
+              tabs={statusTabs}
+              activeTab={activeStatus}
+              onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
+            />
+          </div>
+
+          {/* New Truck Posting Form — Modal Overlay */}
+          {showNewTruckForm && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm"
+              onClick={() => {
+                resetNewTruckForm();
+                setShowNewTruckForm(false);
+              }}
+            >
+              <div
+                className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm">
+                      <svg
+                        className="h-5 w-5 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+                        Create New Truck Posting
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        List your truck for available loads
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      resetNewTruckForm();
+                      setShowNewTruckForm(false);
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div className="p-6">
+                  {/* Step 1: Select Truck */}
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      Step 1: Select Truck from Your Fleet{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    {loadingApprovedTrucks ? (
+                      <div className="py-4 text-[#064d51]/60 dark:text-gray-400">
+                        Loading your trucks...
+                      </div>
+                    ) : (
+                      (() => {
+                        // Filter to only show unposted trucks
+                        const unpostedTrucks = approvedTrucks.filter(
+                          (truck) => !getActivePostingForTruck(truck.id)
+                        );
+
+                        if (approvedTrucks.length === 0) {
+                          return (
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/30">
+                              <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                                No approved trucks found. Please add and get a
+                                truck approved in{" "}
+                                <Link
+                                  href="/carrier/trucks"
+                                  className="font-medium underline"
+                                >
+                                  My Trucks
+                                </Link>{" "}
+                                first.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        if (unpostedTrucks.length === 0) {
+                          return (
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/30">
+                              <p className="text-sm text-blue-800 dark:text-blue-300">
+                                All your trucks are already posted. To edit an
+                                existing posting, click on it in the list below.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <select
+                            value={newTruckForm.truckId}
+                            onChange={(e) =>
+                              handleTruckSelection(e.target.value)
+                            }
+                            className="w-full max-w-md rounded-lg border border-[#064d51]/20 bg-white px-4 py-3 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                          >
+                            <option value="">
+                              -- Select a truck to post --
+                            </option>
+                            {unpostedTrucks.map((truck) => (
+                              <option key={truck.id} value={truck.id}>
+                                {truck.licensePlate} -{" "}
+                                {truck.truckType?.replace("_", " ")} •{" "}
+                                {truck.capacity} kg
+                                {truck.currentCity
+                                  ? ` (📍 ${truck.currentCity})`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()
+                    )}
+                  </div>
+
+                  {/* Step 2: Posting Details - Only show when truck is selected */}
+                  {newTruckForm.truckId && (
+                    <>
+                      <div className="mb-6 border-t border-gray-200 pt-6 dark:border-slate-700">
+                        <label className="mb-4 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                          Step 2: Posting Details
+                        </label>
+
+                        {/* Row 1: Location & Availability */}
+                        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          {/* Origin */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Origin (Available At){" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <PlacesAutocomplete
+                              value={newTruckForm.origin}
+                              onChange={(value, place) => {
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  origin: value,
+                                  originCoordinates: place?.coordinates,
+                                });
+                              }}
+                              placeholder="Where is truck available?"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              countryRestriction={["ET", "DJ"]}
+                              types={["(cities)"]}
+                            />
+                          </div>
+
+                          {/* Destination */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Destination (Preferred)
+                            </label>
+                            <PlacesAutocomplete
+                              value={newTruckForm.destination}
+                              onChange={(value, place) => {
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  destination: value,
+                                  destinationCoordinates: place?.coordinates,
+                                });
+                              }}
+                              placeholder="Anywhere"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              countryRestriction={["ET", "DJ"]}
+                              types={["(cities)"]}
+                            />
+                          </div>
+
+                          {/* Available From */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Available From{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="date"
+                              value={newTruckForm.availableFrom}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  availableFrom: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min={new Date().toISOString().split("T")[0]}
+                            />
+                          </div>
+
+                          {/* Available To */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Available Until
+                            </label>
+                            <input
+                              type="date"
+                              value={newTruckForm.availableTo}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  availableTo: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min={
+                                newTruckForm.availableFrom ||
+                                new Date().toISOString().split("T")[0]
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 2: Load Details */}
+                        <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+                          {/* DH-O (Declared Deadhead to Origin Limit) */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              DH-O Limit (km)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.declaredDhO}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  declaredDhO: e.target.value,
+                                })
+                              }
+                              placeholder="e.g. 100"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min="0"
+                            />
+                            <p className="mt-1 text-xs text-[#064d51]/60 dark:text-slate-400">
+                              Max distance to pickup
+                            </p>
+                          </div>
+
+                          {/* DH-D (Declared Deadhead after Delivery Limit) */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              DH-D Limit (km)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.declaredDhD}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  declaredDhD: e.target.value,
+                                })
+                              }
+                              placeholder="e.g. 100"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min="0"
+                            />
+                            <p className="mt-1 text-xs text-[#064d51]/60 dark:text-slate-400">
+                              Max distance after delivery
+                            </p>
+                          </div>
+
+                          {/* F/P */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Full/Partial
+                            </label>
+                            <select
+                              value={newTruckForm.fullPartial}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  fullPartial: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            >
+                              <option value="FULL">Full Load</option>
+                              <option value="PARTIAL">Partial</option>
+                            </select>
+                          </div>
+
+                          {/* Length */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Length (m)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.lengthM}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  lengthM: e.target.value,
+                                })
+                              }
+                              placeholder="Available length"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+
+                          {/* Weight */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Weight (kg)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.weight}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  weight: e.target.value,
+                                })
+                              }
+                              placeholder="Max capacity"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+
+                          {/* Contact Phone */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Contact Phone{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="tel"
+                              value={newTruckForm.contactPhone}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  contactPhone: e.target.value,
+                                })
+                              }
+                              placeholder="+251-9xx-xxx-xxx"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 3: Comments */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Comments{" "}
+                              <span className="text-gray-400">
+                                ({newTruckForm.comments1.length}/70)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newTruckForm.comments1}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  comments1: e.target.value.slice(0, 70),
+                                })
+                              }
+                              placeholder="Additional notes for shippers..."
+                              maxLength={70}
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Additional Comments{" "}
+                              <span className="text-gray-400">
+                                ({newTruckForm.comments2.length}/70)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newTruckForm.comments2}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  comments2: e.target.value.slice(0, 70),
+                                })
+                              }
+                              placeholder="Special equipment, requirements..."
+                              maxLength={70}
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => {
+                            resetNewTruckForm();
+                            setShowNewTruckForm(false);
+                          }}
+                          className="rounded-lg border border-[#064d51]/30 px-6 py-2 font-medium text-[#064d51] transition-colors hover:bg-[#064d51]/5 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handlePostTruck}
+                          disabled={
+                            !newTruckForm.truckId ||
+                            !newTruckForm.origin ||
+                            !newTruckForm.availableFrom ||
+                            !newTruckForm.contactPhone
+                          }
+                          className="rounded-lg bg-teal-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Post Truck
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Truck Posts Table */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+            {/* Header */}
+            <div className="flex items-center justify-between bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                <svg
+                  className="h-5 w-5 text-teal-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+                  />
+                </svg>
+                {trucks.length} Posted Trucks
+              </h3>
+              <span className="text-xs text-slate-300">
+                Click a truck to see matching loads
+              </span>
+            </div>
+            <DataTable
+              columns={truckColumns}
+              data={trucks}
+              loading={loading}
+              emptyMessage="No truck postings found. Click NEW TRUCK POST to create one."
+              rowKey="id"
+              expandable={true}
+              expandedRowIds={editingTruckId ? [editingTruckId] : []}
+              onRowClick={(truck) => {
+                // Click row → switch to Matching Loads tab and fetch loads for THIS truck
+                setSelectedTruckId(truck.id);
+                setActiveMainTab("matching");
+                fetchMatchingLoadsForTruck(truck.id);
+              }}
+              renderExpandedRow={(truck) => {
+                const isEditing = editingTruckId === truck.id;
+
+                // Only show expanded content when editing - action buttons are now in the row itself
+                if (!isEditing) {
+                  return null;
+                }
+
+                return (
+                  <div id={`posting-${truck.id}`} className="p-4">
+                    {/* Edit Mode - Professional Form Layout */}
+                    <div className="space-y-4">
+                      {/* Header with truck info */}
+                      <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                            <span className="text-xl">🚛</span>
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-[#064d51]">
+                              Edit Truck Posting
+                            </h3>
+                            <p className="text-xs text-[#064d51]/60">
+                              {truck.truck?.licensePlate} •{" "}
+                              {(truck.truck?.truckType || "N/A").replace(
+                                "_",
+                                " "
+                              )}{" "}
+                              •{" "}
+                              {truck.truck?.capacity
+                                ? `${truck.truck.capacity} kg`
+                                : "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelEdit();
+                          }}
+                          className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          <span className="text-lg">✕</span>
+                        </button>
+                      </div>
+
+                      {/* Form Grid */}
+                      <div className="grid grid-cols-2 gap-3 md:grid-cols-5 lg:grid-cols-10">
+                        {/* Origin */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Origin <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={editForm.origin || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                origin: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          >
+                            <option value="">Select city</option>
+                            {ethiopianCities.map((city: EthiopianCity) => (
+                              <option key={city.id} value={city.id}>
+                                {city.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Destination */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Destination
+                          </label>
+                          <select
+                            value={editForm.destination || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                destination: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          >
+                            <option value="">Anywhere</option>
+                            {ethiopianCities.map((city: EthiopianCity) => (
+                              <option key={city.id} value={city.id}>
+                                {city.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Available From */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            From <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={editForm.availableFrom || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                availableFrom: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          />
+                        </div>
+
+                        {/* Available To */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Until
+                          </label>
+                          <input
+                            type="date"
+                            value={editForm.availableTo || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                availableTo: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          />
+                        </div>
+
+                        {/* Full/Partial */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Load Type
+                          </label>
+                          <select
+                            value={editForm.fullPartial || "FULL"}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                fullPartial: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          >
+                            <option value="FULL">Full</option>
+                            <option value="PARTIAL">Partial</option>
+                          </select>
+                        </div>
+
+                        {/* DH-O Limit */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            DH-O (km)
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.declaredDhO || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                declaredDhO: e.target.value,
+                              })
+                            }
+                            placeholder="100"
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                            min="0"
+                          />
+                        </div>
+
+                        {/* DH-D Limit */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            DH-D (km)
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.declaredDhD || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                declaredDhD: e.target.value,
+                              })
+                            }
+                            placeholder="100"
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                            min="0"
+                          />
+                        </div>
+
+                        {/* Length */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Length (m)
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.lengthM || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                lengthM: e.target.value,
+                              })
+                            }
+                            placeholder="12"
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          />
+                        </div>
+
+                        {/* Weight */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Weight (kg)
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.weight || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                weight: e.target.value,
+                              })
+                            }
+                            placeholder="25000"
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          />
+                        </div>
+
+                        {/* Contact Phone */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Phone <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            value={editForm.contactPhone || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                contactPhone: e.target.value,
+                              })
+                            }
+                            placeholder="+251 9XX"
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Comments and Actions Row */}
+                      <div className="flex items-end gap-4">
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Comments{" "}
+                            <span className="text-gray-400">
+                              ({editForm.comments1?.length || 0}/70)
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.comments1 || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                comments1: e.target.value.slice(0, 70),
+                              })
+                            }
+                            placeholder="Additional notes..."
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                            maxLength={70}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
+                            Additional{" "}
+                            <span className="text-gray-400">
+                              ({editForm.comments2?.length || 0}/70)
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            value={editForm.comments2 || ""}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                comments2: e.target.value.slice(0, 70),
+                              })
+                            }
+                            placeholder="Special requirements..."
+                            className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
+                            maxLength={70}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelEdit();
+                            }}
+                            className="rounded-md border border-[#064d51]/20 bg-white px-4 py-2 text-sm font-medium text-[#064d51]/80 transition-colors hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveEdit();
+                            }}
+                            className="rounded-md bg-[#1e9c99] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#064d51]"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* ============================================================ */}
+      {/* TAB 2: MATCHING LOADS                                        */}
+      {/* ============================================================ */}
+      {activeMainTab === "matching" && (
+        <>
+          {/* Back Button + Selected Truck Info */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMainTab("postings");
+                setSelectedTruckId(null);
+              }}
+              className="flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-sky-600"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              ← Back to My Postings
+            </button>
+            {selectedTruckDetails ? (
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-sky-700 text-xl text-white">
+                  🚚
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-slate-900">
+                    {selectedTruckDetails.truck?.licensePlate ||
+                      "Unknown Truck"}
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    {(
+                      selectedTruckDetails.truck?.truckType ||
+                      selectedTruckDetails.truckType ||
+                      "N/A"
+                    ).replace("_", " ")}
+                    {selectedTruckDetails.truck?.capacity &&
+                      ` • ${Math.round(selectedTruckDetails.truck.capacity / 1000)}T`}
+                    {" • "}
+                    {selectedTruckDetails.originCity?.name || "N/A"} →{" "}
+                    {selectedTruckDetails.destinationCity?.name || "Any"}
+                    {selectedTruckDetails.availableFrom && (
+                      <span className="ml-2 text-slate-400">
+                        • Available{" "}
+                        {new Date(
+                          selectedTruckDetails.availableFrom
+                        ).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                        {selectedTruckDetails.availableTo &&
+                          ` - ${new Date(selectedTruckDetails.availableTo).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTruckId(null);
+                    fetchAllMatchingLoads();
+                  }}
+                  className="ml-4 rounded-md px-3 py-1.5 text-sm text-sky-600 transition-colors hover:bg-sky-50 hover:text-sky-700"
+                >
+                  Show all trucks
+                </button>
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">
+                Showing matches for all posted trucks
+              </div>
+            )}
+          </div>
+
+          {/* Matching Loads Section */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+            {/* Header with Total Count and Tabs */}
+            <div className="flex items-center justify-between bg-gradient-to-r from-teal-600 to-teal-500 px-6 py-4">
+              <div className="flex items-center gap-4">
+                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                   <svg
-                    className="h-5 w-5 text-white"
+                    className="h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1010,25 +2357,84 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M12 4v16m8-8H4"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                     />
                   </svg>
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-800 dark:text-white">
-                    Create New Truck Posting
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    List your truck for available loads
-                  </p>
-                </div>
+                  {filteredMatchingLoads.length} Matching Loads
+                  {selectedTruckId && (
+                    <span className="ml-2 text-sm font-normal text-teal-100">
+                      (for selected truck)
+                    </span>
+                  )}
+                </h3>
+                {selectedTruckId && (
+                  <button
+                    onClick={() => {
+                      setSelectedTruckId(null);
+                      setExpandedTruckId(null);
+                      fetchAllMatchingLoads();
+                    }}
+                    className="text-xs text-white/80 underline hover:text-white"
+                  >
+                    Show all loads
+                  </button>
+                )}
               </div>
+
+              {/* All loads tab */}
+              <div className="flex gap-2">
+                <button className="rounded-lg bg-white px-4 py-1.5 text-xs font-bold text-teal-700 transition-colors">
+                  ALL
+                </button>
+              </div>
+            </div>
+
+            {/* Matching Loads Table */}
+            <div className="p-0">
+              <DataTable
+                columns={loadColumns}
+                data={filteredMatchingLoads}
+                loading={loadingMatches}
+                emptyMessage="No matching loads found. Post a truck to see matching loads."
+                rowKey="id"
+                cardPrimaryColumns={[
+                  "pickupCity",
+                  "deliveryCity",
+                  "truckType",
+                  "actions",
+                ]}
+                cardTitleColumn="pickupCity"
+                cardSubtitleColumn="deliveryCity"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Sprint 18: Load Request Modal */}
+      {requestModalOpen && selectedLoadForRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-2xl">
+            <div className="flex items-center justify-between bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <svg
+                  className="h-5 w-5 text-teal-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                Request Load
+              </h3>
               <button
-                onClick={() => {
-                  resetNewTruckForm();
-                  setShowNewTruckForm(false);
-                }}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                onClick={() => setRequestModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <svg
                   className="h-5 w-5"
@@ -1046,728 +2452,152 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               </button>
             </div>
             <div className="p-6">
-              {/* Step 1: Select Truck */}
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                  Step 1: Select Truck from Your Fleet{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                {loadingApprovedTrucks ? (
-                  <div className="py-4 text-[#064d51]/60 dark:text-gray-400">
-                    Loading your trucks...
-                  </div>
-                ) : (
-                  (() => {
-                    // Filter to only show unposted trucks
-                    const unpostedTrucks = approvedTrucks.filter(
-                      (truck) => !getActivePostingForTruck(truck.id)
-                    );
-
-                    if (approvedTrucks.length === 0) {
-                      return (
-                        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/30">
-                          <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                            No approved trucks found. Please add and get a truck
-                            approved in{" "}
-                            <Link
-                              href="/carrier/trucks"
-                              className="font-medium underline"
-                            >
-                              My Trucks
-                            </Link>{" "}
-                            first.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    if (unpostedTrucks.length === 0) {
-                      return (
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/30">
-                          <p className="text-sm text-blue-800 dark:text-blue-300">
-                            All your trucks are already posted. To edit an
-                            existing posting, click on it in the list below.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <select
-                        value={newTruckForm.truckId}
-                        onChange={(e) => handleTruckSelection(e.target.value)}
-                        className="w-full max-w-md rounded-lg border border-[#064d51]/20 bg-white px-4 py-3 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                      >
-                        <option value="">-- Select a truck to post --</option>
-                        {unpostedTrucks.map((truck) => (
-                          <option key={truck.id} value={truck.id}>
-                            {truck.licensePlate} -{" "}
-                            {truck.truckType?.replace("_", " ")} •{" "}
-                            {truck.capacity} kg
-                            {truck.currentCity
-                              ? ` (📍 ${truck.currentCity})`
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
-                    );
-                  })()
-                )}
-              </div>
-
-              {/* Step 2: Posting Details - Only show when truck is selected */}
-              {newTruckForm.truckId && (
-                <>
-                  <div className="mb-6 border-t border-gray-200 pt-6 dark:border-slate-700">
-                    <label className="mb-4 block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                      Step 2: Posting Details
-                    </label>
-
-                    {/* Row 1: Location & Availability */}
-                    <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                      {/* Origin */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Origin (Available At){" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <PlacesAutocomplete
-                          value={newTruckForm.origin}
-                          onChange={(value, place) => {
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              origin: value,
-                              originCoordinates: place?.coordinates,
-                            });
-                          }}
-                          placeholder="Where is truck available?"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          countryRestriction={["ET", "DJ"]}
-                          types={["(cities)"]}
-                        />
-                      </div>
-
-                      {/* Destination */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Destination (Preferred)
-                        </label>
-                        <PlacesAutocomplete
-                          value={newTruckForm.destination}
-                          onChange={(value, place) => {
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              destination: value,
-                              destinationCoordinates: place?.coordinates,
-                            });
-                          }}
-                          placeholder="Anywhere"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          countryRestriction={["ET", "DJ"]}
-                          types={["(cities)"]}
-                        />
-                      </div>
-
-                      {/* Available From */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Available From <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={newTruckForm.availableFrom}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              availableFrom: e.target.value,
-                            })
-                          }
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          min={new Date().toISOString().split("T")[0]}
-                        />
-                      </div>
-
-                      {/* Available To */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Available Until
-                        </label>
-                        <input
-                          type="date"
-                          value={newTruckForm.availableTo}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              availableTo: e.target.value,
-                            })
-                          }
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          min={
-                            newTruckForm.availableFrom ||
-                            new Date().toISOString().split("T")[0]
-                          }
-                        />
-                      </div>
+              {/* Load Summary */}
+              <div className="mb-4 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-teal-50/30 p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="mb-1 text-xs font-medium text-slate-500">
+                      Route
                     </div>
-
-                    {/* Row 2: Load Details */}
-                    <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-                      {/* DH-O (Declared Deadhead to Origin Limit) */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          DH-O Limit (km)
-                        </label>
-                        <input
-                          type="number"
-                          value={newTruckForm.declaredDhO}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              declaredDhO: e.target.value,
-                            })
-                          }
-                          placeholder="e.g. 100"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          min="0"
-                        />
-                        <p className="mt-1 text-xs text-[#064d51]/60 dark:text-slate-400">
-                          Max distance to pickup
-                        </p>
-                      </div>
-
-                      {/* DH-D (Declared Deadhead after Delivery Limit) */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          DH-D Limit (km)
-                        </label>
-                        <input
-                          type="number"
-                          value={newTruckForm.declaredDhD}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              declaredDhD: e.target.value,
-                            })
-                          }
-                          placeholder="e.g. 100"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          min="0"
-                        />
-                        <p className="mt-1 text-xs text-[#064d51]/60 dark:text-slate-400">
-                          Max distance after delivery
-                        </p>
-                      </div>
-
-                      {/* F/P */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Full/Partial
-                        </label>
-                        <select
-                          value={newTruckForm.fullPartial}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              fullPartial: e.target.value,
-                            })
-                          }
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        >
-                          <option value="FULL">Full Load</option>
-                          <option value="PARTIAL">Partial</option>
-                        </select>
-                      </div>
-
-                      {/* Length */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Length (m)
-                        </label>
-                        <input
-                          type="number"
-                          value={newTruckForm.lengthM}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              lengthM: e.target.value,
-                            })
-                          }
-                          placeholder="Available length"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        />
-                      </div>
-
-                      {/* Weight */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Weight (kg)
-                        </label>
-                        <input
-                          type="number"
-                          value={newTruckForm.weight}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              weight: e.target.value,
-                            })
-                          }
-                          placeholder="Max capacity"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        />
-                      </div>
-
-                      {/* Contact Phone */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Contact Phone <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="tel"
-                          value={newTruckForm.contactPhone}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              contactPhone: e.target.value,
-                            })
-                          }
-                          placeholder="+251-9xx-xxx-xxx"
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row 3: Comments */}
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Comments{" "}
-                          <span className="text-gray-400">
-                            ({newTruckForm.comments1.length}/70)
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newTruckForm.comments1}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              comments1: e.target.value.slice(0, 70),
-                            })
-                          }
-                          placeholder="Additional notes for shippers..."
-                          maxLength={70}
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                          Additional Comments{" "}
-                          <span className="text-gray-400">
-                            ({newTruckForm.comments2.length}/70)
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newTruckForm.comments2}
-                          onChange={(e) =>
-                            setNewTruckForm({
-                              ...newTruckForm,
-                              comments2: e.target.value.slice(0, 70),
-                            })
-                          }
-                          placeholder="Special equipment, requirements..."
-                          maxLength={70}
-                          className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        />
-                      </div>
+                    <div className="font-semibold text-slate-800">
+                      {selectedLoadForRequest.pickupCity} →{" "}
+                      {selectedLoadForRequest.deliveryCity}
                     </div>
                   </div>
-
-                  {/* Submit Button */}
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => {
-                        resetNewTruckForm();
-                        setShowNewTruckForm(false);
-                      }}
-                      className="rounded-lg border border-[#064d51]/30 px-6 py-2 font-medium text-[#064d51] transition-colors hover:bg-[#064d51]/5 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handlePostTruck}
-                      disabled={
-                        !newTruckForm.truckId ||
-                        !newTruckForm.origin ||
-                        !newTruckForm.availableFrom ||
-                        !newTruckForm.contactPhone
-                      }
-                      className="rounded-lg bg-teal-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Post Truck
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Truck Posts Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
-        {/* Header */}
-        <div className="flex items-center justify-between bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4">
-          <h3 className="flex items-center gap-2 text-lg font-bold text-white">
-            <svg
-              className="h-5 w-5 text-teal-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
-              />
-            </svg>
-            {trucks.length} Posted Trucks
-          </h3>
-          <span className="text-xs text-slate-300">
-            Click a truck to see matching loads
-          </span>
-        </div>
-        <DataTable
-          columns={truckColumns}
-          data={trucks}
-          loading={loading}
-          emptyMessage="No truck postings found. Click NEW TRUCK POST to create one."
-          rowKey="id"
-          expandable={true}
-          expandedRowIds={editingTruckId ? [editingTruckId] : []}
-          onRowClick={(truck) => {
-            setSelectedTruckId(selectedTruckId === truck.id ? null : truck.id);
-          }}
-          renderExpandedRow={(truck) => {
-            const isEditing = editingTruckId === truck.id;
-
-            // Only show expanded content when editing - action buttons are now in the row itself
-            if (!isEditing) {
-              return null;
-            }
-
-            return (
-              <div id={`posting-${truck.id}`} className="p-4">
-                {/* Edit Mode - Professional Form Layout */}
-                <div className="space-y-4">
-                  {/* Header with truck info */}
-                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                        <span className="text-xl">🚛</span>
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-[#064d51]">
-                          Edit Truck Posting
-                        </h3>
-                        <p className="text-xs text-[#064d51]/60">
-                          {truck.truck?.licensePlate} •{" "}
-                          {(truck.truck?.truckType || "N/A").replace("_", " ")}{" "}
-                          •{" "}
-                          {truck.truck?.capacity
-                            ? `${truck.truck.capacity} kg`
-                            : "N/A"}
-                        </p>
-                      </div>
+                  <div>
+                    <div className="mb-1 text-xs font-medium text-slate-500">
+                      Shipper
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCancelEdit();
-                      }}
-                      className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                    >
-                      <span className="text-lg">✕</span>
-                    </button>
-                  </div>
-
-                  {/* Form Grid */}
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-5 lg:grid-cols-10">
-                    {/* Origin */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Origin <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={editForm.origin || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            origin: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      >
-                        <option value="">Select city</option>
-                        {ethiopianCities.map((city: EthiopianCity) => (
-                          <option key={city.id} value={city.id}>
-                            {city.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Destination */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Destination
-                      </label>
-                      <select
-                        value={editForm.destination || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            destination: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      >
-                        <option value="">Anywhere</option>
-                        {ethiopianCities.map((city: EthiopianCity) => (
-                          <option key={city.id} value={city.id}>
-                            {city.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Available From */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        From <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={editForm.availableFrom || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            availableFrom: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      />
-                    </div>
-
-                    {/* Available To */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Until
-                      </label>
-                      <input
-                        type="date"
-                        value={editForm.availableTo || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            availableTo: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      />
-                    </div>
-
-                    {/* Full/Partial */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Load Type
-                      </label>
-                      <select
-                        value={editForm.fullPartial || "FULL"}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            fullPartial: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      >
-                        <option value="FULL">Full</option>
-                        <option value="PARTIAL">Partial</option>
-                      </select>
-                    </div>
-
-                    {/* DH-O Limit */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        DH-O (km)
-                      </label>
-                      <input
-                        type="number"
-                        value={editForm.declaredDhO || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            declaredDhO: e.target.value,
-                          })
-                        }
-                        placeholder="100"
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                        min="0"
-                      />
-                    </div>
-
-                    {/* DH-D Limit */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        DH-D (km)
-                      </label>
-                      <input
-                        type="number"
-                        value={editForm.declaredDhD || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            declaredDhD: e.target.value,
-                          })
-                        }
-                        placeholder="100"
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                        min="0"
-                      />
-                    </div>
-
-                    {/* Length */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Length (m)
-                      </label>
-                      <input
-                        type="number"
-                        value={editForm.lengthM || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            lengthM: e.target.value,
-                          })
-                        }
-                        placeholder="12"
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      />
-                    </div>
-
-                    {/* Weight */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Weight (kg)
-                      </label>
-                      <input
-                        type="number"
-                        value={editForm.weight || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            weight: e.target.value,
-                          })
-                        }
-                        placeholder="25000"
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      />
-                    </div>
-
-                    {/* Contact Phone */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Phone <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={editForm.contactPhone || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            contactPhone: e.target.value,
-                          })
-                        }
-                        placeholder="+251 9XX"
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                      />
+                    <div className="font-semibold text-slate-800">
+                      {selectedLoadForRequest.shipper?.name || "N/A"}
                     </div>
                   </div>
-
-                  {/* Comments and Actions Row */}
-                  <div className="flex items-end gap-4">
-                    <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Comments{" "}
-                        <span className="text-gray-400">
-                          ({editForm.comments1?.length || 0}/70)
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.comments1 || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            comments1: e.target.value.slice(0, 70),
-                          })
-                        }
-                        placeholder="Additional notes..."
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                        maxLength={70}
-                      />
+                  <div>
+                    <div className="mb-1 text-xs font-medium text-slate-500">
+                      Truck Type
                     </div>
-                    <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-[#064d51]/80">
-                        Additional{" "}
-                        <span className="text-gray-400">
-                          ({editForm.comments2?.length || 0}/70)
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.comments2 || ""}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            comments2: e.target.value.slice(0, 70),
-                          })
-                        }
-                        placeholder="Special requirements..."
-                        className="w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99]"
-                        maxLength={70}
-                      />
+                    <div className="font-semibold text-slate-800">
+                      {selectedLoadForRequest.truckType?.replace("_", " ") ||
+                        "N/A"}
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancelEdit();
-                        }}
-                        className="rounded-md border border-[#064d51]/20 bg-white px-4 py-2 text-sm font-medium text-[#064d51]/80 transition-colors hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSaveEdit();
-                        }}
-                        className="rounded-md bg-[#1e9c99] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#064d51]"
-                      >
-                        Save
-                      </button>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-xs font-medium text-slate-500">
+                      Rate
+                    </div>
+                    <div className="font-semibold text-teal-600">
+                      {selectedLoadForRequest.rate
+                        ? `${selectedLoadForRequest.rate} ETB`
+                        : "Negotiable"}
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          }}
-        />
-      </div>
-      {/* Matching Loads tab removed — load requests handled in SearchLoadsTab */}
+
+              {/* Truck Selection */}
+              <div className="mb-4">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Select Truck *
+                </label>
+                <select
+                  value={selectedTruckForRequest}
+                  onChange={(e) => setSelectedTruckForRequest(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 transition-all outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                >
+                  <option value="">Select a truck...</option>
+                  {getApprovedPostedTrucks().map((posting) => (
+                    <option key={posting.truck?.id} value={posting.truck?.id}>
+                      {posting.truck?.licensePlate} -{" "}
+                      {posting.truck?.truckType?.replace("_", " ")} (
+                      {posting.originCity?.name || "N/A"})
+                    </option>
+                  ))}
+                </select>
+                {getApprovedPostedTrucks().length === 0 && (
+                  <p className="mt-1 text-xs text-rose-500">
+                    No approved trucks with active postings. Please post a truck
+                    first.
+                  </p>
+                )}
+              </div>
+
+              {/* Price Negotiation Info */}
+              <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-3">
+                <div className="flex items-start gap-2">
+                  <svg
+                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-teal-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-semibold text-teal-800">
+                      Price Negotiation
+                    </h4>
+                    <p className="mt-1 text-xs text-teal-700">
+                      You will negotiate the freight rate directly with the
+                      shipper after your request is approved. The platform only
+                      charges a service fee based on distance.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Message to Shipper{" "}
+                  <span className="font-normal text-slate-400">(Optional)</span>
+                </label>
+                <textarea
+                  value={requestNotes}
+                  onChange={(e) => setRequestNotes(e.target.value)}
+                  placeholder="Add any notes or special requirements..."
+                  rows={3}
+                  maxLength={500}
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 transition-all outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  {requestNotes.length}/500
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setRequestModalOpen(false);
+                    setSelectedLoadForRequest(null);
+                  }}
+                  disabled={submittingRequest}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitLoadRequest}
+                  disabled={submittingRequest || !selectedTruckForRequest}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-2.5 font-medium text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submittingRequest ? "Sending..." : "Send Request"}
+                </button>
+              </div>
+
+              <p className="mt-4 text-center text-xs text-slate-400">
+                The shipper will review your request and can approve or reject
+                it.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
