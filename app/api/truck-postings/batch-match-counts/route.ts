@@ -116,8 +116,9 @@ export async function POST(request: NextRequest) {
         };
       });
 
-    // Calculate match count per posting
+    // Calculate match count per posting + collect unique load IDs
     const counts: Record<string, number> = {};
+    const allMatchedIds = new Set<string>();
 
     for (const id of postingIds) {
       counts[id] = 0;
@@ -153,9 +154,15 @@ export async function POST(request: NextRequest) {
 
       const matches = findMatchingLoads(truckCriteria, loadsCriteria, 50);
       counts[posting.id] = matches.length;
+      for (const m of matches) {
+        if (m.id) allMatchedIds.add(m.id);
+      }
     }
 
-    return NextResponse.json({ counts });
+    return NextResponse.json({
+      counts,
+      totalUniqueMatches: allMatchedIds.size,
+    });
   } catch (error) {
     return handleApiError(error, "POST /api/truck-postings/batch-match-counts");
   }

@@ -42,6 +42,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [, setExpandedTruckId] = useState<string | null>(null);
   const [matchingLoads, setMatchingLoads] = useState<Load[]>([]);
+  const [totalUniqueMatches, setTotalUniqueMatches] = useState(0);
   const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TruckPostingUpdatePayload>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -259,6 +260,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           } else if (batchRes.ok) {
             const batchData = await batchRes.json();
             truckMatchCounts = batchData.counts || {};
+            setTotalUniqueMatches(batchData.totalUniqueMatches || 0);
           }
         } catch {
           // Fallback: all counts stay 0
@@ -334,13 +336,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    */
 
   /**
-   * Fetch all matching loads for all posted trucks
-   * Shows recent loads with DH-O and DH-D set to 0 (will be calculated when truck is selected)
+   * Fetch all matching loads for all posted trucks — single batch request.
+   * Only called when user clicks the "Matching Loads" tab (lazy-loaded).
    */
   const fetchAllMatchingLoads = useCallback(async () => {
     setLoadingMatches(true);
     try {
-      // Get all posted trucks
       const postedTrucks = trucks.filter(
         (t) => t.status === "POSTED" || t.status === "ACTIVE"
       );
@@ -351,65 +352,36 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         return;
       }
 
-      // Fetch matching loads for each truck
-      const allLoadsPromises = postedTrucks.map((truck) =>
-        fetch(`/api/truck-postings/${truck.id}/matching-loads?limit=100`)
-          .then((res) => {
-            if (res.status === 402) {
-              return res.json().then((errData) => {
-                toast.error(
-                  errData.error ||
-                    "Insufficient wallet balance for marketplace access."
-                );
-                return { matches: [] };
-              });
-            }
-            return res.json();
-          })
-          .then((data) => {
-            // Add truck info to each load for DH calculation
-            return (data.matches || []).map((match: LoadMatch) => ({
-              ...match,
-              truckOrigin: truck.originCity?.name || truck.origin,
-              truckDestination:
-                truck.destinationCity?.name || truck.destination,
-            }));
-          })
-          .catch((err) => {
-            console.error(`Failed to fetch loads for truck ${truck.id}:`, err);
-            return [];
-          })
-      );
-
-      const loadsArrays = await Promise.all(allLoadsPromises);
-
-      // Flatten and deduplicate loads by id
-      const allLoads = loadsArrays.flat();
-      const uniqueLoads = Array.from(
-        new Map(
-          allLoads.map((load) => [load.load?.id || load.id, load])
-        ).values()
-      );
-
-      // Sort by most recent first, then by origin alphabetically
-      const sortedLoads = uniqueLoads.sort((a, b) => {
-        const loadA = a.load || a;
-        const loadB = b.load || b;
-
-        // First: by most recent (newest first)
-        const dateA = new Date(loadA.createdAt || 0).getTime();
-        const dateB = new Date(loadB.createdAt || 0).getTime();
-        if (dateA !== dateB) return dateB - dateA;
-
-        // Second: by pickup city (origin) alphabetically
-        const cityA = (loadA.pickupCity || "").toLowerCase();
-        const cityB = (loadB.pickupCity || "").toLowerCase();
-        return cityA.localeCompare(cityB);
+      const postingIds = postedTrucks.map((t) => t.id);
+      const csrfToken = await getCSRFToken();
+      const res = await fetch("/api/truck-postings/batch-matching-loads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        credentials: "include",
+        body: JSON.stringify({ postingIds, limit: 100 }),
       });
 
-      setMatchingLoads(sortedLoads);
+      if (res.status === 402) {
+        const errData = await res.json();
+        toast.error(
+          errData.error || "Insufficient wallet balance for marketplace access."
+        );
+        setMatchingLoads([]);
+        return;
+      }
+
+      if (!res.ok) {
+        setMatchingLoads([]);
+        return;
+      }
+
+      const data = await res.json();
+      setMatchingLoads(data.matches || []);
     } catch (error) {
-      console.error("Failed to fetch all matching loads:", error);
+      console.error("Failed to fetch matching loads:", error);
       setMatchingLoads([]);
     } finally {
       setLoadingMatches(false);
@@ -449,11 +421,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   }, [fetchTrucks]);
 
   useEffect(() => {
-    // Fetch matching loads when trucks are loaded
-    if (trucks.length > 0) {
+    // Lazy-load: only fetch matching loads when user switches to the tab
+    if (
+      activeMainTab === "matching" &&
+      trucks.length > 0 &&
+      matchingLoads.length === 0
+    ) {
       fetchAllMatchingLoads();
     }
-  }, [trucks, fetchAllMatchingLoads]);
+  }, [activeMainTab, trucks, matchingLoads.length, fetchAllMatchingLoads]);
 
   /**
    * Handle DELETE action
@@ -1441,7 +1417,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 : "bg-slate-300 text-slate-600"
             }`}
           >
-            {filteredMatchingLoads.length}
+            {activeMainTab === "matching" && matchingLoads.length > 0
+              ? filteredMatchingLoads.length
+              : totalUniqueMatches}
           </span>
         </button>
       </div>
