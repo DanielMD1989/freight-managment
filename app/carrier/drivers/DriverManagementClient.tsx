@@ -175,6 +175,60 @@ export default function DriverManagementClient({
     }
   }
 
+  async function handleReactivate(driverId: string) {
+    if (
+      !confirm(
+        "Reactivate this driver? They will be able to receive trip assignments again."
+      )
+    )
+      return;
+    try {
+      const csrf = await fetch("/api/csrf-token", {
+        credentials: "include",
+      }).then((r) => r.json());
+      const csrfToken = csrf.csrfToken ?? csrf.token;
+
+      const res = await fetch(`/api/drivers/${driverId}/reactivate`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "X-CSRF-Token": csrfToken },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to reactivate");
+      }
+      fetchDrivers(activeTab);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reactivate failed");
+    }
+  }
+
+  async function handleRevokeInvite(driverId: string) {
+    if (
+      !confirm("Revoke this invitation? The invite code will no longer work.")
+    )
+      return;
+    try {
+      const csrf = await fetch("/api/csrf-token", {
+        credentials: "include",
+      }).then((r) => r.json());
+      const csrfToken = csrf.csrfToken ?? csrf.token;
+
+      const res = await fetch(`/api/drivers/${driverId}/revoke-invite`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "X-CSRF-Token": csrfToken },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to revoke invitation");
+      }
+      fetchDrivers(activeTab);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Revoke failed");
+    }
+  }
+
   const stats = {
     total: initialTotal,
     active: initialDrivers.filter((d) => d.status === "ACTIVE").length,
@@ -308,6 +362,14 @@ export default function DriverManagementClient({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
+                        {d.status === "INVITED" && (
+                          <button
+                            onClick={() => handleRevokeInvite(d.id)}
+                            className="rounded bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-300"
+                          >
+                            Revoke Invite
+                          </button>
+                        )}
                         {d.status === "PENDING_VERIFICATION" && (
                           <>
                             <button
@@ -339,6 +401,14 @@ export default function DriverManagementClient({
                               Suspend
                             </button>
                           </>
+                        )}
+                        {d.status === "SUSPENDED" && (
+                          <button
+                            onClick={() => handleReactivate(d.id)}
+                            className="rounded bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-200"
+                          >
+                            Reactivate
+                          </button>
                         )}
                       </div>
                     </td>

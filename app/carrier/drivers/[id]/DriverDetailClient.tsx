@@ -142,6 +142,30 @@ export default function DriverDetailClient({
     }
   }
 
+  async function handleReactivate() {
+    if (
+      !confirm(
+        "Reactivate this driver? They will be able to receive trip assignments again."
+      )
+    )
+      return;
+    try {
+      const token = await csrfToken();
+      const res = await fetch(`/api/drivers/${driver.id}/reactivate`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "X-CSRF-Token": token },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to reactivate");
+      }
+      setDriver((d) => ({ ...d, status: "ACTIVE" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reactivate failed");
+    }
+  }
+
   async function toggleAvailability() {
     if (!driver.driverProfile) return;
     setToggling(true);
@@ -240,6 +264,14 @@ export default function DriverDetailClient({
                 className="rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
               >
                 Suspend
+              </button>
+            )}
+            {driver.status === "SUSPENDED" && (
+              <button
+                onClick={handleReactivate}
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+              >
+                Reactivate
               </button>
             )}
           </div>
