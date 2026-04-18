@@ -42,7 +42,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [, setExpandedTruckId] = useState<string | null>(null);
   const [matchingLoads, setMatchingLoads] = useState<Load[]>([]);
-  const [totalUniqueMatches, setTotalUniqueMatches] = useState(0);
   const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TruckPostingUpdatePayload>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -260,7 +259,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           } else if (batchRes.ok) {
             const batchData = await batchRes.json();
             truckMatchCounts = batchData.counts || {};
-            setTotalUniqueMatches(batchData.totalUniqueMatches || 0);
           }
         } catch {
           // Fallback: all counts stay 0
@@ -336,59 +334,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    */
 
   /**
-   * Fetch all matching loads for all posted trucks — single batch request.
-   * Only called when user clicks the "Matching Loads" tab (lazy-loaded).
-   */
-  const fetchAllMatchingLoads = useCallback(async () => {
-    setLoadingMatches(true);
-    try {
-      const postedTrucks = trucks.filter(
-        (t) => t.status === "POSTED" || t.status === "ACTIVE"
-      );
-
-      if (postedTrucks.length === 0) {
-        setMatchingLoads([]);
-        setLoadingMatches(false);
-        return;
-      }
-
-      const postingIds = postedTrucks.map((t) => t.id);
-      const csrfToken = await getCSRFToken();
-      const res = await fetch("/api/truck-postings/batch-matching-loads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify({ postingIds, limit: 100 }),
-      });
-
-      if (res.status === 402) {
-        const errData = await res.json();
-        toast.error(
-          errData.error || "Insufficient wallet balance for marketplace access."
-        );
-        setMatchingLoads([]);
-        return;
-      }
-
-      if (!res.ok) {
-        setMatchingLoads([]);
-        return;
-      }
-
-      const data = await res.json();
-      setMatchingLoads(data.matches || []);
-    } catch (error) {
-      console.error("Failed to fetch matching loads:", error);
-      setMatchingLoads([]);
-    } finally {
-      setLoadingMatches(false);
-    }
-  }, [trucks]);
-
-  /**
    * Fetch matching loads for a specific truck
    * Used when user clicks on a truck row - shows exact matches for that truck
    */
@@ -419,17 +364,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   useEffect(() => {
     fetchTrucks();
   }, [fetchTrucks]);
-
-  useEffect(() => {
-    // Lazy-load: only fetch matching loads when user switches to the tab
-    if (
-      activeMainTab === "matching" &&
-      trucks.length > 0 &&
-      matchingLoads.length === 0
-    ) {
-      fetchAllMatchingLoads();
-    }
-  }, [activeMainTab, trucks, matchingLoads.length, fetchAllMatchingLoads]);
 
   /**
    * Handle DELETE action
@@ -1378,54 +1312,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
   return (
     <div className="space-y-4 pt-6">
-      {/* Main Tab Navigation - Pill Style */}
-      <div className="flex w-fit gap-1 rounded-xl bg-slate-200 p-1">
-        <button
-          onClick={() => setActiveMainTab("postings")}
-          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all ${
-            activeMainTab === "postings"
-              ? "bg-white text-sky-600 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <span>📋</span>
-          My Postings
-          <span
-            className={`rounded-full px-2 py-0.5 text-sm ${
-              activeMainTab === "postings"
-                ? "bg-sky-100 text-sky-600"
-                : "bg-slate-300 text-slate-600"
-            }`}
-          >
-            {trucks.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveMainTab("matching")}
-          className={`flex items-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all ${
-            activeMainTab === "matching"
-              ? "bg-white text-sky-600 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <span>🔍</span>
-          Matching Loads
-          <span
-            className={`rounded-full px-2 py-0.5 text-sm ${
-              activeMainTab === "matching"
-                ? "bg-sky-100 text-sky-600"
-                : "bg-slate-300 text-slate-600"
-            }`}
-          >
-            {activeMainTab === "matching" && matchingLoads.length > 0
-              ? filteredMatchingLoads.length
-              : totalUniqueMatches}
-          </span>
-        </button>
-      </div>
-
       {/* ============================================================ */}
-      {/* TAB 1: MY POSTINGS                                           */}
+      {/* TRUCK POSTINGS VIEW                                          */}
       {/* ============================================================ */}
       {activeMainTab === "postings" && (
         <>
@@ -2323,20 +2211,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedTruckId(null);
-                    fetchAllMatchingLoads();
-                  }}
-                  className="ml-4 rounded-md px-3 py-1.5 text-sm text-sky-600 transition-colors hover:bg-sky-50 hover:text-sky-700"
-                >
-                  Show all trucks
-                </button>
               </div>
             ) : (
               <div className="text-sm text-slate-500">
-                Showing matches for all posted trucks
+                Select a truck to see matching loads
               </div>
             )}
           </div>
@@ -2367,18 +2245,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                     </span>
                   )}
                 </h3>
-                {selectedTruckId && (
-                  <button
-                    onClick={() => {
-                      setSelectedTruckId(null);
-                      setExpandedTruckId(null);
-                      fetchAllMatchingLoads();
-                    }}
-                    className="text-xs text-white/80 underline hover:text-white"
-                  >
-                    Show all loads
-                  </button>
-                )}
+                {/* Show all loads button removed — matching is per-truck only */}
               </div>
 
               {/* All loads tab */}

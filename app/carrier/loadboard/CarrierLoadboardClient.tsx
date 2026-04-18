@@ -29,7 +29,11 @@ interface CarrierLoadboardClientProps {
 type CarrierTabKey = "POST_TRUCKS" | "SEARCH_LOADS";
 
 const TABS = [
-  { key: "POST_TRUCKS" as CarrierTabKey, label: "My Trucks", icon: TruckIcon },
+  {
+    key: "POST_TRUCKS" as CarrierTabKey,
+    label: "Truck Postings",
+    icon: TruckIcon,
+  },
   {
     key: "SEARCH_LOADS" as CarrierTabKey,
     label: "Search Loads",
