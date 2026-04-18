@@ -38,6 +38,8 @@ interface Truck {
     status: string;
     lastSeenAt: string;
   } | null;
+  hasActivePosting?: boolean;
+  postingStatus?: string | null;
 }
 
 import { TRUCK_TYPES as BASE_TRUCK_TYPES } from "@/lib/constants/truckTypes";
@@ -491,8 +493,21 @@ export default function TruckManagementClient({
                       className="transition-colors hover:bg-slate-50"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800">
-                          {truck.licensePlate}
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-800">
+                            {truck.licensePlate}
+                          </span>
+                          {activeTab === "approved" && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                truck.hasActivePosting
+                                  ? "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300"
+                                  : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                              }`}
+                            >
+                              {truck.hasActivePosting ? "Posted" : "Not Posted"}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-400">
                           Added {formatDate(truck.createdAt)}
@@ -592,8 +607,19 @@ export default function TruckManagementClient({
                 <div key={truck.id} className="p-4">
                   <div className="mb-2 flex items-start justify-between">
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="flex items-center gap-2 font-medium text-gray-900">
                         {truck.licensePlate}
+                        {activeTab === "approved" && (
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              truck.hasActivePosting
+                                ? "bg-teal-100 text-teal-700"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {truck.hasActivePosting ? "Posted" : "Not Posted"}
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-gray-600">
                         {truck.truckType.replace(/_/g, " ")}
