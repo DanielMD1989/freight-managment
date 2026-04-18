@@ -1481,14 +1481,45 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             />
           </div>
 
-          {/* New Truck Posting Form - Clean Organized Layout */}
+          {/* New Truck Posting Form — Modal Overlay */}
           {showNewTruckForm && (
-            <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12 backdrop-blur-sm">
+              <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4 dark:border-slate-700 dark:from-slate-800 dark:to-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm">
+                      <svg
+                        className="h-5 w-5 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+                        Create New Truck Posting
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        List your truck for available loads
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      resetNewTruckForm();
+                      setShowNewTruckForm(false);
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                  >
                     <svg
-                      className="h-5 w-5 text-white"
+                      className="h-5 w-5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1497,407 +1528,382 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M12 4v16m8-8H4"
+                        d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-800">
-                      Create New Truck Posting
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      List your truck for available loads
-                    </p>
-                  </div>
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    resetNewTruckForm();
-                    setShowNewTruckForm(false);
-                  }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div className="p-6">
-                {/* Step 1: Select Truck */}
-                <div className="mb-6">
-                  <label className="mb-2 block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                    Step 1: Select Truck from Your Fleet{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  {loadingApprovedTrucks ? (
-                    <div className="py-4 text-[#064d51]/60 dark:text-gray-400">
-                      Loading your trucks...
-                    </div>
-                  ) : (
-                    (() => {
-                      // Filter to only show unposted trucks
-                      const unpostedTrucks = approvedTrucks.filter(
-                        (truck) => !getActivePostingForTruck(truck.id)
-                      );
-
-                      if (approvedTrucks.length === 0) {
-                        return (
-                          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/30">
-                            <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                              No approved trucks found. Please add and get a
-                              truck approved in{" "}
-                              <Link
-                                href="/carrier/trucks"
-                                className="font-medium underline"
-                              >
-                                My Trucks
-                              </Link>{" "}
-                              first.
-                            </p>
-                          </div>
+                <div className="p-6">
+                  {/* Step 1: Select Truck */}
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      Step 1: Select Truck from Your Fleet{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    {loadingApprovedTrucks ? (
+                      <div className="py-4 text-[#064d51]/60 dark:text-gray-400">
+                        Loading your trucks...
+                      </div>
+                    ) : (
+                      (() => {
+                        // Filter to only show unposted trucks
+                        const unpostedTrucks = approvedTrucks.filter(
+                          (truck) => !getActivePostingForTruck(truck.id)
                         );
-                      }
 
-                      if (unpostedTrucks.length === 0) {
+                        if (approvedTrucks.length === 0) {
+                          return (
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/30">
+                              <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                                No approved trucks found. Please add and get a
+                                truck approved in{" "}
+                                <Link
+                                  href="/carrier/trucks"
+                                  className="font-medium underline"
+                                >
+                                  My Trucks
+                                </Link>{" "}
+                                first.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        if (unpostedTrucks.length === 0) {
+                          return (
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/30">
+                              <p className="text-sm text-blue-800 dark:text-blue-300">
+                                All your trucks are already posted. To edit an
+                                existing posting, click on it in the list below.
+                              </p>
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/30">
-                            <p className="text-sm text-blue-800 dark:text-blue-300">
-                              All your trucks are already posted. To edit an
-                              existing posting, click on it in the list below.
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <select
-                          value={newTruckForm.truckId}
-                          onChange={(e) => handleTruckSelection(e.target.value)}
-                          className="w-full max-w-md rounded-lg border border-[#064d51]/20 bg-white px-4 py-3 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                        >
-                          <option value="">-- Select a truck to post --</option>
-                          {unpostedTrucks.map((truck) => (
-                            <option key={truck.id} value={truck.id}>
-                              {truck.licensePlate} -{" "}
-                              {truck.truckType?.replace("_", " ")} •{" "}
-                              {truck.capacity} kg
-                              {truck.currentCity
-                                ? ` (📍 ${truck.currentCity})`
-                                : ""}
+                          <select
+                            value={newTruckForm.truckId}
+                            onChange={(e) =>
+                              handleTruckSelection(e.target.value)
+                            }
+                            className="w-full max-w-md rounded-lg border border-[#064d51]/20 bg-white px-4 py-3 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                          >
+                            <option value="">
+                              -- Select a truck to post --
                             </option>
-                          ))}
-                        </select>
-                      );
-                    })()
+                            {unpostedTrucks.map((truck) => (
+                              <option key={truck.id} value={truck.id}>
+                                {truck.licensePlate} -{" "}
+                                {truck.truckType?.replace("_", " ")} •{" "}
+                                {truck.capacity} kg
+                                {truck.currentCity
+                                  ? ` (📍 ${truck.currentCity})`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()
+                    )}
+                  </div>
+
+                  {/* Step 2: Posting Details - Only show when truck is selected */}
+                  {newTruckForm.truckId && (
+                    <>
+                      <div className="mb-6 border-t border-gray-200 pt-6 dark:border-slate-700">
+                        <label className="mb-4 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                          Step 2: Posting Details
+                        </label>
+
+                        {/* Row 1: Location & Availability */}
+                        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          {/* Origin */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Origin (Available At){" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <PlacesAutocomplete
+                              value={newTruckForm.origin}
+                              onChange={(value, place) => {
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  origin: value,
+                                  originCoordinates: place?.coordinates,
+                                });
+                              }}
+                              placeholder="Where is truck available?"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              countryRestriction={["ET", "DJ"]}
+                              types={["(cities)"]}
+                            />
+                          </div>
+
+                          {/* Destination */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Destination (Preferred)
+                            </label>
+                            <PlacesAutocomplete
+                              value={newTruckForm.destination}
+                              onChange={(value, place) => {
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  destination: value,
+                                  destinationCoordinates: place?.coordinates,
+                                });
+                              }}
+                              placeholder="Anywhere"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              countryRestriction={["ET", "DJ"]}
+                              types={["(cities)"]}
+                            />
+                          </div>
+
+                          {/* Available From */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Available From{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="date"
+                              value={newTruckForm.availableFrom}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  availableFrom: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min={new Date().toISOString().split("T")[0]}
+                            />
+                          </div>
+
+                          {/* Available To */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Available Until
+                            </label>
+                            <input
+                              type="date"
+                              value={newTruckForm.availableTo}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  availableTo: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min={
+                                newTruckForm.availableFrom ||
+                                new Date().toISOString().split("T")[0]
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 2: Load Details */}
+                        <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+                          {/* DH-O (Declared Deadhead to Origin Limit) */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              DH-O Limit (km)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.declaredDhO}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  declaredDhO: e.target.value,
+                                })
+                              }
+                              placeholder="e.g. 100"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min="0"
+                            />
+                            <p className="mt-1 text-xs text-[#064d51]/60 dark:text-slate-400">
+                              Max distance to pickup
+                            </p>
+                          </div>
+
+                          {/* DH-D (Declared Deadhead after Delivery Limit) */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              DH-D Limit (km)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.declaredDhD}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  declaredDhD: e.target.value,
+                                })
+                              }
+                              placeholder="e.g. 100"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                              min="0"
+                            />
+                            <p className="mt-1 text-xs text-[#064d51]/60 dark:text-slate-400">
+                              Max distance after delivery
+                            </p>
+                          </div>
+
+                          {/* F/P */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Full/Partial
+                            </label>
+                            <select
+                              value={newTruckForm.fullPartial}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  fullPartial: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            >
+                              <option value="FULL">Full Load</option>
+                              <option value="PARTIAL">Partial</option>
+                            </select>
+                          </div>
+
+                          {/* Length */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Length (m)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.lengthM}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  lengthM: e.target.value,
+                                })
+                              }
+                              placeholder="Available length"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+
+                          {/* Weight */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Weight (kg)
+                            </label>
+                            <input
+                              type="number"
+                              value={newTruckForm.weight}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  weight: e.target.value,
+                                })
+                              }
+                              placeholder="Max capacity"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+
+                          {/* Contact Phone */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Contact Phone{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="tel"
+                              value={newTruckForm.contactPhone}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  contactPhone: e.target.value,
+                                })
+                              }
+                              placeholder="+251-9xx-xxx-xxx"
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 3: Comments */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Comments{" "}
+                              <span className="text-gray-400">
+                                ({newTruckForm.comments1.length}/70)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newTruckForm.comments1}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  comments1: e.target.value.slice(0, 70),
+                                })
+                              }
+                              placeholder="Additional notes for shippers..."
+                              maxLength={70}
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
+                              Additional Comments{" "}
+                              <span className="text-gray-400">
+                                ({newTruckForm.comments2.length}/70)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={newTruckForm.comments2}
+                              onChange={(e) =>
+                                setNewTruckForm({
+                                  ...newTruckForm,
+                                  comments2: e.target.value.slice(0, 70),
+                                })
+                              }
+                              placeholder="Special equipment, requirements..."
+                              maxLength={70}
+                              className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => {
+                            resetNewTruckForm();
+                            setShowNewTruckForm(false);
+                          }}
+                          className="rounded-lg border border-[#064d51]/30 px-6 py-2 font-medium text-[#064d51] transition-colors hover:bg-[#064d51]/5 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handlePostTruck}
+                          disabled={
+                            !newTruckForm.truckId ||
+                            !newTruckForm.origin ||
+                            !newTruckForm.availableFrom ||
+                            !newTruckForm.contactPhone
+                          }
+                          className="rounded-lg bg-teal-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Post Truck
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
-
-                {/* Step 2: Posting Details - Only show when truck is selected */}
-                {newTruckForm.truckId && (
-                  <>
-                    <div className="mb-6 border-t border-gray-200 pt-6 dark:border-slate-700">
-                      <label className="mb-4 block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                        Step 2: Posting Details
-                      </label>
-
-                      {/* Row 1: Location & Availability */}
-                      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        {/* Origin */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Origin (Available At){" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <PlacesAutocomplete
-                            value={newTruckForm.origin}
-                            onChange={(value, place) => {
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                origin: value,
-                                originCoordinates: place?.coordinates,
-                              });
-                            }}
-                            placeholder="Where is truck available?"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                            countryRestriction={["ET", "DJ"]}
-                            types={["(cities)"]}
-                          />
-                        </div>
-
-                        {/* Destination */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Destination (Preferred)
-                          </label>
-                          <PlacesAutocomplete
-                            value={newTruckForm.destination}
-                            onChange={(value, place) => {
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                destination: value,
-                                destinationCoordinates: place?.coordinates,
-                              });
-                            }}
-                            placeholder="Anywhere"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                            countryRestriction={["ET", "DJ"]}
-                            types={["(cities)"]}
-                          />
-                        </div>
-
-                        {/* Available From */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Available From{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="date"
-                            value={newTruckForm.availableFrom}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                availableFrom: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                            min={new Date().toISOString().split("T")[0]}
-                          />
-                        </div>
-
-                        {/* Available To */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Available Until
-                          </label>
-                          <input
-                            type="date"
-                            value={newTruckForm.availableTo}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                availableTo: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                            min={
-                              newTruckForm.availableFrom ||
-                              new Date().toISOString().split("T")[0]
-                            }
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row 2: Load Details */}
-                      <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-                        {/* DH-O (Declared Deadhead to Origin Limit) */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            DH-O Limit (km)
-                          </label>
-                          <input
-                            type="number"
-                            value={newTruckForm.declaredDhO}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                declaredDhO: e.target.value,
-                              })
-                            }
-                            placeholder="e.g. 100"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                            min="0"
-                          />
-                          <p className="mt-1 text-xs text-[#064d51]/60">
-                            Max distance to pickup
-                          </p>
-                        </div>
-
-                        {/* DH-D (Declared Deadhead after Delivery Limit) */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            DH-D Limit (km)
-                          </label>
-                          <input
-                            type="number"
-                            value={newTruckForm.declaredDhD}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                declaredDhD: e.target.value,
-                              })
-                            }
-                            placeholder="e.g. 100"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                            min="0"
-                          />
-                          <p className="mt-1 text-xs text-[#064d51]/60">
-                            Max distance after delivery
-                          </p>
-                        </div>
-
-                        {/* F/P */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Full/Partial
-                          </label>
-                          <select
-                            value={newTruckForm.fullPartial}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                fullPartial: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          >
-                            <option value="FULL">Full Load</option>
-                            <option value="PARTIAL">Partial</option>
-                          </select>
-                        </div>
-
-                        {/* Length */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Length (m)
-                          </label>
-                          <input
-                            type="number"
-                            value={newTruckForm.lengthM}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                lengthM: e.target.value,
-                              })
-                            }
-                            placeholder="Available length"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          />
-                        </div>
-
-                        {/* Weight */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Weight (kg)
-                          </label>
-                          <input
-                            type="number"
-                            value={newTruckForm.weight}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                weight: e.target.value,
-                              })
-                            }
-                            placeholder="Max capacity"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          />
-                        </div>
-
-                        {/* Contact Phone */}
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Contact Phone{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            value={newTruckForm.contactPhone}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                contactPhone: e.target.value,
-                              })
-                            }
-                            placeholder="+251-9xx-xxx-xxx"
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row 3: Comments */}
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Comments{" "}
-                            <span className="text-gray-400">
-                              ({newTruckForm.comments1.length}/70)
-                            </span>
-                          </label>
-                          <input
-                            type="text"
-                            value={newTruckForm.comments1}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                comments1: e.target.value.slice(0, 70),
-                              })
-                            }
-                            placeholder="Additional notes for shippers..."
-                            maxLength={70}
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[#064d51]/80 dark:text-gray-300">
-                            Additional Comments{" "}
-                            <span className="text-gray-400">
-                              ({newTruckForm.comments2.length}/70)
-                            </span>
-                          </label>
-                          <input
-                            type="text"
-                            value={newTruckForm.comments2}
-                            onChange={(e) =>
-                              setNewTruckForm({
-                                ...newTruckForm,
-                                comments2: e.target.value.slice(0, 70),
-                              })
-                            }
-                            placeholder="Special equipment, requirements..."
-                            maxLength={70}
-                            className="w-full rounded-lg border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-800 dark:text-gray-100"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="flex justify-end gap-3">
-                      <button
-                        onClick={() => {
-                          resetNewTruckForm();
-                          setShowNewTruckForm(false);
-                        }}
-                        className="rounded-lg border border-[#064d51]/30 px-6 py-2 font-medium text-[#064d51] transition-colors hover:bg-[#064d51]/5"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handlePostTruck}
-                        disabled={
-                          !newTruckForm.truckId ||
-                          !newTruckForm.origin ||
-                          !newTruckForm.availableFrom ||
-                          !newTruckForm.contactPhone
-                        }
-                        className="rounded-lg bg-[#064d51] px-6 py-2 font-semibold text-white transition-colors hover:bg-[#053d40] disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Post Truck
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
           )}
