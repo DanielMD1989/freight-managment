@@ -90,6 +90,18 @@ const TRUCK_DOCUMENT_TYPES: {
   },
 ];
 
+function formatTruckType(type: string) {
+  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function TruckDetailsPage({
   params,
 }: {
@@ -150,60 +162,13 @@ export default function TruckDetailsPage({
     setDocuments((prev) => [...prev, document]);
   };
 
-  // Status colors from StatusBadge.tsx (source of truth)
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-      case "AVAILABLE":
-        return "bg-emerald-500/10 text-emerald-600";
-      case "IN_TRANSIT":
-      case "ON_JOB":
-        return "bg-indigo-500/10 text-indigo-600";
-      case "MAINTENANCE":
-        return "bg-amber-500/10 text-amber-600";
-      case "INACTIVE":
-        return "bg-gray-500/10 text-gray-600";
-      default:
-        return "bg-slate-500/10 text-slate-600";
-    }
-  };
-
-  const getApprovalStatusColor = (status: string) => {
-    switch (status) {
-      case "APPROVED":
-        return "bg-emerald-500/10 text-emerald-600";
-      case "PENDING":
-        return "bg-amber-500/10 text-amber-600";
-      case "REJECTED":
-        return "bg-rose-500/10 text-rose-600";
-      default:
-        return "bg-slate-500/10 text-slate-600";
-    }
-  };
-
-  const getVerificationStatusColor = (status: string) => {
-    switch (status) {
-      case "VERIFIED":
-        return "bg-emerald-500/10 text-emerald-600";
-      case "PENDING":
-        return "bg-amber-500/10 text-amber-600";
-      case "REJECTED":
-        return "bg-rose-500/10 text-rose-600";
-      default:
-        return "bg-slate-500/10 text-slate-600";
-    }
-  };
-
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="mb-4 h-8 w-1/4 rounded bg-gray-200"></div>
-          <div className="mb-8 h-4 w-1/2 rounded bg-gray-200"></div>
-          <div className="space-y-4">
-            <div className="h-32 rounded bg-gray-200"></div>
-            <div className="h-32 rounded bg-gray-200"></div>
-          </div>
+      <div className="mx-auto max-w-4xl p-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-48 rounded-lg bg-slate-200" />
+          <div className="h-48 rounded-xl bg-slate-200" />
+          <div className="h-64 rounded-xl bg-slate-200" />
         </div>
       </div>
     );
@@ -211,13 +176,13 @@ export default function TruckDetailsPage({
 
   if (error || !truck) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+      <div className="mx-auto max-w-4xl p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <h2 className="mb-2 text-xl font-semibold text-red-800">Error</h2>
           <p className="mb-4 text-red-600">{error || "Truck not found"}</p>
           <Link
             href="/carrier/trucks"
-            className="inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            className="inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
             Back to My Trucks
           </Link>
@@ -226,152 +191,205 @@ export default function TruckDetailsPage({
     );
   }
 
+  const approvalColors: Record<string, string> = {
+    APPROVED: "bg-emerald-100 text-emerald-700",
+    PENDING: "bg-amber-100 text-amber-700",
+    REJECTED: "bg-red-100 text-red-700",
+  };
+
+  const verificationColors: Record<string, string> = {
+    VERIFIED: "bg-emerald-100 text-emerald-700",
+    PENDING: "bg-amber-100 text-amber-700",
+    REJECTED: "bg-red-100 text-red-700",
+  };
+
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-4xl space-y-6 p-6">
+      {/* Back link */}
+      <Link
+        href="/carrier/trucks"
+        className="text-sm text-slate-500 hover:text-slate-700"
+      >
+        &larr; Back to My Trucks
+      </Link>
+
+      {/* Header card */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-slate-800">
               {truck.licensePlate}
             </h1>
-            <p className="text-gray-500">Truck Details</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {formatTruckType(truck.truckType)} &middot;{" "}
+              {truck.capacity.toLocaleString()} kg
+              {truck.volume ? ` &middot; ${truck.volume} m³` : ""}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Added {formatDate(truck.createdAt)}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Link
-              href={`/carrier/trucks/${truck.id}/edit`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-            >
-              Edit Truck
-            </Link>
-            <Link
-              href="/carrier/trucks"
-              className="rounded-md bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300"
-            >
-              Back
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Truck Details Card */}
-      <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">Truck Information</h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          <div>
-            <p className="text-sm text-gray-500">Type</p>
-            <p className="font-medium">{truck.truckType.replace(/_/g, " ")}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Capacity</p>
-            <p className="font-medium">{truck.capacity.toLocaleString()} kg</p>
-          </div>
-          {truck.volume && (
-            <div>
-              <p className="text-sm text-gray-500">Volume</p>
-              <p className="font-medium">{truck.volume} m³</p>
-            </div>
-          )}
-          <div>
-            <p className="text-sm text-gray-500">Location</p>
-            <p className="font-medium">{truck.currentCity || "Not set"}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Region</p>
-            <p className="font-medium">{truck.currentRegion || "Not set"}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Status</p>
+          <div className="flex items-center gap-2">
             <span
-              className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(truck.status)}`}
-            >
-              {truck.status}
-            </span>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Approval Status</p>
-            <span
-              className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getApprovalStatusColor(truck.approvalStatus)}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                approvalColors[truck.approvalStatus] ??
+                "bg-slate-100 text-slate-600"
+              }`}
             >
               {truck.approvalStatus}
             </span>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Availability</p>
             <span
-              className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${truck.isAvailable ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                truck.isAvailable
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-slate-100 text-slate-600"
+              }`}
             >
-              {truck.isAvailable ? "Available" : "Not Available"}
+              {truck.isAvailable ? "Available" : "Unavailable"}
             </span>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Added</p>
-            <p className="font-medium">
-              {new Date(truck.createdAt).toLocaleDateString()}
-            </p>
-          </div>
         </div>
+        <div className="mt-4 flex gap-2">
+          <Link
+            href={`/carrier/trucks/${truck.id}/edit`}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          >
+            Edit Truck
+          </Link>
+        </div>
+      </div>
 
-        {/* G-M10-6: Rejection reason banner */}
-        {truck.approvalStatus === "REJECTED" && truck.rejectionReason && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="font-medium text-red-800">Rejection Reason:</p>
-            <p className="mt-1 text-red-700">{truck.rejectionReason}</p>
-            <a
-              href={`/carrier/trucks/${truck.id}/edit?resubmit=true`}
-              className="mt-3 inline-block rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-            >
-              Edit &amp; Resubmit
-            </a>
+      {/* Rejection reason banner */}
+      {truck.approvalStatus === "REJECTED" && truck.rejectionReason && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+          <p className="font-medium text-red-800">Rejection Reason</p>
+          <p className="mt-1 text-sm text-red-700">{truck.rejectionReason}</p>
+          <Link
+            href={`/carrier/trucks/${truck.id}/edit?resubmit=true`}
+            className="mt-3 inline-block rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Edit &amp; Resubmit
+          </Link>
+        </div>
+      )}
+
+      {/* Truck details grid */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold text-slate-800">
+          Truck Information
+        </h2>
+        <dl className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
+          <div>
+            <dt className="text-slate-500">Type</dt>
+            <dd className="font-medium text-slate-800">
+              {formatTruckType(truck.truckType)}
+            </dd>
           </div>
-        )}
-
-        {/* GPS Device Info */}
-        <div className="mt-6 border-t pt-4">
-          <h3 className="text-md mb-3 font-semibold">GPS Device</h3>
-          {truck.gpsDevice ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div>
-                <p className="text-sm text-gray-500">IMEI</p>
-                <p className="font-medium">{truck.gpsDevice.imei}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Provider</p>
-                <p className="font-medium">{truck.gpsDevice.provider}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <span
-                  className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${truck.gpsDevice.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
-                >
-                  {truck.gpsDevice.status}
-                </span>
-              </div>
+          <div>
+            <dt className="text-slate-500">Capacity</dt>
+            <dd className="font-medium text-slate-800">
+              {truck.capacity.toLocaleString()} kg
+            </dd>
+          </div>
+          {truck.volume && (
+            <div>
+              <dt className="text-slate-500">Volume</dt>
+              <dd className="font-medium text-slate-800">{truck.volume} m³</dd>
             </div>
+          )}
+          <div>
+            <dt className="text-slate-500">City</dt>
+            <dd className="font-medium text-slate-800">
+              {truck.currentCity || "Not set"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Region</dt>
+            <dd className="font-medium text-slate-800">
+              {truck.currentRegion || "Not set"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Carrier</dt>
+            <dd className="flex items-center gap-1.5 font-medium text-slate-800">
+              {truck.carrier.name}
+              {truck.carrier.isVerified && (
+                <svg
+                  className="h-4 w-4 text-emerald-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </dd>
+          </div>
+        </dl>
+
+        {/* GPS Device */}
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">
+            GPS Device
+          </h3>
+          {truck.gpsDevice ? (
+            <dl className="grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
+              <div>
+                <dt className="text-slate-500">IMEI</dt>
+                <dd className="font-mono font-medium text-slate-800">
+                  {truck.gpsDevice.imei}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Provider</dt>
+                <dd className="font-medium text-slate-800">
+                  {truck.gpsDevice.provider}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Status</dt>
+                <dd>
+                  <span
+                    className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      truck.gpsDevice.status === "ACTIVE"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {truck.gpsDevice.status}
+                  </span>
+                </dd>
+              </div>
+            </dl>
           ) : (
-            <p className="text-sm text-gray-500">No GPS device configured</p>
+            <p className="text-sm text-slate-400">No GPS device configured</p>
           )}
         </div>
       </div>
 
-      {/* Documents Section */}
-      <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">Documents</h2>
+      {/* Documents section */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold text-slate-800">Documents</h2>
 
-        {/* Existing Documents */}
+        {/* Existing documents */}
         {documents.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-md mb-3 font-medium">Uploaded Documents</h3>
+            <h3 className="mb-3 text-sm font-medium text-slate-700">
+              Uploaded Documents
+            </h3>
             <div className="space-y-2">
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
+                  className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="rounded bg-blue-100 p-2">
+                    <div className="rounded-lg bg-indigo-100 p-2">
                       <svg
-                        className="h-5 w-5 text-blue-600"
+                        className="h-5 w-5 text-indigo-600"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -385,15 +403,18 @@ export default function TruckDetailsPage({
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium text-slate-800">
                         {doc.type.replace(/_/g, " ")}
                       </p>
-                      <p className="text-xs text-gray-500">{doc.fileName}</p>
+                      <p className="text-xs text-slate-400">{doc.fileName}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span
-                      className={`rounded-full px-2 py-1 text-xs font-medium ${getVerificationStatusColor(doc.verificationStatus)}`}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        verificationColors[doc.verificationStatus] ??
+                        "bg-slate-100 text-slate-600"
+                      }`}
                     >
                       {doc.verificationStatus}
                     </span>
@@ -401,7 +422,7 @@ export default function TruckDetailsPage({
                       href={doc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800"
+                      className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
                     >
                       View
                     </a>
@@ -412,11 +433,13 @@ export default function TruckDetailsPage({
           </div>
         )}
 
-        {/* Upload New Document */}
+        {/* Upload new document */}
         <div>
-          <h3 className="text-md mb-3 font-medium">Upload New Document</h3>
+          <h3 className="mb-3 text-sm font-medium text-slate-700">
+            Upload New Document
+          </h3>
           <div className="mb-4">
-            <label className="mb-2 block text-sm text-gray-600">
+            <label className="mb-1.5 block text-sm text-slate-500">
               Document Type
             </label>
             <select
@@ -424,7 +447,7 @@ export default function TruckDetailsPage({
               onChange={(e) =>
                 setSelectedDocType(e.target.value as TruckDocumentType)
               }
-              className="w-full rounded-md border p-2 md:w-64"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none md:w-64"
             >
               {TRUCK_DOCUMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -432,23 +455,24 @@ export default function TruckDetailsPage({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-slate-400">
               {
                 TRUCK_DOCUMENT_TYPES.find((t) => t.value === selectedDocType)
                   ?.description
               }
             </p>
           </div>
-          {/* Insurance-specific fields (shown when INSURANCE is selected) */}
+
+          {/* Insurance-specific fields */}
           {selectedDocType === "INSURANCE" && (
-            <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 md:grid-cols-2">
+            <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <p className="mb-2 text-sm font-medium text-blue-800">
+                <p className="mb-2 text-sm font-medium text-indigo-800">
                   Insurance Details (optional)
                 </p>
               </div>
               <div>
-                <label className="mb-1 block text-sm text-gray-600">
+                <label className="mb-1 block text-sm text-slate-600">
                   Policy Number
                 </label>
                 <input
@@ -456,11 +480,11 @@ export default function TruckDetailsPage({
                   value={policyNumber}
                   onChange={(e) => setPolicyNumber(e.target.value)}
                   placeholder="e.g., POL-12345"
-                  className="w-full rounded-md border p-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-gray-600">
+                <label className="mb-1 block text-sm text-slate-600">
                   Insurance Provider
                 </label>
                 <input
@@ -468,11 +492,11 @@ export default function TruckDetailsPage({
                   value={insuranceProvider}
                   onChange={(e) => setInsuranceProvider(e.target.value)}
                   placeholder="e.g., Ethiopian Insurance Corp."
-                  className="w-full rounded-md border p-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-gray-600">
+                <label className="mb-1 block text-sm text-slate-600">
                   Coverage Amount (ETB)
                 </label>
                 <input
@@ -481,17 +505,17 @@ export default function TruckDetailsPage({
                   onChange={(e) => setCoverageAmount(e.target.value)}
                   placeholder="e.g., 500000"
                   min="0"
-                  className="w-full rounded-md border p-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-gray-600">
+                <label className="mb-1 block text-sm text-slate-600">
                   Coverage Type
                 </label>
                 <select
                   value={coverageType}
                   onChange={(e) => setCoverageType(e.target.value)}
-                  className="w-full rounded-md border p-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                 >
                   <option value="">Select type...</option>
                   <option value="CARGO">Cargo</option>
@@ -502,13 +526,13 @@ export default function TruckDetailsPage({
               </div>
             </div>
           )}
+
           <DocumentUpload
             entityType="truck"
             entityId={truck.id}
             documentType={selectedDocType}
             onUploadComplete={(doc) => {
               handleDocumentUpload(doc);
-              // Reset insurance fields after upload
               setPolicyNumber("");
               setInsuranceProvider("");
               setCoverageAmount("");
@@ -527,51 +551,6 @@ export default function TruckDetailsPage({
                 : undefined
             }
           />
-        </div>
-      </div>
-
-      {/* Carrier Info */}
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">Carrier Information</h2>
-        <div className="flex items-center gap-4">
-          <div className="rounded-full bg-gray-100 p-3">
-            <svg
-              className="h-6 w-6 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
-            </svg>
-          </div>
-          <div>
-            <p className="font-medium">{truck.carrier.name}</p>
-            <div className="mt-1 flex items-center gap-2">
-              {truck.carrier.isVerified ? (
-                <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                  <svg
-                    className="h-4 w-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Verified Carrier
-                </span>
-              ) : (
-                <span className="text-xs text-gray-500">Unverified</span>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
